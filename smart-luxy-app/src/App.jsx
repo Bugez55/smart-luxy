@@ -13,17 +13,12 @@ import { notifyTelegram, genId } from './utils/notify'
 const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || 'smartluxy2025'
 
 export default function App() {
-  // Admin check
   const [isAdmin] = useState(() =>
     window.location.search.includes('admin') || localStorage.getItem('sl_admin') === '1'
   )
   const [adminAuth, setAdminAuth] = useState(() => localStorage.getItem('sl_admin') === '1')
-
-  // Data
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
-
-  // Shop UI
   const [cart, setCart] = useState([])
   const [activeCat, setActiveCat] = useState('Tous')
   const [search, setSearch] = useState('')
@@ -36,8 +31,7 @@ export default function App() {
   const loadProducts = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
-      .from('products')
-      .select('*')
+      .from('products').select('*')
       .eq('is_active', true)
       .order('display_order', { ascending: true })
     setProducts(data || [])
@@ -46,14 +40,40 @@ export default function App() {
 
   useEffect(() => { loadProducts() }, [loadProducts])
 
-  // Toast
+  // Ouvre le bon produit si l'URL contient #produit-XX
+  useEffect(() => {
+    if (products.length === 0) return
+    function handleHash() {
+      const hash = window.location.hash
+      if (hash.startsWith('#produit-')) {
+        const id = parseInt(hash.replace('#produit-', ''), 10)
+        const prod = products.find(p => p.id === id)
+        if (prod) setOpenProduct(prod)
+      } else {
+        setOpenProduct(null)
+      }
+    }
+    handleHash()
+    window.addEventListener('hashchange', handleHash)
+    return () => window.removeEventListener('hashchange', handleHash)
+  }, [products])
+
+  function handleOpenProduct(prod) {
+    window.location.hash = 'produit-' + prod.id
+    setOpenProduct(prod)
+  }
+
+  function handleCloseProduct() {
+    history.pushState('', document.title, window.location.pathname + window.location.search)
+    setOpenProduct(null)
+  }
+
   function toast(msg, type = 'default') {
     const id = Date.now()
     setToasts(t => [...t, { id, msg, type }])
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3200)
   }
 
-  // Cart
   function addToCart(product, qty = 1) {
     setCart(prev => {
       const ex = prev.find(i => i.id === product.id)
@@ -67,32 +87,24 @@ export default function App() {
 
   function changeQty(id, delta) {
     setCart(prev => prev.map(i => i.id === id
-      ? { ...i, qty: Math.max(1, i.qty + delta) } : i
-    ))
+      ? { ...i, qty: Math.max(1, i.qty + delta) } : i))
   }
 
   const cartTotal = cart.reduce((s, i) => s + Number(i.prix) * i.qty, 0)
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
 
-  // Order
   async function submitOrder(form) {
     const id = genId()
     const order = {
-      id,
-      items: form.items,
-      nom_client: form.nom,
-      telephone: form.tel,
-      wilaya: form.wilaya,
-      commune: form.commune,
-      adresse: form.adresse || '',
-      note: form.note || '',
+      id, items: form.items,
+      nom_client: form.nom, telephone: form.tel,
+      wilaya: form.wilaya, commune: form.commune,
+      adresse: form.adresse || '', note: form.note || '',
       total: form.items.reduce((s, i) => s + Number(i.prix) * i.qty, 0),
       statut: 'new'
     }
-
     const { error } = await supabase.from('orders').insert(order)
     if (error) { toast('❌ Erreur. Veuillez réessayer.', 'error'); return }
-
     notifyTelegram(order)
     setLastOrder(order)
     setOrderItems(null)
@@ -100,14 +112,9 @@ export default function App() {
     setCartOpen(false)
   }
 
-  // Admin auth
   function handleLogin(pw) {
-    if (pw === ADMIN_PW) {
-      localStorage.setItem('sl_admin', '1')
-      setAdminAuth(true)
-    } else {
-      toast('❌ Mot de passe incorrect', 'error')
-    }
+    if (pw === ADMIN_PW) { localStorage.setItem('sl_admin', '1'); setAdminAuth(true) }
+    else toast('❌ Mot de passe incorrect', 'error')
   }
   function handleLogout() {
     localStorage.removeItem('sl_admin')
@@ -115,7 +122,6 @@ export default function App() {
     window.location.href = '/'
   }
 
-  // Derived
   const categories = ['Tous', ...new Set(products.map(p => p.categorie).filter(Boolean))]
   const filtered = products.filter(p => {
     if (activeCat !== 'Tous' && p.categorie !== activeCat) return false
@@ -123,22 +129,14 @@ export default function App() {
     return true
   })
 
-  // ── Admin ──────────────────────────────────────────────
   if (isAdmin) {
     if (!adminAuth) return <AdminLogin onLogin={handleLogin} />
     return <AdminPanel onLogout={handleLogout} onToast={toast} />
   }
 
-  // ── Shop ───────────────────────────────────────────────
   return (
     <div className="app">
-      <Header
-        cartCount={cartCount}
-        onCartOpen={() => setCartOpen(true)}
-        search={search}
-        onSearch={setSearch}
-      />
-
+      <Header cartCount={cartCount} onCartOpen={() => setCartOpen(true)} search={search} onSearch={setSearch} />
       <main>
         <section className="hero">
           <h1>Smart <em>Luxy</em></h1>
@@ -147,76 +145,38 @@ export default function App() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
-            <input
-              placeholder="Rechercher un produit..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+            <input placeholder="Rechercher un produit..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </section>
-
         <ProductGrid
-          products={filtered}
-          categories={categories}
-          activeCat={activeCat}
-          onCatChange={setActiveCat}
-          loading={loading}
-          onProductClick={setOpenProduct}
+          products={filtered} categories={categories} activeCat={activeCat}
+          onCatChange={setActiveCat} loading={loading}
+          onProductClick={handleOpenProduct}
           onAddToCart={addToCart}
           onBuyNow={p => setOrderItems([{ ...p, qty: 1 }])}
         />
       </main>
-
       <footer className="footer">
         <div className="fbn">Smart <em>Luxy</em></div>
         <p className="ftag">Boutique en ligne · Algérie 🇩🇿</p>
       </footer>
-
-      {/* Product detail panel */}
-      <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={() => setOpenProduct(null)} />
+      <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={handleCloseProduct} />
       {openProduct && (
         <ProductPage
           product={openProduct}
-          onClose={() => setOpenProduct(null)}
-          onAddToCart={(qty) => { addToCart(openProduct, qty); setOpenProduct(null) }}
-          onBuyNow={(qty) => { setOrderItems([{ ...openProduct, qty }]); setOpenProduct(null) }}
+          onClose={handleCloseProduct}
+          onAddToCart={(qty) => { addToCart(openProduct, qty); handleCloseProduct() }}
+          onBuyNow={(qty) => { setOrderItems([{ ...openProduct, qty }]); handleCloseProduct() }}
         />
       )}
-
-      {/* Cart */}
       <div className={`overlay ${cartOpen ? 'on' : ''}`} onClick={() => setCartOpen(false)} />
-      <Cart
-        open={cartOpen}
-        items={cart}
-        total={cartTotal}
-        onClose={() => setCartOpen(false)}
-        onRemove={removeFromCart}
-        onChangeQty={changeQty}
-        onOrder={() => { setCartOpen(false); setOrderItems(cart) }}
-      />
-
-      {/* Order modal */}
-      {orderItems && (
-        <OrderModal
-          items={orderItems}
-          onClose={() => setOrderItems(null)}
-          onSubmit={submitOrder}
-        />
-      )}
-
-      {/* Success */}
-      {lastOrder && (
-        <SuccessScreen
-          order={lastOrder}
-          onClose={() => setLastOrder(null)}
-        />
-      )}
-
-      {/* Toasts */}
+      <Cart open={cartOpen} items={cart} total={cartTotal} onClose={() => setCartOpen(false)}
+        onRemove={removeFromCart} onChangeQty={changeQty}
+        onOrder={() => { setCartOpen(false); setOrderItems(cart) }} />
+      {orderItems && <OrderModal items={orderItems} onClose={() => setOrderItems(null)} onSubmit={submitOrder} />}
+      {lastOrder && <SuccessScreen order={lastOrder} onClose={() => setLastOrder(null)} />}
       <div className="toasts">
-        {toasts.map(t => (
-          <div key={t.id} className={`toast-msg ${t.type}`}>{t.msg}</div>
-        ))}
+        {toasts.map(t => <div key={t.id} className={`toast-msg ${t.type}`}>{t.msg}</div>)}
       </div>
     </div>
   )
