@@ -6,6 +6,7 @@ import ProductPage from './components/ProductPage'
 import Cart from './components/Cart'
 import OrderModal from './components/OrderModal'
 import SuccessScreen from './components/SuccessScreen'
+import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
 import { notifyTelegram, genId } from './utils/notify'
@@ -17,8 +18,10 @@ export default function App() {
     window.location.search.includes('admin') || localStorage.getItem('sl_admin') === '1'
   )
   const [adminAuth, setAdminAuth] = useState(() => localStorage.getItem('sl_admin') === '1')
+
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+
   const [cart, setCart] = useState([])
   const [activeCat, setActiveCat] = useState('Tous')
   const [search, setSearch] = useState('')
@@ -28,10 +31,14 @@ export default function App() {
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
 
+  // ← Nouveau : politique
+  const [politiqueTab, setPolitiqueTab] = useState(null) // null | 'confidentialite' | 'retour'
+
   const loadProducts = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
-      .from('products').select('*')
+      .from('products')
+      .select('*')
       .eq('is_active', true)
       .order('display_order', { ascending: true })
     setProducts(data || [])
@@ -39,34 +46,6 @@ export default function App() {
   }, [])
 
   useEffect(() => { loadProducts() }, [loadProducts])
-
-  // Ouvre le bon produit si l'URL contient #produit-XX
-  useEffect(() => {
-    if (products.length === 0) return
-    function handleHash() {
-      const hash = window.location.hash
-      if (hash.startsWith('#produit-')) {
-        const id = parseInt(hash.replace('#produit-', ''), 10)
-        const prod = products.find(p => p.id === id)
-        if (prod) setOpenProduct(prod)
-      } else {
-        setOpenProduct(null)
-      }
-    }
-    handleHash()
-    window.addEventListener('hashchange', handleHash)
-    return () => window.removeEventListener('hashchange', handleHash)
-  }, [products])
-
-  function handleOpenProduct(prod) {
-    window.location.hash = 'produit-' + prod.id
-    setOpenProduct(prod)
-  }
-
-  function handleCloseProduct() {
-    history.pushState('', document.title, window.location.pathname + window.location.search)
-    setOpenProduct(null)
-  }
 
   function toast(msg, type = 'default') {
     const id = Date.now()
@@ -87,7 +66,8 @@ export default function App() {
 
   function changeQty(id, delta) {
     setCart(prev => prev.map(i => i.id === id
-      ? { ...i, qty: Math.max(1, i.qty + delta) } : i))
+      ? { ...i, qty: Math.max(1, i.qty + delta) } : i
+    ))
   }
 
   const cartTotal = cart.reduce((s, i) => s + Number(i.prix) * i.qty, 0)
@@ -96,10 +76,14 @@ export default function App() {
   async function submitOrder(form) {
     const id = genId()
     const order = {
-      id, items: form.items,
-      nom_client: form.nom, telephone: form.tel,
-      wilaya: form.wilaya, commune: form.commune,
-      adresse: form.adresse || '', note: form.note || '',
+      id,
+      items: form.items,
+      nom_client: form.nom,
+      telephone: form.tel,
+      wilaya: form.wilaya,
+      commune: form.commune,
+      adresse: form.adresse || '',
+      note: form.note || '',
       total: form.items.reduce((s, i) => s + Number(i.prix) * i.qty, 0),
       statut: 'new'
     }
@@ -113,8 +97,12 @@ export default function App() {
   }
 
   function handleLogin(pw) {
-    if (pw === ADMIN_PW) { localStorage.setItem('sl_admin', '1'); setAdminAuth(true) }
-    else toast('❌ Mot de passe incorrect', 'error')
+    if (pw === ADMIN_PW) {
+      localStorage.setItem('sl_admin', '1')
+      setAdminAuth(true)
+    } else {
+      toast('❌ Mot de passe incorrect', 'error')
+    }
   }
   function handleLogout() {
     localStorage.removeItem('sl_admin')
@@ -136,7 +124,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <Header cartCount={cartCount} onCartOpen={() => setCartOpen(true)} search={search} onSearch={setSearch} />
+      <Header
+        cartCount={cartCount}
+        onCartOpen={() => setCartOpen(true)}
+        search={search}
+        onSearch={setSearch}
+      />
+
       <main>
         <section className="hero">
           <h1>Smart <em>Luxy</em></h1>
@@ -145,38 +139,119 @@ export default function App() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
-            <input placeholder="Rechercher un produit..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input
+              placeholder="Rechercher un produit..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
         </section>
+
         <ProductGrid
-          products={filtered} categories={categories} activeCat={activeCat}
-          onCatChange={setActiveCat} loading={loading}
-          onProductClick={handleOpenProduct}
+          products={filtered}
+          categories={categories}
+          activeCat={activeCat}
+          onCatChange={setActiveCat}
+          loading={loading}
+          onProductClick={setOpenProduct}
           onAddToCart={addToCart}
           onBuyNow={p => setOrderItems([{ ...p, qty: 1 }])}
         />
       </main>
+
+      {/* ── Footer ── */}
       <footer className="footer">
         <div className="fbn">Smart <em>Luxy</em></div>
         <p className="ftag">Boutique en ligne · Algérie 🇩🇿</p>
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setPolitiqueTab('confidentialite')}
+            style={{
+              background: 'none', border: 'none',
+              color: 'rgba(255,255,255,.35)', fontSize: 12,
+              cursor: 'pointer', textDecoration: 'underline',
+              textUnderlineOffset: 3, padding: 0,
+              transition: 'color .2s',
+            }}
+            onMouseEnter={e => e.target.style.color = '#C9A84C'}
+            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.35)'}
+          >
+            🔒 Politique de confidentialité
+          </button>
+          <span style={{ color: 'rgba(255,255,255,.15)', fontSize: 12 }}>|</span>
+          <button
+            onClick={() => setPolitiqueTab('retour')}
+            style={{
+              background: 'none', border: 'none',
+              color: 'rgba(255,255,255,.35)', fontSize: 12,
+              cursor: 'pointer', textDecoration: 'underline',
+              textUnderlineOffset: 3, padding: 0,
+              transition: 'color .2s',
+            }}
+            onMouseEnter={e => e.target.style.color = '#C9A84C'}
+            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.35)'}
+          >
+            🔄 Politique de retour
+          </button>
+        </div>
+        <p style={{ color: 'rgba(255,255,255,.15)', fontSize: 11, marginTop: 14 }}>
+          © {new Date().getFullYear()} Smart Luxy · Tous droits réservés
+        </p>
       </footer>
-      <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={handleCloseProduct} />
+
+      {/* Product detail */}
+      <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={() => setOpenProduct(null)} />
       {openProduct && (
         <ProductPage
           product={openProduct}
-          onClose={handleCloseProduct}
-          onAddToCart={(qty) => { addToCart(openProduct, qty); handleCloseProduct() }}
-          onBuyNow={(qty) => { setOrderItems([{ ...openProduct, qty }]); handleCloseProduct() }}
+          onClose={() => setOpenProduct(null)}
+          onAddToCart={(qty) => { addToCart(openProduct, qty); setOpenProduct(null) }}
+          onBuyNow={(qty) => { setOrderItems([{ ...openProduct, qty }]); setOpenProduct(null) }}
         />
       )}
+
+      {/* Cart */}
       <div className={`overlay ${cartOpen ? 'on' : ''}`} onClick={() => setCartOpen(false)} />
-      <Cart open={cartOpen} items={cart} total={cartTotal} onClose={() => setCartOpen(false)}
-        onRemove={removeFromCart} onChangeQty={changeQty}
-        onOrder={() => { setCartOpen(false); setOrderItems(cart) }} />
-      {orderItems && <OrderModal items={orderItems} onClose={() => setOrderItems(null)} onSubmit={submitOrder} />}
-      {lastOrder && <SuccessScreen order={lastOrder} onClose={() => setLastOrder(null)} />}
+      <Cart
+        open={cartOpen}
+        items={cart}
+        total={cartTotal}
+        onClose={() => setCartOpen(false)}
+        onRemove={removeFromCart}
+        onChangeQty={changeQty}
+        onOrder={() => { setCartOpen(false); setOrderItems(cart) }}
+      />
+
+      {/* Order modal */}
+      {orderItems && (
+        <OrderModal
+          items={orderItems}
+          onClose={() => setOrderItems(null)}
+          onSubmit={submitOrder}
+        />
+      )}
+
+      {/* Success */}
+      {lastOrder && (
+        <SuccessScreen
+          order={lastOrder}
+          onClose={() => setLastOrder(null)}
+        />
+      )}
+
+      {/* Politiques */}
+      {politiqueTab && (
+        <PolitiquesPage
+          defaultTab={politiqueTab}
+          onClose={() => setPolitiqueTab(null)}
+        />
+      )}
+
+      {/* Toasts */}
       <div className="toasts">
-        {toasts.map(t => <div key={t.id} className={`toast-msg ${t.type}`}>{t.msg}</div>)}
+        {toasts.map(t => (
+          <div key={t.id} className={`toast-msg ${t.type}`}>{t.msg}</div>
+        ))}
       </div>
     </div>
   )
