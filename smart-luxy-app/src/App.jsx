@@ -47,7 +47,24 @@ export default function App() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { loadProducts() }, [loadProducts])
+  // ── Chargement produits + ouverture directe via URL hash ──
+  useEffect(() => {
+    async function init() {
+      await loadProducts()
+      // Lire le hash APRÈS que les produits soient chargés
+      const hash = window.location.hash // ex: #produit-abc123
+      if (hash.startsWith('#produit-')) {
+        const productId = hash.replace('#produit-', '')
+        const { data } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', productId)
+          .single()
+        if (data) setOpenProduct(data)
+      }
+    }
+    init()
+  }, [loadProducts])
 
   function toast(msg, type = 'default') {
     const id = Date.now()
