@@ -531,12 +531,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
                 {t.fraisLiv} {modeLiv === 'domicile' ? '🏠' : '📦'}
               </span>
               <span style={{ fontWeight: 800, color: fraisLiv === 0 ? '#4CAF50' : '#C9A84C', fontSize: 15 }}>
-                {fraisLiv === null
-                  fraisLiv === 0 ? '' // unused
-                  : fraisLiv === 0
-                    ? t.gratuit
-                    : fmt(fraisLiv)
-                }
+                {fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
               </span>
             </div>
           )}
