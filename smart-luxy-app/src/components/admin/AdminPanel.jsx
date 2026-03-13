@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
@@ -197,6 +197,8 @@ function printInvoice(order) {
 // ── AdminPanel ────────────────────────────────────────────
 export default function AdminPanel({ onLogout, onToast }) {
   const [tab, setTab] = useState('orders')
+  const [promos, setPromos] = useState([])
+  const [newPromo, setNewPromo] = useState({ code:'', reduction:10, max_uses:'' })
   const [orders, setOrders] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -249,6 +251,57 @@ export default function AdminPanel({ onLogout, onToast }) {
     ca: orders.filter(o => o.statut !== 'cancelled').reduce((s, o) => s + Number(o.total || 0), 0),
   }
 
+  // Stats avancées
+  const wilayaCount = {}
+  orders.forEach(o => { wilayaCount[o.wilaya] = (wilayaCount[o.wilaya]||0)+1 })
+  const topWilayas = Object.entries(wilayaCount).sort((a,b)=>b[1]-a[1]).slice(0,5)
+
+  const prodCount = {}
+  orders.forEach(o => {
+    const items = (() => { try { return typeof o.items==='string'?JSON.parse(o.items):(o.items||[]) } catch{return[]} })()
+    items.forEach(i => { prodCount[i.nom] = (prodCount[i.nom]||0)+i.qty })
+  })
+  const topProds = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,5)
+
+  // Ventes par jour (7 derniers jours)
+  const last7 = Array.from({length:7}, (_,i) => {
+    const d = new Date(); d.setDate(d.getDate()-i)
+    const key = d.toISOString().slice(0,10)
+    const label = d.toLocaleDateString('fr-DZ',{weekday:'short'})
+    const ca = orders.filter(o => o.created_at?.slice(0,10)===key && o.statut!=='cancelled')
+                      .reduce((s,o)=>s+Number(o.total||0),0)
+    return { key, label, ca }
+  }).reverse()
+  const maxCA = Math.max(...last7.map(d=>d.ca), 1)
+
+  // Chargement promos
+  async function loadPromos() {
+    const { data } = await supabase.from('promos').select('*').order('created_at', { ascending:false })
+    setPromos(data||[])
+  }
+
+  async function addPromo() {
+    const code = newPromo.code.trim().toUpperCase()
+    if (!code) return
+    await supabase.from('promos').insert({
+      code, reduction: Number(newPromo.reduction),
+      max_uses: newPromo.max_uses ? Number(newPromo.max_uses) : null,
+      actif: true, uses: 0,
+    })
+    setNewPromo({ code:'', reduction:10, max_uses:'' })
+    loadPromos()
+  }
+
+  async function togglePromo(id, actif) {
+    await supabase.from('promos').update({ actif }).eq('id', id)
+    setPromos(prev => prev.map(p => p.id===id ? {...p, actif} : p))
+  }
+
+  async function deletePromo(id) {
+    await supabase.from('promos').delete().eq('id', id)
+    setPromos(prev => prev.filter(p => p.id!==id))
+  }
+
   async function toggleActive(id, val) {
     await supabase.from('products').update({ is_active: val }).eq('id', id)
     setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: val } : p))
@@ -283,7 +336,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Smart <em>Luxy</em> — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['products','📦 Produits']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
