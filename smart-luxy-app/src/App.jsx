@@ -3,13 +3,14 @@ import { supabase } from './supabase'
 import Header from './components/Header'
 import ProductGrid from './components/ProductGrid'
 import ProductPage from './components/ProductPage'
+import TrackingPage from './components/TrackingPage'
 import Cart from './components/Cart'
 import OrderModal from './components/OrderModal'
 import SuccessScreen from './components/SuccessScreen'
 import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
-import { notifyTelegram, genId } from './utils/notify'
+import { notifyTelegram, sendWAConfirmation, genId } from './utils/notify'
 
 // ✅ Nouveau mot de passe admin
 const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
@@ -28,6 +29,8 @@ export default function App() {
   const [search, setSearch] = useState('')
   const [openProduct, setOpenProduct] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
+  const [trackingOpen, setTrackingOpen] = useState(false)
+  const [promoInfo, setPromoInfo] = useState(null)
   const [orderItems, setOrderItems] = useState(null)
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
@@ -86,6 +89,8 @@ export default function App() {
       mode_livraison: form.mode_livraison || 'domicile',
       frais_livraison: form.frais_livraison || 0,
       total: form.total || form.items.reduce((s, i) => s + Number(i.prix) * i.qty, 0),
+      promo_code: promoInfo?.code || null,
+      promo_reduction: promoInfo?.reduction || null,
       statut: 'new'
     }
 
@@ -93,10 +98,13 @@ export default function App() {
     if (error) { toast('❌ Erreur. Veuillez réessayer.', 'error'); return }
 
     notifyTelegram(order)
+    // Envoyer WA de confirmation au client automatiquement
+    sendWAConfirmation(order)
     setLastOrder(order)
     setOrderItems(null)
     setCart([])
     setCartOpen(false)
+    setPromoInfo(null)
   }
 
   function handleLogin(pw) {
@@ -181,6 +189,12 @@ export default function App() {
         <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:12, flexWrap:'wrap' }}>
           <button
             onClick={() => setPolitiqueTab('confidentialite')}
+              <button
+                onClick={() => setTrackingOpen(true)}
+                style={{ background:'none', border:'none', color:'#555', fontSize:12, cursor:'pointer', padding:'2px 0' }}
+              >
+                📦 Suivre ma commande
+              </button>
             style={{
               background:'none', border:'none',
               color:'rgba(255,255,255,.3)', fontSize:12,
@@ -219,6 +233,7 @@ export default function App() {
           product={openProduct}
           onClose={() => setOpenProduct(null)}
           onAddToCart={(qty) => { addToCart(openProduct, qty); setOpenProduct(null) }}
+          allProducts={products}
           onBuyNow={(qty) => { setOrderItems([{ ...openProduct, qty }]); setOpenProduct(null) }}
         />
       )}
@@ -232,7 +247,7 @@ export default function App() {
         onClose={() => setCartOpen(false)}
         onRemove={removeFromCart}
         onChangeQty={changeQty}
-        onOrder={() => { setCartOpen(false); setOrderItems(cart) }}
+        onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart) }}
       />
 
       {/* Order modal */}
@@ -259,6 +274,9 @@ export default function App() {
           onClose={() => setPolitiqueTab(null)}
         />
       )}
+
+      {/* Tracking */}
+      {trackingOpen && <TrackingPage onClose={() => setTrackingOpen(false)} />}
 
       {/* Toasts */}
       <div className="toasts">
