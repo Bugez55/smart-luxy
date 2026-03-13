@@ -3,33 +3,31 @@ import { openWA } from '../utils/notify'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
-// Confetti léger en CSSpur
 function Confetti() {
-  const pieces = Array.from({ length: 22 }, (_, i) => i)
-  const colors = ['#C9A84C','#FFD700','#fff','#f97316','#a78bfa','#34d399']
+  const pieces = Array.from({ length: 24 }, (_, i) => i)
+  const colors = ['#C9A84C','#FFD700','#fff','#f97316','#a78bfa','#34d399','#60a5fa']
   return (
     <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:0 }}>
       {pieces.map(i => {
         const color = colors[i % colors.length]
-        const left = `${(i * 4.5 + 3) % 100}%`
-        const delay = `${(i * 0.13).toFixed(2)}s`
-        const size = 6 + (i % 5) * 2
-        const duration = `${1.8 + (i % 4) * 0.3}s`
+        const left = `${(i * 4.2 + 2) % 100}%`
+        const delay = `${(i * 0.11).toFixed(2)}s`
+        const size = 5 + (i % 5) * 2
+        const dur = `${1.6 + (i % 4) * 0.35}s`
         return (
           <div key={i} style={{
-            position:'absolute', top:'-10px', left,
+            position:'absolute', top:'-12px', left,
             width: size, height: size,
             background: color,
             borderRadius: i % 3 === 0 ? '50%' : 2,
-            animation: `confettiFall ${duration} ${delay} ease-in forwards`,
-            opacity: 0.9,
+            animation: `cfFall ${dur} ${delay} ease-in forwards`,
           }} />
         )
       })}
       <style>{`
-        @keyframes confettiFall {
-          0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(420px) rotate(720deg); opacity: 0; }
+        @keyframes cfFall {
+          0%   { transform: translateY(0) rotate(0deg); opacity:1; }
+          100% { transform: translateY(480px) rotate(720deg); opacity:0; }
         }
       `}</style>
     </div>
@@ -38,50 +36,80 @@ function Confetti() {
 
 export default function SuccessScreen({ order, onClose }) {
   const [show, setShow] = useState(false)
-  const [step, setStep] = useState(0) // animation steps
+  const [step, setStep] = useState(0)
 
   const items = (() => {
     try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) }
     catch { return [] }
   })()
   const modeLiv = order.mode_livraison || 'domicile'
-  const fraisLiv = order.frais_livraison || 0
+  const fraisLiv = Number(order.frais_livraison || 0)
   const totalProd = items.reduce((s, i) => s + Number(i.prix) * i.qty, 0)
-  const total = order.total || totalProd + fraisLiv
+  const total = order.total || (totalProd + fraisLiv)
+
+  useEffect(() => {
+    // Scroll haut de page quand fermé
+    return () => { window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  }, [])
 
   useEffect(() => {
     setTimeout(() => setShow(true), 30)
     setTimeout(() => setStep(1), 300)
-    setTimeout(() => setStep(2), 700)
-    setTimeout(() => setStep(3), 1100)
+    setTimeout(() => setStep(2), 650)
+    setTimeout(() => setStep(3), 1000)
   }, [])
 
+  function handleClose() {
+    setShow(false)
+    setTimeout(() => {
+      onClose()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 250)
+  }
+
   return (
-    <div style={{
-      position:'fixed', inset:0, zIndex:600,
-      background:'rgba(0,0,0,.92)', backdropFilter:'blur(10px)',
-      display:'flex', alignItems:'flex-end', justifyContent:'center',
-      opacity: show ? 1 : 0, transition:'opacity .3s',
-    }}>
+    <div
+      onClick={e => e.target === e.currentTarget && handleClose()}
+      style={{
+        position:'fixed', inset:0, zIndex:600,
+        background:'rgba(0,0,0,.92)', backdropFilter:'blur(10px)',
+        display:'flex', alignItems:'flex-end', justifyContent:'center',
+        opacity: show ? 1 : 0, transition:'opacity .25s',
+      }}
+    >
       <div style={{
         position:'relative', width:'100%', maxWidth:520,
-        background:'linear-gradient(160deg, #1a1a1a 0%, #141414 100%)',
+        background:'linear-gradient(160deg, #1a1a1a 0%, #111 100%)',
         borderRadius:'24px 24px 0 0',
-        border:'1px solid #2a2a2a', borderBottom:'none',
+        border:'1px solid rgba(201,168,76,.18)', borderBottom:'none',
         overflow:'hidden',
-        transform: show ? 'translateY(0)' : 'translateY(60px)',
+        transform: show ? 'translateY(0)' : 'translateY(70px)',
         transition:'transform .4s cubic-bezier(.22,1,.36,1)',
-        maxHeight:'95vh', display:'flex', flexDirection:'column',
+        maxHeight:'92vh', display:'flex', flexDirection:'column',
       }}>
         <Confetti />
 
-        {/* ── Haut doré ── */}
+        {/* ── Bouton X fermeture ── */}
+        <button
+          onClick={handleClose}
+          style={{
+            position:'absolute', top:12, right:12, zIndex:10,
+            background:'rgba(0,0,0,.4)', border:'1px solid rgba(255,255,255,.15)',
+            borderRadius:'50%', width:32, height:32,
+            color:'rgba(255,255,255,.7)', fontSize:16, cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            transition:'all .2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,168,76,.2)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,.4)'}
+        >✕</button>
+
+        {/* ── Bandeau doré ── */}
         <div style={{
           position:'relative', zIndex:1,
-          background:'linear-gradient(135deg, #C9A84C 0%, #a8833a 100%)',
+          background:'linear-gradient(135deg, #C9A84C 0%, #a8832e 100%)',
           padding:'28px 20px 22px', textAlign:'center',
         }}>
-          {/* Icône animée */}
           <div style={{
             width:72, height:72, background:'white', borderRadius:'50%',
             display:'flex', alignItems:'center', justifyContent:'center',
@@ -89,9 +117,7 @@ export default function SuccessScreen({ order, onClose }) {
             boxShadow:'0 8px 32px rgba(0,0,0,.3)',
             transform: step >= 1 ? 'scale(1)' : 'scale(0)',
             transition:'transform .5s cubic-bezier(.34,1.56,.64,1)',
-          }}>
-            ✅
-          </div>
+          }}>✅</div>
 
           <h1 style={{
             margin:'0 0 6px', fontSize:22, fontWeight:900,
@@ -99,48 +125,42 @@ export default function SuccessScreen({ order, onClose }) {
             opacity: step >= 2 ? 1 : 0,
             transform: step >= 2 ? 'translateY(0)' : 'translateY(10px)',
             transition:'all .4s ease',
-          }}>
-            Commande confirmée !
-          </h1>
+          }}>Commande confirmée !</h1>
+
           <p style={{
-            margin:0, fontSize:13.5, color:'rgba(0,0,0,.65)',
+            margin:0, fontSize:13.5, color:'rgba(0,0,0,.6)',
             opacity: step >= 2 ? 1 : 0, transition:'opacity .4s .1s',
           }}>
             Merci <strong>{order.nom_client}</strong> pour votre confiance 🙏
           </p>
         </div>
 
-        {/* ── Corps ── */}
+        {/* ── Corps scrollable ── */}
         <div style={{
-          flex:1, overflowY:'auto', padding:'18px 16px',
+          flex:1, overflowY:'auto', padding:'16px',
           position:'relative', zIndex:1,
           opacity: step >= 3 ? 1 : 0,
-          transform: step >= 3 ? 'translateY(0)' : 'translateY(12px)',
+          transform: step >= 3 ? 'translateY(0)' : 'translateY(14px)',
           transition:'all .4s ease',
         }}>
 
-          {/* Message rassurant */}
+          {/* Message contact */}
           <div style={{
-            background:'rgba(201,168,76,.07)', border:'1px solid rgba(201,168,76,.2)',
-            borderRadius:12, padding:'12px 14px', marginBottom:14,
-            fontSize:13.5, color:'rgba(255,255,255,.75)', lineHeight:1.7,
+            background:'rgba(201,168,76,.07)', border:'1px solid rgba(201,168,76,.18)',
+            borderRadius:12, padding:'11px 14px', marginBottom:12,
+            fontSize:13.5, color:'rgba(255,255,255,.7)', lineHeight:1.7,
           }}>
-            📞 Nous allons vous appeler au <strong style={{color:'white'}}>{order.telephone}</strong> pour confirmer votre livraison. Vous serez livré dans <strong style={{color:'#C9A84C'}}>{modeLiv === 'bureau' ? '1–3 jours' : '2–5 jours'}</strong>.
+            📞 Nous vous appelons au <strong style={{color:'white'}}>{order.telephone}</strong> pour confirmer. Livraison dans <strong style={{color:'#C9A84C'}}>{modeLiv === 'bureau' ? '1–3 jours' : '2–5 jours'}</strong>.
           </div>
 
-          {/* Numéro de commande */}
+          {/* N° commande */}
           <div style={{
             background:'#1e1e1e', border:'1px solid #2a2a2a',
-            borderRadius:10, padding:'10px 14px', marginBottom:14,
+            borderRadius:10, padding:'9px 14px', marginBottom:12,
             display:'flex', justifyContent:'space-between', alignItems:'center',
           }}>
-            <span style={{fontSize:12, color:'#666', fontWeight:700, textTransform:'uppercase', letterSpacing:'.05em'}}>
-              N° Commande
-            </span>
-            <span style={{
-              fontSize:13, color:'#C9A84C', fontWeight:800,
-              fontFamily:'monospace', letterSpacing:'.05em',
-            }}>
+            <span style={{fontSize:11, color:'#555', fontWeight:800, textTransform:'uppercase', letterSpacing:'.05em'}}>N° Commande</span>
+            <span style={{fontSize:13, color:'#C9A84C', fontWeight:800, fontFamily:'monospace'}}>
               {order.id?.slice(0,8).toUpperCase()}
             </span>
           </div>
@@ -148,92 +168,88 @@ export default function SuccessScreen({ order, onClose }) {
           {/* Livraison */}
           <div style={{
             background:'#1e1e1e', border:'1px solid #2a2a2a',
-            borderRadius:10, padding:'10px 14px', marginBottom:14,
-            fontSize:13,
+            borderRadius:10, padding:'10px 14px', marginBottom:12, fontSize:13,
+            display:'flex', flexDirection:'column', gap:5,
           }}>
-            <div style={{display:'flex', justifyContent:'space-between', marginBottom:6}}>
-              <span style={{color:'#666'}}>Mode</span>
-              <span style={{color:'white', fontWeight:700}}>
-                {modeLiv === 'bureau' ? '📦 Retrait bureau (Tizi Ouzou)' : '🏠 Livraison à domicile'}
-              </span>
+            <div style={{display:'flex', justifyContent:'space-between'}}>
+              <span style={{color:'#555'}}>Mode</span>
+              <span style={{color:'white', fontWeight:700}}>{modeLiv === 'bureau' ? '📦 Retrait bureau (Tizi Ouzou)' : '🏠 Livraison à domicile'}</span>
             </div>
-            <div style={{display:'flex', justifyContent:'space-between', marginBottom:6}}>
-              <span style={{color:'#666'}}>Wilaya</span>
+            <div style={{display:'flex', justifyContent:'space-between'}}>
+              <span style={{color:'#555'}}>Destination</span>
               <span style={{color:'white', fontWeight:600}}>{order.wilaya} — {order.commune}</span>
             </div>
             {order.adresse && (
               <div style={{display:'flex', justifyContent:'space-between'}}>
-                <span style={{color:'#666'}}>Adresse</span>
-                <span style={{color:'white', fontWeight:600, textAlign:'right', maxWidth:'60%'}}>{order.adresse}</span>
+                <span style={{color:'#555'}}>Adresse</span>
+                <span style={{color:'white', textAlign:'right', maxWidth:'60%'}}>{order.adresse}</span>
               </div>
             )}
           </div>
 
-          {/* Articles */}
+          {/* Articles + total */}
           <div style={{
             background:'#1e1e1e', border:'1px solid #2a2a2a',
-            borderRadius:10, padding:'10px 14px', marginBottom:14,
+            borderRadius:10, padding:'10px 14px', marginBottom:12,
           }}>
-            <div style={{fontSize:11, fontWeight:800, color:'#555', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8}}>
+            <div style={{fontSize:11, fontWeight:800, color:'#444', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:8}}>
               Récapitulatif
             </div>
             {items.map((item, i) => (
-              <div key={i} style={{
-                display:'flex', justifyContent:'space-between',
-                fontSize:13.5, marginBottom:i < items.length-1 ? 6 : 0,
-              }}>
+              <div key={i} style={{display:'flex', justifyContent:'space-between', fontSize:13.5, marginBottom:5}}>
                 <span style={{color:'#aaa'}}>{item.nom} <span style={{color:'#555'}}>×{item.qty}</span></span>
                 <span style={{color:'white', fontWeight:600}}>{fmt(Number(item.prix)*item.qty)}</span>
               </div>
             ))}
-            <div style={{borderTop:'1px solid #2a2a2a', marginTop:8, paddingTop:8}}>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'#555', marginBottom:4}}>
+            <div style={{borderTop:'1px solid #2a2a2a', marginTop:8, paddingTop:8, display:'flex', flexDirection:'column', gap:4}}>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'#555'}}>
                 <span>Sous-total</span><span>{fmt(totalProd)}</span>
               </div>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'#555', marginBottom:8}}>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'#555'}}>
                 <span>Livraison</span>
                 <span style={{color: fraisLiv === 0 ? '#4CAF50' : '#aaa'}}>
-                  {fraisLiv === 0 ? 'Gratuit' : fmt(fraisLiv)}
+                  {fraisLiv === 0 ? '✓ Gratuit' : fmt(fraisLiv)}
                 </span>
               </div>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:17, fontWeight:900}}>
-                <span style={{color:'white'}}>Total</span>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:17, fontWeight:900, paddingTop:4}}>
+                <span style={{color:'white'}}>Total payé</span>
                 <span style={{color:'#C9A84C'}}>{fmt(total)}</span>
               </div>
             </div>
           </div>
 
-          {/* Ce qui t'attend */}
+          {/* Ce qui attend */}
           <div style={{
-            background:'rgba(52,211,153,.06)', border:'1px solid rgba(52,211,153,.15)',
-            borderRadius:12, padding:'12px 14px', marginBottom:14,
+            background:'rgba(52,211,153,.05)', border:'1px solid rgba(52,211,153,.12)',
+            borderRadius:12, padding:'11px 14px', marginBottom:4,
           }}>
-            <div style={{fontSize:12, fontWeight:800, color:'#34d399', marginBottom:8, textTransform:'uppercase', letterSpacing:'.05em'}}>
+            <div style={{fontSize:11, fontWeight:800, color:'#34d399', marginBottom:8, textTransform:'uppercase', letterSpacing:'.05em'}}>
               ✨ Ce qui vous attend
             </div>
             {[
               { icon:'📦', text:'Produit emballé avec soin' },
-              { icon:'🚚', text: modeLiv === 'bureau' ? 'Prêt en 1–3 jours au bureau Tizi Ouzou' : 'Livraison en 2–5 jours à votre porte' },
+              { icon:'🚚', text: modeLiv === 'bureau' ? 'Prêt en 1–3 jours, bureau Tizi Ouzou' : 'Livraison en 2–5 jours à votre porte' },
               { icon:'💬', text:'Notre équipe vous contacte pour confirmer' },
               { icon:'💰', text:'Paiement à la livraison, en toute confiance' },
             ].map((e, i) => (
-              <div key={i} style={{display:'flex', alignItems:'center', gap:10, marginBottom: i < 3 ? 7 : 0}}>
-                <span style={{fontSize:18}}>{e.icon}</span>
-                <span style={{fontSize:13, color:'rgba(255,255,255,.65)'}}>{e.text}</span>
+              <div key={i} style={{display:'flex', alignItems:'center', gap:10, marginBottom: i<3 ? 6 : 0}}>
+                <span style={{fontSize:17}}>{e.icon}</span>
+                <span style={{fontSize:13, color:'rgba(255,255,255,.6)'}}>{e.text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Boutons ── */}
+        {/* ── Footer boutons ── */}
         <div style={{
-          padding:'12px 16px 16px', background:'#1a1a1a',
-          borderTop:'1px solid #2a2a2a', flexShrink:0,
-          position:'relative', zIndex:1,
+          padding:'12px 16px 16px',
+          background:'rgba(14,14,14,.95)',
+          borderTop:'1px solid #2a2a2a',
+          flexShrink:0, zIndex:1, position:'relative',
           opacity: step >= 3 ? 1 : 0, transition:'opacity .5s .2s',
         }}>
           <button onClick={() => openWA(order)} style={{
-            width:'100%', padding:'13px',
+            width:'100%', padding:'12px',
             background:'#25D366', border:'none', borderRadius:12,
             color:'white', fontSize:14, fontWeight:800,
             cursor:'pointer', marginBottom:8,
@@ -244,12 +260,20 @@ export default function SuccessScreen({ order, onClose }) {
             </svg>
             Confirmer sur WhatsApp
           </button>
-          <button onClick={onClose} style={{
-            width:'100%', padding:'12px',
-            background:'rgba(255,255,255,.06)', border:'1px solid #2a2a2a',
-            borderRadius:12, color:'rgba(255,255,255,.5)',
-            fontSize:14, fontWeight:700, cursor:'pointer',
-          }}>
+
+          {/* Bouton principal — retour boutique */}
+          <button
+            onClick={handleClose}
+            style={{
+              width:'100%', padding:'13px',
+              background:'linear-gradient(135deg, #C9A84C, #a8832e)',
+              border:'none', borderRadius:12,
+              color:'#0e0e0e', fontSize:15, fontWeight:900,
+              cursor:'pointer', letterSpacing:'.01em',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+              boxShadow:'0 4px 20px rgba(201,168,76,.3)',
+            }}
+          >
             🛍️ Continuer mes achats
           </button>
         </div>
