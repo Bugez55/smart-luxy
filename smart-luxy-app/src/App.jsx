@@ -10,7 +10,7 @@ import SuccessScreen from './components/SuccessScreen'
 import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
-import { notifyTelegram, sendWAConfirmation, genId } from './utils/notify'
+import { notifyTelegram, genId } from './utils/notify'
 
 // ✅ Nouveau mot de passe admin
 const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
@@ -105,7 +105,6 @@ export default function App() {
     }
 
     notifyTelegram(order)
-    sendWAConfirmation(order)
     setLastOrder(order)
     setOrderItems(null)
     setCart([])
