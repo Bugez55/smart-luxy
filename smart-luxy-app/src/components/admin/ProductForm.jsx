@@ -7,18 +7,18 @@ const BADGES = ['','⚡ Nouveau','🔥 Tendance','⭐ Top vente','💎 Premium',
 export default function ProductForm({ product, onClose, onSave }) {
   const isEdit = !!product
   const [form, setForm] = useState({
-    nom:        product?.nom || '',
-    prix:       product?.prix || '',
-    prix_old:   product?.prix_old || '',
-    categorie:  product?.categorie || '',
-    badge:      product?.badge || '',
-    emoji:      product?.emoji || '📦',
-    desc:       product?.description || '',
-    specs:      product?.specs ? (typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs) : [],
-    images:     product?.images ? (typeof product.images === 'string' ? JSON.parse(product.images) : product.images) : [],
-    img:        product?.img || '',
+    nom:           product?.nom || '',
+    prix:          product?.prix || '',
+    prix_old:      product?.prix_old || '',
+    categorie:     product?.categorie || '',
+    badge:         product?.badge || '',
+    emoji:         product?.emoji || '📦',
+    desc:          product?.description || '',
+    specs:         product?.specs ? (typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs) : [],
+    images:        product?.images ? (typeof product.images === 'string' ? JSON.parse(product.images) : product.images) : [],
+    img:           product?.img || '',
     display_order: product?.display_order || 99,
-    stock: product?.stock !== undefined && product?.stock !== null ? product.stock : '',
+    stock:         product?.stock !== undefined && product?.stock !== null ? String(product.stock) : '',
   })
   const [newSpec, setNewSpec] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -28,12 +28,11 @@ export default function ProductForm({ product, onClose, onSave }) {
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
-  // Upload image to Supabase Storage
   async function uploadFile(file) {
     setUploading(true)
     const ext = file.name.split('.').pop()
     const path = `products/${Date.now()}.${ext}`
-    const { data, error } = await supabase.storage.from('product-images').upload(path, file)
+    const { error } = await supabase.storage.from('product-images').upload(path, file)
     setUploading(false)
     if (error) { alert('Erreur upload: ' + error.message); return null }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
@@ -44,10 +43,7 @@ export default function ProductForm({ product, onClose, onSave }) {
     const files = Array.from(e.target.files)
     for (const file of files) {
       const url = await uploadFile(file)
-      if (url) {
-        const isGif = file.type === 'image/gif' || file.type === 'image/webp'
-        addImageRow(url, file.name, isGif ? 'gif' : 'image')
-      }
+      if (url) addImageRow(url, file.name, file.type.includes('gif') || file.type.includes('webp') ? 'gif' : 'image')
     }
   }
 
@@ -57,16 +53,13 @@ export default function ProductForm({ product, onClose, onSave }) {
   }
 
   function updateImg(i, key, val) {
-    const imgs = form.images.map((img, idx) => idx === i ? { ...img, [key]: val } : img)
-    set('images', imgs)
+    set('images', form.images.map((img, idx) => idx === i ? { ...img, [key]: val } : img))
   }
 
   function removeImg(i) {
     const imgs = form.images.filter((_, idx) => idx !== i)
     set('images', imgs)
-    if (form.img === form.images[i]?.url) {
-      set('img', imgs[0]?.url || '')
-    }
+    if (form.img === form.images[i]?.url) set('img', imgs[0]?.url || '')
   }
 
   function addSpec() {
@@ -85,23 +78,26 @@ export default function ProductForm({ product, onClose, onSave }) {
 
   function handleSave() {
     if (!form.nom || !form.prix) return
-    const data = {
+    onSave({
       ...(isEdit ? { id: product.id } : {}),
-      nom: form.nom,
-      prix: Number(form.prix),
-      prix_old: Number(form.prix_old) || null,
-      categorie: form.categorie,
-      badge: form.badge,
-      emoji: form.emoji,
-      description: form.desc,
-      specs: form.specs,
-      images: form.images,
-      img: form.img || form.images[0]?.url || null,
+      nom:           form.nom,
+      prix:          Number(form.prix),
+      prix_old:      Number(form.prix_old) || null,
+      categorie:     form.categorie,
+      badge:         form.badge,
+      emoji:         form.emoji,
+      description:   form.desc,
+      specs:         form.specs,
+      images:        form.images,
+      img:           form.img || form.images[0]?.url || null,
       display_order: Number(form.display_order) || 99,
-      stock: form.stock !== '' ? Number(form.stock) : null,
-    }
-    onSave(data)
+      stock:         form.stock !== '' ? Number(form.stock) : null,
+    })
   }
+
+  // Indicateur stock
+  const stockNum = form.stock !== '' ? Number(form.stock) : null
+  const stockStatus = stockNum === null ? null : stockNum === 0 ? 'epuise' : stockNum <= 5 ? 'bas' : 'ok'
 
   return (
     <div className="pf-ov" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -112,7 +108,7 @@ export default function ProductForm({ product, onClose, onSave }) {
         </div>
 
         <div className="pf-body">
-          {/* Infos de base */}
+          {/* ── Infos de base ── */}
           <div className="pf-section">
             <h3>Informations</h3>
             <div className="form-field" style={{ marginBottom: 12 }}>
@@ -149,42 +145,84 @@ export default function ProductForm({ product, onClose, onSave }) {
                 <label>Ordre affichage</label>
                 <input type="number" value={form.display_order} onChange={e => set('display_order', e.target.value)} />
               </div>
-              <div className="form-field">
-                <label>Stock disponible</label>
-                <input
-                  type="number" min="0"
-                  placeholder="Illimité si vide"
-                  value={form.stock}
-                  onChange={e => set('stock', e.target.value)}
-                />
-                {form.stock !== '' && Number(form.stock) <= 5 && Number(form.stock) > 0 && (
-                  <div style={{ fontSize:11, color:'#f87171', marginTop:4 }}>
-                    ⚠️ Stock bas — badge rouge affiché sur le produit
-                  </div>
-                )}
-                {form.stock !== '' && Number(form.stock) === 0 && (
-                  <div style={{ fontSize:11, color:'#fca5a5', marginTop:4 }}>
-                    ❌ Produit marqué comme ÉPUISÉ
-                  </div>
-                )}
+            </div>
+          </div>
+
+          {/* ── STOCK ── */}
+          <div className="pf-section">
+            <h3>📦 Gestion du stock</h3>
+            <div className="form-field">
+              <label>Quantité en stock</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="Laisser vide = stock illimité"
+                value={form.stock}
+                onChange={e => set('stock', e.target.value)}
+                style={{
+                  border: `2px solid ${
+                    stockStatus === 'epuise' ? '#ef4444' :
+                    stockStatus === 'bas' ? '#f97316' :
+                    stockStatus === 'ok' ? '#22c55e' : 'rgba(255,255,255,.1)'
+                  }`,
+                  transition: 'border-color .2s',
+                }}
+              />
+            </div>
+
+            {/* Indicateur visuel */}
+            <div style={{
+              marginTop: 10,
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: stockStatus === null
+                ? 'rgba(255,255,255,.04)'
+                : stockStatus === 'epuise'
+                  ? 'rgba(239,68,68,.1)'
+                  : stockStatus === 'bas'
+                    ? 'rgba(249,115,22,.1)'
+                    : 'rgba(34,197,94,.08)',
+              border: `1px solid ${
+                stockStatus === null ? 'rgba(255,255,255,.08)' :
+                stockStatus === 'epuise' ? 'rgba(239,68,68,.3)' :
+                stockStatus === 'bas' ? 'rgba(249,115,22,.3)' : 'rgba(34,197,94,.2)'
+              }`,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <span style={{ fontSize: 20 }}>
+                {stockStatus === null ? '♾️' : stockStatus === 'epuise' ? '🚫' : stockStatus === 'bas' ? '🔥' : '✅'}
+              </span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>
+                  {stockStatus === null && 'Stock illimité — aucun badge affiché'}
+                  {stockStatus === 'epuise' && 'ÉPUISÉ — boutons désactivés sur le site'}
+                  {stockStatus === 'bas' && `Stock bas (${stockNum}) — badge rouge animé sur le site`}
+                  {stockStatus === 'ok' && `${stockNum} unités disponibles — stock normal`}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', marginTop: 2 }}>
+                  {stockStatus === null && 'Le stock est automatiquement déduit à chaque commande si défini'}
+                  {stockStatus === 'epuise' && 'Les clients ne peuvent plus commander ce produit'}
+                  {stockStatus === 'bas' && 'Urgence d\'achat affichée — booste les conversions'}
+                  {stockStatus === 'ok' && 'Le stock se déduit automatiquement à chaque commande'}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Description */}
+          {/* ── Description ── */}
           <div className="pf-section">
             <h3>Description</h3>
             <div className="form-field">
               <textarea
                 rows={4}
-                placeholder="Description du produit (HTML supporté : <b>, <br>, etc.)"
+                placeholder="Description du produit"
                 value={form.desc}
                 onChange={e => set('desc', e.target.value)}
               />
             </div>
           </div>
 
-          {/* Specs */}
+          {/* ── Specs ── */}
           <div className="pf-section">
             <h3>Caractéristiques</h3>
             {form.specs.map((s, i) => (
@@ -205,23 +243,29 @@ export default function ProductForm({ product, onClose, onSave }) {
             </div>
           </div>
 
-          {/* Images */}
+          {/* ── Images ── */}
           <div className="pf-section">
             <h3>Photos & Médias</h3>
-
-            {/* Upload depuis l'appareil */}
             <label
               className="upload-zone"
               onDragOver={e => e.preventDefault()}
-              onDrop={async e => { e.preventDefault(); const files = Array.from(e.dataTransfer.files); for(const f of files){ const url = await uploadFile(f); if(url) addImageRow(url, f.name, f.type.includes('gif')||f.type.includes('webp')?'gif':'image') } }}
+              onDrop={async e => {
+                e.preventDefault()
+                const files = Array.from(e.dataTransfer.files)
+                for (const f of files) {
+                  const url = await uploadFile(f)
+                  if (url) addImageRow(url, f.name, f.type.includes('gif') || f.type.includes('webp') ? 'gif' : 'image')
+                }
+              }}
             >
               <input ref={fileRef} type="file" accept="image/*,.gif,.webp" multiple onChange={handleFileSelect} />
               <div style={{ fontSize: 28, marginBottom: 6 }}>📁</div>
-              <div style={{ fontSize: 13, color: 'var(--g4)' }}>{uploading ? '⏳ Upload en cours…' : 'Cliquer ou glisser des photos/GIFs ici'}</div>
+              <div style={{ fontSize: 13, color: 'var(--g4)' }}>
+                {uploading ? '⏳ Upload en cours…' : 'Cliquer ou glisser des photos ici'}
+              </div>
               <div style={{ fontSize: 11, color: 'var(--g5)', marginTop: 4 }}>JPG, PNG, WebP, GIF</div>
             </label>
 
-            {/* URL manuelle */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <input
                 style={{ flex: 2, background: 'var(--card)', border: '1px solid var(--brd)', borderRadius: 8, padding: '8px 12px', color: 'white', fontSize: 13 }}
@@ -238,7 +282,6 @@ export default function ProductForm({ product, onClose, onSave }) {
               <button className="act-btn" onClick={addUrlImg}>+ URL</button>
             </div>
 
-            {/* Images list */}
             {form.images.map((img, i) => (
               <div key={i} className="img-row">
                 {img.url && <img src={img.url} className="img-preview" alt="" onError={e => e.target.style.display='none'} />}
