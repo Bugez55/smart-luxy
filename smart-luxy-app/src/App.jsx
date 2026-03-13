@@ -183,7 +183,10 @@ export default function App() {
           activeCat={activeCat}
           onCatChange={setActiveCat}
           loading={loading}
-          onProductClick={setOpenProduct}
+          onProductClick={(p) => {
+            setOpenProduct(p)
+            window.history.pushState({}, '', '#produit-' + p.id)
+          }}
           onAddToCart={addToCart}
           onBuyNow={p => setOrderItems([{ ...p, qty: 1 }])}
         />
@@ -242,14 +245,28 @@ export default function App() {
       </footer>
 
       {/* Product detail */}
-      <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={() => setOpenProduct(null)} />
+      <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={() => {
+          setOpenProduct(null)
+          window.history.pushState({}, '', window.location.pathname)
+        }} />
       {openProduct && (
         <ProductPage
           product={openProduct}
-          onClose={() => setOpenProduct(null)}
-          onAddToCart={(qty) => { addToCart(openProduct, qty); setOpenProduct(null) }}
+          onClose={() => {
+            setOpenProduct(null)
+            window.history.pushState({}, '', window.location.pathname)
+          }}
+          onAddToCart={(qty) => {
+            addToCart(openProduct, qty)
+            setOpenProduct(null)
+            window.history.pushState({}, '', window.location.pathname)
+          }}
           allProducts={products}
-          onBuyNow={(qty) => { setOrderItems([{ ...openProduct, qty }]); setOpenProduct(null) }}
+          onBuyNow={(qty) => {
+            setOrderItems([{ ...openProduct, qty }])
+            setOpenProduct(null)
+            window.history.pushState({}, '', window.location.pathname)
+          }}
         />
       )}
 
