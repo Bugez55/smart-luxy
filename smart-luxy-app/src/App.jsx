@@ -187,18 +187,8 @@ export default function App() {
         <div className="fbn">Smart <em>Luxy</em></div>
         <p className="ftag">Boutique en ligne · Algérie 🇩🇿</p>
         <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:12, flexWrap:'wrap' }}>
-          <button onClick={() => setPolitiqueTab('confidentialite')}>
-  Nom du premier bouton
-</button>
-
-<button 
-  onClick={() => setTrackingOpen(true)} 
-  style={{ background:'none', border:'none', color:'#555', fontSize:12, cursor:'pointer', padding:'2px 0' }}
->
-  Nom du deuxième bouton
-</button>
-                📦 Suivre ma commande
-              </button>
+          <button
+            onClick={() => setPolitiqueTab('confidentialite')}
             style={{
               background:'none', border:'none',
               color:'rgba(255,255,255,.3)', fontSize:12,
@@ -223,6 +213,20 @@ export default function App() {
             onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.3)'}
           >
             🔄 Politique de retour
+          </button>
+          <span style={{ color:'rgba(255,255,255,.1)', fontSize:12 }}>|</span>
+          <button
+            onClick={() => setTrackingOpen(true)}
+            style={{
+              background:'none', border:'none',
+              color:'rgba(255,255,255,.3)', fontSize:12,
+              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
+              padding:0, transition:'color .2s',
+            }}
+            onMouseEnter={e => e.target.style.color = '#C9A84C'}
+            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.3)'}
+          >
+            📦 Suivre ma commande
           </button>
         </div>
         <p style={{ color:'rgba(255,255,255,.12)', fontSize:11, marginTop:12 }}>
