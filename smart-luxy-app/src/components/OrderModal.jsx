@@ -170,7 +170,7 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
         style={{
           background: '#1e1e1e', border: `1px solid ${open ? '#C9A84C' : '#333'}`,
           borderRadius: 8, padding: '10px 12px',
-          color: value ? 'white' : '#555', fontSize: 14,
+          color: value ? 'white' : '#555', fontSize: '16px',
           cursor: disabled ? 'not-allowed' : 'pointer',
           opacity: disabled ? 0.5 : 1,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -202,7 +202,8 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
               style={{
                 width: '100%', background: '#252525', border: '1px solid #333',
                 borderRadius: 6, padding: '6px 10px', color: 'white',
-                fontSize: 16, outline: 'none', direction: rtl ? 'rtl' : 'ltr',
+                fontSize: '16px', outline: 'none', direction: rtl ? 'rtl' : 'ltr',
+                WebkitTextSizeAdjust: '100%', touchAction: 'manipulation',
                 boxSizing: 'border-box',
               }}
             />
@@ -341,6 +342,23 @@ function ConfirmButton({ loading, disabled, onClick, label, labelLoading }) {
 // ── Modal principale ─────────────────────────────────────
 export default function OrderModal({ items, onClose, onSubmit }) {
   const [lang, setLang] = useState('fr')
+  // ── Lock body scroll quand modal ouvert ──
+  useEffect(() => {
+    const scrollY = window.scrollY
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [])
+
+
   const [modeLiv, setModeLiv] = useState('domicile') // 'domicile' | 'bureau'
   const [form, setForm] = useState({ nom: '', tel: '', wilaya: '', commune: '', adresse: '', note: '' })
   const [loading, setLoading] = useState(false)
@@ -389,9 +407,10 @@ export default function OrderModal({ items, onClose, onSubmit }) {
 
   const inputStyle = {
     background: '#1e1e1e', border: '1px solid #333', borderRadius: 8,
-    padding: '10px 12px', color: 'white', fontSize: 16, width: '100%',
+    padding: '10px 12px', color: 'white', fontSize: '16px', width: '100%',
     outline: 'none', boxSizing: 'border-box',
     direction: rtl ? 'rtl' : 'ltr', fontFamily: 'inherit',
+    WebkitTextSizeAdjust: '100%', touchAction: 'manipulation',
   }
   const labelStyle = {
     fontSize: 11, fontWeight: 800, color: '#888',
@@ -404,15 +423,18 @@ export default function OrderModal({ items, onClose, onSubmit }) {
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 400,
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 400,
         background: 'rgba(0,0,0,.88)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        overscrollBehavior: 'contain',
       }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div style={{
         background: '#141414', width: '100%', maxWidth: 600,
-        maxHeight: '95vh', borderRadius: '20px 20px 0 0',
+        height: '92dvh', maxHeight: '92dvh',
+        borderRadius: '20px 20px 0 0',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         animation: 'omSlide .3s cubic-bezier(.22,1,.36,1)',
         direction: rtl ? 'rtl' : 'ltr',
