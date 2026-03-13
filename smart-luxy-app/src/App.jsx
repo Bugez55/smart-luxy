@@ -11,7 +11,8 @@ import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
 import { notifyTelegram, genId } from './utils/notify'
 
-const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || 'smartluxy2025'
+// ✅ Nouveau mot de passe admin
+const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
 
 export default function App() {
   const [isAdmin] = useState(() =>
@@ -30,9 +31,7 @@ export default function App() {
   const [orderItems, setOrderItems] = useState(null)
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
-
-  // ← Nouveau : politique
-  const [politiqueTab, setPolitiqueTab] = useState(null) // null | 'confidentialite' | 'retour'
+  const [politiqueTab, setPolitiqueTab] = useState(null)
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -84,11 +83,15 @@ export default function App() {
       commune: form.commune,
       adresse: form.adresse || '',
       note: form.note || '',
-      total: form.items.reduce((s, i) => s + Number(i.prix) * i.qty, 0),
+      mode_livraison: form.mode_livraison || 'domicile',
+      frais_livraison: form.frais_livraison || 0,
+      total: form.total || form.items.reduce((s, i) => s + Number(i.prix) * i.qty, 0),
       statut: 'new'
     }
+
     const { error } = await supabase.from('orders').insert(order)
     if (error) { toast('❌ Erreur. Veuillez réessayer.', 'error'); return }
+
     notifyTelegram(order)
     setLastOrder(order)
     setOrderItems(null)
@@ -104,6 +107,7 @@ export default function App() {
       toast('❌ Mot de passe incorrect', 'error')
     }
   }
+
   function handleLogout() {
     localStorage.removeItem('sl_admin')
     setAdminAuth(false)
@@ -117,11 +121,13 @@ export default function App() {
     return true
   })
 
+  // ── Admin ────────────────────────────────────────────
   if (isAdmin) {
     if (!adminAuth) return <AdminLogin onLogin={handleLogin} />
     return <AdminPanel onLogout={handleLogout} onToast={toast} />
   }
 
+  // ── Boutique ─────────────────────────────────────────
   return (
     <div className="app">
       <Header
@@ -132,9 +138,18 @@ export default function App() {
       />
 
       <main>
+        {/* ── Hero ── */}
         <section className="hero">
           <h1>Smart <em>Luxy</em></h1>
-          <p>Boutique en ligne · Livraison partout en Algérie</p>
+          <p>Boutique en ligne · Livraison partout en Algérie 🇩🇿</p>
+
+          {/* ✅ Badges 69 wilayas */}
+          <div className="hero-badges">
+            <div className="hero-badge">🚚 Livraison <span>69 wilayas</span></div>
+            <div className="hero-badge">💳 Paiement <span>à la livraison</span></div>
+            <div className="hero-badge">✅ Qualité <span>garantie</span></div>
+          </div>
+
           <div className="search-big">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -163,38 +178,36 @@ export default function App() {
       <footer className="footer">
         <div className="fbn">Smart <em>Luxy</em></div>
         <p className="ftag">Boutique en ligne · Algérie 🇩🇿</p>
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+        <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:12, flexWrap:'wrap' }}>
           <button
             onClick={() => setPolitiqueTab('confidentialite')}
             style={{
-              background: 'none', border: 'none',
-              color: 'rgba(255,255,255,.35)', fontSize: 12,
-              cursor: 'pointer', textDecoration: 'underline',
-              textUnderlineOffset: 3, padding: 0,
-              transition: 'color .2s',
+              background:'none', border:'none',
+              color:'rgba(255,255,255,.3)', fontSize:12,
+              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
+              padding:0, transition:'color .2s',
             }}
             onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.35)'}
+            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.3)'}
           >
             🔒 Politique de confidentialité
           </button>
-          <span style={{ color: 'rgba(255,255,255,.15)', fontSize: 12 }}>|</span>
+          <span style={{ color:'rgba(255,255,255,.1)', fontSize:12 }}>|</span>
           <button
             onClick={() => setPolitiqueTab('retour')}
             style={{
-              background: 'none', border: 'none',
-              color: 'rgba(255,255,255,.35)', fontSize: 12,
-              cursor: 'pointer', textDecoration: 'underline',
-              textUnderlineOffset: 3, padding: 0,
-              transition: 'color .2s',
+              background:'none', border:'none',
+              color:'rgba(255,255,255,.3)', fontSize:12,
+              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
+              padding:0, transition:'color .2s',
             }}
             onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.35)'}
+            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.3)'}
           >
             🔄 Politique de retour
           </button>
         </div>
-        <p style={{ color: 'rgba(255,255,255,.15)', fontSize: 11, marginTop: 14 }}>
+        <p style={{ color:'rgba(255,255,255,.12)', fontSize:11, marginTop:12 }}>
           © {new Date().getFullYear()} Smart Luxy · Tous droits réservés
         </p>
       </footer>
