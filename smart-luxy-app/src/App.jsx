@@ -187,12 +187,16 @@ export default function App() {
         <div className="fbn">Smart <em>Luxy</em></div>
         <p className="ftag">Boutique en ligne · Algérie 🇩🇿</p>
         <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:12, flexWrap:'wrap' }}>
-          <button
-            onClick={() => setPolitiqueTab('confidentialite')}
-              <button
-                onClick={() => setTrackingOpen(true)}
-                style={{ background:'none', border:'none', color:'#555', fontSize:12, cursor:'pointer', padding:'2px 0' }}
-              >
+          <button onClick={() => setPolitiqueTab('confidentialite')}>
+  Nom du premier bouton
+</button>
+
+<button 
+  onClick={() => setTrackingOpen(true)} 
+  style={{ background:'none', border:'none', color:'#555', fontSize:12, cursor:'pointer', padding:'2px 0' }}
+>
+  Nom du deuxième bouton
+</button>
                 📦 Suivre ma commande
               </button>
             style={{
