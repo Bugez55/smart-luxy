@@ -18,6 +18,7 @@ export default function ProductForm({ product, onClose, onSave }) {
     images:     product?.images ? (typeof product.images === 'string' ? JSON.parse(product.images) : product.images) : [],
     img:        product?.img || '',
     display_order: product?.display_order || 99,
+    stock: product?.stock !== undefined && product?.stock !== null ? product.stock : '',
   })
   const [newSpec, setNewSpec] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -97,6 +98,7 @@ export default function ProductForm({ product, onClose, onSave }) {
       images: form.images,
       img: form.img || form.images[0]?.url || null,
       display_order: Number(form.display_order) || 99,
+      stock: form.stock !== '' ? Number(form.stock) : null,
     }
     onSave(data)
   }
@@ -146,6 +148,25 @@ export default function ProductForm({ product, onClose, onSave }) {
               <div className="form-field">
                 <label>Ordre affichage</label>
                 <input type="number" value={form.display_order} onChange={e => set('display_order', e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label>Stock disponible</label>
+                <input
+                  type="number" min="0"
+                  placeholder="Illimité si vide"
+                  value={form.stock}
+                  onChange={e => set('stock', e.target.value)}
+                />
+                {form.stock !== '' && Number(form.stock) <= 5 && Number(form.stock) > 0 && (
+                  <div style={{ fontSize:11, color:'#f87171', marginTop:4 }}>
+                    ⚠️ Stock bas — badge rouge affiché sur le produit
+                  </div>
+                )}
+                {form.stock !== '' && Number(form.stock) === 0 && (
+                  <div style={{ fontSize:11, color:'#fca5a5', marginTop:4 }}>
+                    ❌ Produit marqué comme ÉPUISÉ
+                  </div>
+                )}
               </div>
             </div>
           </div>
