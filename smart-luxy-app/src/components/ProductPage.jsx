@@ -23,6 +23,13 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     .slice(0, 4)
 
   useEffect(() => {
+    // Lock body scroll
+    const scrollY = window.scrollY
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+
     setQty(1); setImgIdx(0); setTab('desc')
     const onKey = e => {
       if (e.key === 'Escape') { if (lb) setLb(false); else onClose() }
@@ -32,7 +39,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       }
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      window.scrollTo(0, scrollY)
+    }
   }, [p.id, lb])
 
   const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100 - (p.prix / p.prix_old) * 100) : 0
