@@ -1209,3 +1209,52 @@ input, select, textarea { font-family: var(--fb); outline: none; }
   .hero-badges { display: none; }
   .adm-tabs { justify-content: flex-start; overflow-x: auto; padding-bottom: 4px; }
 }
+
+/* ═══════════════════════════════════════════════════
+   FIX ZOOM MOBILE — iOS/Android
+   font-size >= 16px sur tous les inputs pour
+   empêcher le zoom automatique au focus
+═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* OrderModal inputs */
+  .om input,
+  .om select,
+  .om textarea {
+    font-size: 16px !important;
+    transform: none !important;
+  }
+
+  /* SearchSelect dropdown */
+  .om [style*="background: #1e1e1e"] input {
+    font-size: 16px !important;
+  }
+
+  /* ProductForm */
+  .pf input,
+  .pf select,
+  .pf textarea {
+    font-size: 16px !important;
+  }
+
+  /* Cart promo input */
+  .cart-drawer input {
+    font-size: 16px !important;
+  }
+
+  /* TrackingPage */
+  input[placeholder*="SL-"] {
+    font-size: 16px !important;
+  }
+
+  /* Empêcher le rebond au scroll dans les modals */
+  .om-ov,
+  .pf-ov,
+  .cart-drawer {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
