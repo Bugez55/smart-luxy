@@ -37,11 +37,11 @@ const LIVRAISON = {
   'Ouargla':            { bureau: 750,  domicile: 1200 },
   'Oran':               { bureau: 400,  domicile: 850  },
   'El Bayadh':          { bureau: 400,  domicile: 900  },
-  'Illizi':             { bureau: 1600, domicile: 1800 },
+  'Illizi':             { bureau: 1500, domicile: 1900 },
   'Bordj Bou Arréridj': { bureau: 400,  domicile: 900  },
   'Boumerdès':          { bureau: 400,  domicile: 850  },
   'El Tarf':            { bureau: 400,  domicile: 1000 },
-  'Tindouf':            { bureau: 1600, domicile: 1800 },
+  'Tindouf':            { bureau: 1500, domicile: 1900 },
   'Tissemsilt':         { bureau: 400,  domicile: 850  },
   'El Oued':            { bureau: 750,  domicile: 1200 },
   'Khenchela':          { bureau: 600,  domicile: 1000 },
@@ -55,13 +55,13 @@ const LIVRAISON = {
   'Relizane':           { bureau: 400,  domicile: 800  },
   // Wilayas déléguées
   'Timimoun':           { bureau: 1000, domicile: 1600 },
-  'Bordj Badji Mokhtar':{ bureau: 1600, domicile: 1800 },
+  'Bordj Badji Mokhtar':{ bureau: 1500, domicile: 1900 },
   'Ouled Djellal':      { bureau: 600,  domicile: 1100 },
   'Béni Abbès':         { bureau: 750,  domicile: 1400 },
   'In Salah':           { bureau: 1000, domicile: 1800 },
-  'In Guezzam':         { bureau: 1600, domicile: 1800 },
+  'In Guezzam':         { bureau: 1500, domicile: 1900 },
   'Touggourt':          { bureau: 750,  domicile: 1200 },
-  'Djanet':             { bureau: 1600, domicile: 1800 },
+  'Djanet':             { bureau: 1500, domicile: 1900 },
   "El M'Ghair":         { bureau: 750,  domicile: 1200 },
   'El Meniaa':          { bureau: 750,  domicile: 1200 },
   'Aflou':              { bureau: 600,  domicile: 1100 },
@@ -235,6 +235,106 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
         </div>
       )}
     </div>
+  )
+}
+
+
+// ── Bouton de confirmation premium ───────────────────────
+function ConfirmButton({ loading, disabled, onClick, label, labelLoading }) {
+  const [ripples, setRipples] = useState([])
+  const active = !disabled && !loading
+
+  function handleClick(e) {
+    if (!active) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const id = Date.now()
+    setRipples(r => [...r, { id, x, y }])
+    setTimeout(() => setRipples(r => r.filter(i => i.id !== id)), 700)
+    onClick()
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={disabled || loading}
+      style={{
+        width: '100%', padding: '15px',
+        background: active
+          ? 'linear-gradient(135deg, #C9A84C 0%, #a8832e 100%)'
+          : '#1e1e1e',
+        border: active ? 'none' : '1px solid #2a2a2a',
+        borderRadius: 14,
+        color: active ? '#0a0a0a' : '#444',
+        fontSize: 15, fontWeight: 900,
+        cursor: active ? 'pointer' : loading ? 'wait' : 'not-allowed',
+        marginBottom: 8,
+        transition: 'all .3s cubic-bezier(.22,1,.36,1)',
+        boxShadow: active ? '0 6px 24px rgba(201,168,76,.35)' : 'none',
+        transform: active ? 'translateY(0)' : 'none',
+        position: 'relative', overflow: 'hidden',
+        letterSpacing: '.01em',
+      }}
+      onMouseEnter={e => { if (active) e.currentTarget.style.transform = 'translateY(-2px)'; if (active) e.currentTarget.style.boxShadow = '0 10px 32px rgba(201,168,76,.45)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'none'; if (active) e.currentTarget.style.boxShadow = '0 6px 24px rgba(201,168,76,.35)' }}
+      onMouseDown={e => { if (active) e.currentTarget.style.transform = 'scale(.98)' }}
+      onMouseUp={e => { if (active) e.currentTarget.style.transform = 'translateY(-2px)' }}
+    >
+      {/* Shimmer permanent quand actif */}
+      {active && !loading && (
+        <span style={{
+          position: 'absolute', top: 0, left: '-100%', width: '60%', height: '100%',
+          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent)',
+          animation: 'btnShimmer 2.5s ease-in-out infinite',
+          pointerEvents: 'none',
+        }} />
+      )}
+
+      {/* Ripples au clic */}
+      {ripples.map(r => (
+        <span key={r.id} style={{
+          position: 'absolute',
+          left: r.x - 60, top: r.y - 60,
+          width: 120, height: 120,
+          background: 'rgba(255,255,255,.3)',
+          borderRadius: '50%',
+          animation: 'rippleOut .7s ease-out forwards',
+          pointerEvents: 'none',
+        }} />
+      ))}
+
+      {/* Contenu */}
+      <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {loading ? (
+          <>
+            <span style={{
+              width: 18, height: 18, border: '2px solid rgba(0,0,0,.3)',
+              borderTopColor: '#0a0a0a', borderRadius: '50%',
+              animation: 'spinBtn .7s linear infinite', display: 'inline-block',
+            }} />
+            {labelLoading}
+          </>
+        ) : (
+          label
+        )}
+      </span>
+
+      <style>{`
+        @keyframes btnShimmer {
+          0%   { left: -100%; }
+          60%  { left: 150%; }
+          100% { left: 150%; }
+        }
+        @keyframes rippleOut {
+          from { transform: scale(0); opacity: 1; }
+          to   { transform: scale(3); opacity: 0; }
+        }
+        @keyframes spinBtn {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </button>
   )
 }
 
@@ -422,17 +522,17 @@ export default function OrderModal({ items, onClose, onSubmit }) {
           {/* ── Prix livraison affiché ── */}
           {form.wilaya && (
             <div style={{
-              background: fraisLiv !== null ? 'rgba(201,168,76,.07)' : 'rgba(255,80,80,.07)',
-              border: `1px solid ${fraisLiv !== null ? 'rgba(201,168,76,.2)' : 'rgba(255,80,80,.2)'}`,
+              background: 'rgba(201,168,76,.07)',
+              border: '1px solid rgba(201,168,76,.2)',
               borderRadius: 10, padding: '10px 14px', marginBottom: 12,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <span style={{ fontSize: 13, color: '#aaa' }}>
                 {t.fraisLiv} {modeLiv === 'domicile' ? '🏠' : '📦'}
               </span>
-              <span style={{ fontWeight: 800, color: fraisLiv === 0 ? '#4CAF50' : fraisLiv !== null ? '#C9A84C' : '#ff6b6b', fontSize: 15 }}>
+              <span style={{ fontWeight: 800, color: fraisLiv === 0 ? '#4CAF50' : '#C9A84C', fontSize: 15 }}>
                 {fraisLiv === null
-                  ? t.indisponible
+                  fraisLiv === 0 ? '' // unused
                   : fraisLiv === 0
                     ? t.gratuit
                     : fmt(fraisLiv)
@@ -518,23 +618,14 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             </div>
           </div>
 
-          {/* Bouton confirmer */}
-          <button
+          {/* ✅ Bouton confirmer — version premium animée */}
+          <ConfirmButton
+            loading={loading}
+            disabled={!form.nom || !form.tel || !form.wilaya || !form.commune}
             onClick={handleSubmit}
-            disabled={loading || !form.nom || !form.tel || !form.wilaya || !form.commune || fraisLiv === null}
-            style={{
-              width: '100%', padding: '13px',
-              background: (!form.nom || !form.tel || !form.wilaya || !form.commune || fraisLiv === null || loading)
-                ? '#2a2a2a' : '#C9A84C',
-              border: 'none', borderRadius: 12,
-              color: (!form.nom || !form.tel || !form.wilaya || !form.commune || fraisLiv === null || loading)
-                ? '#555' : '#0e0e0e',
-              fontSize: 15, fontWeight: 900, cursor: loading ? 'wait' : 'pointer',
-              marginBottom: 8, transition: 'all .2s',
-            }}
-          >
-            {loading ? t.envoi : t.confirmer}
-          </button>
+            label={t.confirmer}
+            labelLoading={t.envoi}
+          />
 
           {/* Bouton WhatsApp */}
           <button onClick={waOrder} style={{
