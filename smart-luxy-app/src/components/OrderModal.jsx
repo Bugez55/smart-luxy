@@ -202,7 +202,7 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
               style={{
                 width: '100%', background: '#252525', border: '1px solid #333',
                 borderRadius: 6, padding: '6px 10px', color: 'white',
-                fontSize: 13, outline: 'none', direction: rtl ? 'rtl' : 'ltr',
+                fontSize: 16, outline: 'none', direction: rtl ? 'rtl' : 'ltr',
                 boxSizing: 'border-box',
               }}
             />
@@ -389,7 +389,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
 
   const inputStyle = {
     background: '#1e1e1e', border: '1px solid #333', borderRadius: 8,
-    padding: '10px 12px', color: 'white', fontSize: 14, width: '100%',
+    padding: '10px 12px', color: 'white', fontSize: 16, width: '100%',
     outline: 'none', boxSizing: 'border-box',
     direction: rtl ? 'rtl' : 'ltr', fontFamily: 'inherit',
   }
