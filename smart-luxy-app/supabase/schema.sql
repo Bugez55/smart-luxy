@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════
--- SMART LUXY — Schéma Supabase
+-- SMART LUXY — Schéma Supabase (version corrigée)
 -- Coller dans : Supabase → SQL Editor → Run
 -- ══════════════════════════════════════════════════════════
 
@@ -14,7 +14,7 @@ create table if not exists public.products (
   emoji         text default '📦',
   img           text,
   images        jsonb default '[]',
-  desc          text,
+  description   text,
   specs         jsonb default '[]',
   display_order integer default 99,
   is_active     boolean default true,
@@ -23,39 +23,37 @@ create table if not exists public.products (
 
 -- ── Table Orders ──────────────────────────────────────────
 create table if not exists public.orders (
-  id          text primary key,
-  nom_client  text not null,
-  telephone   text not null,
-  wilaya      text not null,
-  commune     text not null,
-  adresse     text,
-  note        text,
-  items       jsonb not null default '[]',
-  total       numeric not null default 0,
-  statut      text not null default 'new',
-  created_at  timestamptz default now()
+  id               text primary key,
+  nom_client       text not null,
+  telephone        text not null,
+  wilaya           text not null,
+  commune          text not null,
+  adresse          text,
+  note             text,
+  items            jsonb not null default '[]',
+  total            numeric not null default 0,
+  statut           text not null default 'new',
+  mode_livraison   text default 'domicile',
+  frais_livraison  numeric default 0,
+  created_at       timestamptz default now()
 );
 
--- ── RLS : accès public lecture produits ───────────────────
+-- ── RLS ───────────────────────────────────────────────────
 alter table public.products enable row level security;
 alter table public.orders   enable row level security;
 
--- Produits : tout le monde peut lire les actifs
 create policy "read active products"
   on public.products for select
   using (is_active = true);
 
--- Produits : tout le monde peut modifier (admin via mot de passe dans l'app)
 create policy "all products management"
   on public.products for all
   using (true) with check (true);
 
--- Commandes : tout le monde peut insérer
 create policy "insert orders"
   on public.orders for insert
   with check (true);
 
--- Commandes : tout le monde peut lire/modifier (admin dans l'app)
 create policy "manage orders"
   on public.orders for all
   using (true) with check (true);
@@ -81,8 +79,8 @@ create policy "delete images"
   on storage.objects for delete
   using (bucket_id = 'product-images');
 
--- ── Produits de démonstration (optionnel) ─────────────────
-insert into public.products (nom, prix, prix_old, categorie, badge, emoji, desc, specs, display_order)
+-- ── Produits de démonstration ─────────────────────────────
+insert into public.products (nom, prix, prix_old, categorie, badge, emoji, description, specs, display_order)
 values
   ('Mini Robot Culinaire 4-en-1', 2990, 4500, 'Cuisine', '⚡ Nouveau', '🔪',
    'Hachoir électrique + trancheur + éplucheur + brosse nettoyante. Sans fil, rechargeable USB-C, imperméable IPX5.',
