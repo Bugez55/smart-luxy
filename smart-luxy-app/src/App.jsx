@@ -89,8 +89,6 @@ export default function App() {
       mode_livraison: form.mode_livraison || 'domicile',
       frais_livraison: form.frais_livraison || 0,
       total: form.total || form.items.reduce((s, i) => s + Number(i.prix) * i.qty, 0),
-      promo_code: promoInfo?.code || null,
-      promo_reduction: promoInfo?.reduction || null,
       statut: 'new'
     }
 
