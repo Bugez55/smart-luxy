@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase'
+import AnnouncementBar from './components/AnnouncementBar'
 import Header from './components/Header'
 import ProductGrid from './components/ProductGrid'
 import ProductPage from './components/ProductPage'
@@ -162,6 +163,7 @@ export default function App() {
   // ── Boutique ─────────────────────────────────────────
   return (
     <div className="app">
+      <AnnouncementBar />
       <Header
         cartCount={cartCount}
         onCartOpen={() => setCartOpen(true)}
