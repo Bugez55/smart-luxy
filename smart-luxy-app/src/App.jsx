@@ -95,14 +95,24 @@ export default function App() {
     const { error } = await supabase.from('orders').insert(order)
     if (error) { toast('❌ Erreur. Veuillez réessayer.', 'error'); return }
 
+    // ── Déduire le stock pour chaque article commandé ──
+    for (const item of form.items) {
+      const prod = products.find(p => p.id === item.id)
+      if (prod && prod.stock !== null && prod.stock !== undefined) {
+        const newStock = Math.max(0, prod.stock - item.qty)
+        await supabase.from('products').update({ stock: newStock }).eq('id', item.id)
+      }
+    }
+
     notifyTelegram(order)
-    // Envoyer WA de confirmation au client automatiquement
     sendWAConfirmation(order)
     setLastOrder(order)
     setOrderItems(null)
     setCart([])
     setCartOpen(false)
     setPromoInfo(null)
+    // Recharger les produits pour afficher le nouveau stock
+    loadProducts()
   }
 
   function handleLogin(pw) {
