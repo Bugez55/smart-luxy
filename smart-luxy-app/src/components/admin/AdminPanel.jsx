@@ -198,6 +198,8 @@ function printInvoice(order) {
 export default function AdminPanel({ onLogout, onToast }) {
   const [tab, setTab] = useState('orders')
   const [promos, setPromos] = useState([])
+  const [bannerMsgs, setBannerMsgs] = useState([])
+  const [newMsg, setNewMsg] = useState('')
   const [newPromo, setNewPromo] = useState({ code:'', reduction:10, max_uses:'' })
   const [orders, setOrders] = useState([])
   const [products, setProducts] = useState([])
@@ -274,6 +276,41 @@ export default function AdminPanel({ onLogout, onToast }) {
   }).reverse()
   const maxCA = Math.max(...last7.map(d=>d.ca), 1)
 
+  // ── Bannière défilante ──
+  async function loadBanner() {
+    const { data } = await supabase.from('banner_messages').select('*').order('position', { ascending: true })
+    setBannerMsgs(data || [])
+  }
+
+  async function addMsg() {
+    const msg = newMsg.trim()
+    if (!msg) return
+    const pos = (bannerMsgs.length + 1)
+    await supabase.from('banner_messages').insert({ message: msg, actif: true, position: pos })
+    setNewMsg('')
+    loadBanner()
+  }
+
+  async function toggleMsg(id, actif) {
+    await supabase.from('banner_messages').update({ actif }).eq('id', id)
+    setBannerMsgs(prev => prev.map(m => m.id === id ? { ...m, actif } : m))
+  }
+
+  async function deleteMsg(id) {
+    await supabase.from('banner_messages').delete().eq('id', id)
+    setBannerMsgs(prev => prev.filter(m => m.id !== id))
+  }
+
+  async function moveMsg(id, dir) {
+    const idx = bannerMsgs.findIndex(m => m.id === id)
+    const swapIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= bannerMsgs.length) return
+    const a = bannerMsgs[idx], b = bannerMsgs[swapIdx]
+    await supabase.from('banner_messages').update({ position: b.position }).eq('id', a.id)
+    await supabase.from('banner_messages').update({ position: a.position }).eq('id', b.id)
+    loadBanner()
+  }
+
   // Chargement promos
   async function loadPromos() {
     const { data } = await supabase.from('promos').select('*').order('created_at', { ascending:false })
@@ -290,6 +327,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     })
     setNewPromo({ code:'', reduction:10, max_uses:'' })
     loadPromos()
+    loadBanner()
   }
 
   async function togglePromo(id, actif) {
@@ -336,7 +374,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Smart <em>Luxy</em> — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -516,6 +554,103 @@ export default function AdminPanel({ onLogout, onToast }) {
           </div>
         )}
       </div>
+
+        {/* ── BANNIÈRE TAB ── */}
+        {tab === 'banner' && (
+          <div>
+            <h3 style={{ color: 'white', fontSize: 15, fontWeight: 800, marginBottom: 16 }}>
+              📢 Messages de la bannière défilante
+            </h3>
+            <p style={{ color: 'rgba(255,255,255,.4)', fontSize: 12, marginBottom: 20 }}>
+              Ces messages s'affichent en haut du site en défilement. Active/désactive ou change l'ordre.
+            </p>
+
+            {/* Aperçu live */}
+            <div style={{
+              background: 'linear-gradient(90deg, #0a0a0a 0%, #1a1500 50%, #0a0a0a 100%)',
+              border: '1px solid rgba(201,168,76,.2)', borderRadius: 10,
+              height: 36, overflow: 'hidden', position: 'relative', marginBottom: 24,
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', height: '100%',
+                animation: 'bannerScroll 20s linear infinite',
+                whiteSpace: 'nowrap',
+              }}>
+                {[...bannerMsgs.filter(m => m.actif), ...bannerMsgs.filter(m => m.actif)].map((m, i) => (
+                  <span key={i} style={{ padding: '0 40px', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.75)' }}>
+                    {m.message} <span style={{ color: 'rgba(201,168,76,.4)' }}>✦</span>
+                  </span>
+                ))}
+              </div>
+              <style>{`@keyframes bannerScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }`}</style>
+            </div>
+
+            {/* Ajouter un message */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <input
+                style={{
+                  flex: 1, background: '#1a1a1a', border: '1px solid #333',
+                  borderRadius: 8, padding: '10px 14px', color: 'white',
+                  fontSize: '16px', outline: 'none',
+                }}
+                placeholder="Ex: 🔥 Offre spéciale — livraison gratuite ce weekend !"
+                value={newMsg}
+                onChange={e => setNewMsg(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addMsg()}
+              />
+              <button
+                className="act-btn"
+                style={{ background: 'var(--br)', color: '#000', border: 'none', fontWeight: 800, padding: '0 20px', whiteSpace: 'nowrap' }}
+                onClick={addMsg}
+              >+ Ajouter</button>
+            </div>
+
+            {/* Liste des messages */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {bannerMsgs.map((m, idx) => (
+                <div key={m.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  background: m.actif ? '#1a1a1a' : '#111',
+                  border: `1px solid ${m.actif ? 'rgba(201,168,76,.2)' : 'rgba(255,255,255,.06)'}`,
+                  borderRadius: 10, padding: '10px 14px',
+                  opacity: m.actif ? 1 : .5,
+                }}>
+                  {/* Ordre */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <button onClick={() => moveMsg(m.id, 'up')} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '2px' }}>▲</button>
+                    <button onClick={() => moveMsg(m.id, 'down')} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '2px' }}>▼</button>
+                  </div>
+
+                  {/* Message */}
+                  <span style={{ flex: 1, fontSize: 13, color: m.actif ? 'white' : '#666' }}>{m.message}</span>
+
+                  {/* Actions */}
+                  <button
+                    onClick={() => toggleMsg(m.id, !m.actif)}
+                    style={{
+                      background: m.actif ? 'rgba(34,197,94,.1)' : 'rgba(255,255,255,.05)',
+                      border: `1px solid ${m.actif ? 'rgba(34,197,94,.3)' : 'rgba(255,255,255,.1)'}`,
+                      borderRadius: 6, padding: '4px 10px',
+                      color: m.actif ? '#86efac' : '#555',
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >{m.actif ? '✅ Actif' : '⏸ Inactif'}</button>
+
+                  <button
+                    onClick={() => deleteMsg(m.id)}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}
+                  >🗑</button>
+                </div>
+              ))}
+            </div>
+
+            {bannerMsgs.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '30px 0', color: 'rgba(255,255,255,.3)', fontSize: 13 }}>
+                Aucun message — ajoute-en un ci-dessus !
+              </div>
+            )}
+          </div>
+        )}
 
       {editProd !== null && (
         <ProductForm
