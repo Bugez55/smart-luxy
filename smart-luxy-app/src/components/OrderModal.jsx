@@ -150,30 +150,20 @@ const T = {
 // ── Dropdown avec recherche ──────────────────────────────
 function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) {
   const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const searchRef = useRef()
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+  const ref = useRef()
 
-  function select(val) { onChange(val); setSearch(''); setOpen(false) }
+  useEffect(() => {
+    function h(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
 
-  function handleOpen() {
-    if (disabled) return
-    setSearch('')
-    setOpen(true)
-  }
-
-  // Fermer en cliquant l'overlay
-  function handleOverlay(e) {
-    if (e.target === e.currentTarget) { setSearch(''); setOpen(false) }
-  }
-
-  const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()))
+  function select(val) { onChange(val); setOpen(false) }
 
   return (
-    <div style={{ position: 'relative' }}>
-      {/* ── Bouton déclencheur ── */}
+    <div ref={ref} style={{ position: 'relative' }}>
       <div
-        onClick={handleOpen}
+        onClick={() => !disabled && setOpen(o => !o)}
         style={{
           background: '#1e1e1e', border: `1px solid ${open ? '#C9A84C' : '#333'}`,
           borderRadius: 8, padding: '10px 12px',
@@ -182,100 +172,44 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
           opacity: disabled ? 0.5 : 1,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           direction: rtl ? 'rtl' : 'ltr',
-          transition: 'border-color .2s',
-          touchAction: 'manipulation',
-          userSelect: 'none',
+          touchAction: 'manipulation', userSelect: 'none',
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {value || placeholder}
         </span>
-        <span style={{ color: '#C9A84C', fontSize: 12, marginLeft: 8, flexShrink: 0 }}>
+        <span style={{ color: '#C9A84C', fontSize: 10, marginLeft: 8, flexShrink: 0 }}>
           {open ? '▲' : '▼'}
         </span>
       </div>
 
-      {/* ── Bottom sheet / dropdown ── */}
       {open && (
-        <div
-          onClick={handleOverlay}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 99999,
-            background: 'rgba(0,0,0,.6)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-          }}
-        >
-          <div style={{
-            background: '#1a1a1a', width: '100%', maxWidth: 600,
-            borderRadius: '18px 18px 0 0',
-            maxHeight: '70vh', display: 'flex', flexDirection: 'column',
-            animation: 'omSlide .25s cubic-bezier(.22,1,.36,1)',
-          }}>
-            {/* Handle */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 0 4px' }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: '#333' }} />
-            </div>
-
-            {/* Titre + fermer */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px 10px', borderBottom: '1px solid #2a2a2a' }}>
-              <span style={{ color: 'rgba(255,255,255,.5)', fontSize: 13, fontWeight: 700 }}>
-                {placeholder}
-              </span>
-              <button
-                onClick={() => { setSearch(''); setOpen(false) }}
-                style={{ background: 'rgba(255,255,255,.08)', border: 'none', borderRadius: '50%', width: 28, height: 28, color: '#aaa', cursor: 'pointer', fontSize: 14 }}
-              >✕</button>
-            </div>
-
-            {/* Barre de recherche — PAS d'autoFocus pour ne pas ouvrir le clavier */}
-            <div style={{ padding: '10px 12px', borderBottom: '1px solid #222' }}>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#555', pointerEvents: 'none' }}>🔍</span>
-                <input
-                  ref={searchRef}
-                  placeholder={rtl ? 'بحث…' : 'Rechercher…'}
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  style={{
-                    width: '100%', background: '#252525', border: '1px solid #333',
-                    borderRadius: 8, padding: '9px 12px 9px 34px', color: 'white',
-                    fontSize: '16px', outline: 'none', boxSizing: 'border-box',
-                    direction: rtl ? 'rtl' : 'ltr',
-                  }}
-                />
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
+          background: '#1a1a1a', border: '1px solid #C9A84C',
+          borderRadius: 10, marginTop: 4, overflow: 'hidden',
+          boxShadow: '0 12px 40px rgba(0,0,0,.8)',
+        }}>
+          <div style={{ maxHeight: 220, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            {options.map(opt => (
+              <div
+                key={opt}
+                onClick={() => select(opt)}
+                style={{
+                  padding: '11px 14px', fontSize: 15, cursor: 'pointer',
+                  color: opt === value ? '#C9A84C' : 'rgba(255,255,255,.85)',
+                  background: opt === value ? 'rgba(201,168,76,.1)' : 'transparent',
+                  fontWeight: opt === value ? 700 : 400,
+                  borderBottom: '1px solid rgba(255,255,255,.04)',
+                  direction: rtl ? 'rtl' : 'ltr',
+                  touchAction: 'manipulation',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}
+              >
+                <span>{opt}</span>
+                {opt === value && <span style={{ fontSize: 13 }}>✓</span>}
               </div>
-            </div>
-
-            {/* Liste */}
-            <div style={{ overflowY: 'auto', flex: 1, WebkitOverflowScrolling: 'touch' }}>
-              {filtered.length === 0 ? (
-                <div style={{ padding: 20, color: '#555', fontSize: 13, textAlign: 'center' }}>
-                  {rtl ? 'لا توجد نتائج' : 'Aucun résultat'}
-                </div>
-              ) : filtered.map(opt => (
-                <div
-                  key={opt}
-                  onClick={() => select(opt)}
-                  style={{
-                    padding: '13px 16px',
-                    fontSize: 15,
-                    cursor: 'pointer',
-                    color: opt === value ? '#C9A84C' : 'rgba(255,255,255,.85)',
-                    background: opt === value ? 'rgba(201,168,76,.1)' : 'transparent',
-                    fontWeight: opt === value ? 700 : 400,
-                    borderBottom: '1px solid rgba(255,255,255,.04)',
-                    direction: rtl ? 'rtl' : 'ltr',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    touchAction: 'manipulation',
-                  }}
-                >
-                  <span>{opt}</span>
-                  {opt === value && <span style={{ fontSize: 14 }}>✓</span>}
-                </div>
-              ))}
-              {/* Espace en bas pour le safe area */}
-              <div style={{ height: 20 }} />
-            </div>
+            ))}
           </div>
         </div>
       )}
