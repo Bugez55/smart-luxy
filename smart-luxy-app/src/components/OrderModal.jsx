@@ -3,7 +3,7 @@ import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
-// ── Prix livraison par wilaya (Yalidine depuis Tizi Ouzou) ──
+// ── Prix livraison par wilaya (Yalidine) ──
 const LIVRAISON = {
   'Adrar':              { bureau: 1000, domicile: 1600 },
   'Chlef':              { bureau: 400,  domicile: 800  },
@@ -96,7 +96,7 @@ const T = {
     notePh: 'Instructions, préférences…',
     livraison: 'Mode de livraison',
     domicile: '🏠 À domicile',
-    bureau: '📦 Retrait au bureau (Tizi Ouzou)',
+    bureau: '📦 Retrait au bureau',
     fraisLiv: 'Frais de livraison',
     totalCmd: 'Total commande',
     totalPayer: 'Total à payer',
@@ -107,7 +107,7 @@ const T = {
     whatsapp: 'Commander via WhatsApp',
     required: '*',
     delaiDom: '2–5 jours ouvrables',
-    delaiBur: '1–3 jours, retrait à Tizi Ouzou',
+    delaiBur: '1–3 jours, retrait au bureau',
     search: '🔍 Rechercher…',
     aucun: 'Aucun résultat',
     communes: 'communes',
@@ -129,7 +129,7 @@ const T = {
     notePh: 'تعليمات، تفضيلات…',
     livraison: 'طريقة التوصيل',
     domicile: '🏠 توصيل للمنزل',
-    bureau: '📦 استلام من المكتب (تيزي وزو)',
+    bureau: '📦 استلام من المكتب',
     fraisLiv: 'تكاليف التوصيل',
     totalCmd: 'مجموع الطلب',
     totalPayer: 'المجموع الكلي',
@@ -151,22 +151,29 @@ const T = {
 function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const ref = useRef()
-
-  const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()))
-
-  useEffect(() => {
-    function h(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
+  const searchRef = useRef()
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
 
   function select(val) { onChange(val); setSearch(''); setOpen(false) }
 
+  function handleOpen() {
+    if (disabled) return
+    setSearch('')
+    setOpen(true)
+  }
+
+  // Fermer en cliquant l'overlay
+  function handleOverlay(e) {
+    if (e.target === e.currentTarget) { setSearch(''); setOpen(false) }
+  }
+
+  const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()))
+
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div style={{ position: 'relative' }}>
+      {/* ── Bouton déclencheur ── */}
       <div
-        onClick={() => !disabled && setOpen(o => !o)}
+        onClick={handleOpen}
         style={{
           background: '#1e1e1e', border: `1px solid ${open ? '#C9A84C' : '#333'}`,
           borderRadius: 8, padding: '10px 12px',
@@ -176,62 +183,99 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           direction: rtl ? 'rtl' : 'ltr',
           transition: 'border-color .2s',
+          touchAction: 'manipulation',
+          userSelect: 'none',
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {value || placeholder}
         </span>
-        <span style={{ color: '#555', fontSize: 10, marginRight: rtl ? 0 : 0, marginLeft: rtl ? 0 : 8, flexShrink: 0 }}>
+        <span style={{ color: '#C9A84C', fontSize: 12, marginLeft: 8, flexShrink: 0 }}>
           {open ? '▲' : '▼'}
         </span>
       </div>
 
+      {/* ── Bottom sheet / dropdown ── */}
       {open && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
-          background: '#1a1a1a', border: '1px solid #C9A84C',
-          borderRadius: 10, marginTop: 4, overflow: 'hidden',
-          boxShadow: '0 12px 40px rgba(0,0,0,.8)',
-        }}>
-          <div style={{ padding: '8px 10px', borderBottom: '1px solid #2a2a2a' }}>
-            <input
-              autoFocus
-              placeholder={rtl ? '🔍 بحث…' : '🔍 Rechercher…'}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                width: '100%', background: '#252525', border: '1px solid #333',
-                borderRadius: 6, padding: '6px 10px', color: 'white',
-                fontSize: '16px', outline: 'none', direction: rtl ? 'rtl' : 'ltr',
-                WebkitTextSizeAdjust: '100%', touchAction: 'manipulation',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-            {filtered.length === 0 ? (
-              <div style={{ padding: 12, color: '#555', fontSize: 13, textAlign: 'center' }}>
-                {rtl ? 'لا توجد نتائج' : 'Aucun résultat'}
+        <div
+          onClick={handleOverlay}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            background: 'rgba(0,0,0,.6)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}
+        >
+          <div style={{
+            background: '#1a1a1a', width: '100%', maxWidth: 600,
+            borderRadius: '18px 18px 0 0',
+            maxHeight: '70vh', display: 'flex', flexDirection: 'column',
+            animation: 'omSlide .25s cubic-bezier(.22,1,.36,1)',
+          }}>
+            {/* Handle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 0 4px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: '#333' }} />
+            </div>
+
+            {/* Titre + fermer */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px 10px', borderBottom: '1px solid #2a2a2a' }}>
+              <span style={{ color: 'rgba(255,255,255,.5)', fontSize: 13, fontWeight: 700 }}>
+                {placeholder}
+              </span>
+              <button
+                onClick={() => { setSearch(''); setOpen(false) }}
+                style={{ background: 'rgba(255,255,255,.08)', border: 'none', borderRadius: '50%', width: 28, height: 28, color: '#aaa', cursor: 'pointer', fontSize: 14 }}
+              >✕</button>
+            </div>
+
+            {/* Barre de recherche — PAS d'autoFocus pour ne pas ouvrir le clavier */}
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid #222' }}>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#555', pointerEvents: 'none' }}>🔍</span>
+                <input
+                  ref={searchRef}
+                  placeholder={rtl ? 'بحث…' : 'Rechercher…'}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{
+                    width: '100%', background: '#252525', border: '1px solid #333',
+                    borderRadius: 8, padding: '9px 12px 9px 34px', color: 'white',
+                    fontSize: '16px', outline: 'none', boxSizing: 'border-box',
+                    direction: rtl ? 'rtl' : 'ltr',
+                  }}
+                />
               </div>
-            ) : filtered.map(opt => (
-              <div
-                key={opt}
-                onClick={() => select(opt)}
-                style={{
-                  padding: '9px 14px', fontSize: 13.5, cursor: 'pointer',
-                  color: opt === value ? '#C9A84C' : 'rgba(255,255,255,.8)',
-                  background: opt === value ? 'rgba(201,168,76,.08)' : 'transparent',
-                  fontWeight: opt === value ? 700 : 400,
-                  borderBottom: '1px solid rgba(255,255,255,.03)',
-                  direction: rtl ? 'rtl' : 'ltr',
-                  transition: 'background .1s',
-                }}
-                onMouseEnter={e => { if (opt !== value) e.currentTarget.style.background = 'rgba(255,255,255,.05)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = opt === value ? 'rgba(201,168,76,.08)' : 'transparent' }}
-              >
-                {opt}
-              </div>
-            ))}
+            </div>
+
+            {/* Liste */}
+            <div style={{ overflowY: 'auto', flex: 1, WebkitOverflowScrolling: 'touch' }}>
+              {filtered.length === 0 ? (
+                <div style={{ padding: 20, color: '#555', fontSize: 13, textAlign: 'center' }}>
+                  {rtl ? 'لا توجد نتائج' : 'Aucun résultat'}
+                </div>
+              ) : filtered.map(opt => (
+                <div
+                  key={opt}
+                  onClick={() => select(opt)}
+                  style={{
+                    padding: '13px 16px',
+                    fontSize: 15,
+                    cursor: 'pointer',
+                    color: opt === value ? '#C9A84C' : 'rgba(255,255,255,.85)',
+                    background: opt === value ? 'rgba(201,168,76,.1)' : 'transparent',
+                    fontWeight: opt === value ? 700 : 400,
+                    borderBottom: '1px solid rgba(255,255,255,.04)',
+                    direction: rtl ? 'rtl' : 'ltr',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  <span>{opt}</span>
+                  {opt === value && <span style={{ fontSize: 14 }}>✓</span>}
+                </div>
+              ))}
+              {/* Espace en bas pour le safe area */}
+              <div style={{ height: 20 }} />
+            </div>
           </div>
         </div>
       )}
@@ -240,106 +284,6 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
 }
 
 
-// ── Bouton de confirmation premium ───────────────────────
-function ConfirmButton({ loading, disabled, onClick, label, labelLoading }) {
-  const [ripples, setRipples] = useState([])
-  const active = !disabled && !loading
-
-  function handleClick(e) {
-    if (!active) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    const id = Date.now()
-    setRipples(r => [...r, { id, x, y }])
-    setTimeout(() => setRipples(r => r.filter(i => i.id !== id)), 700)
-    onClick()
-  }
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={disabled || loading}
-      style={{
-        width: '100%', padding: '15px',
-        background: active
-          ? 'linear-gradient(135deg, #C9A84C 0%, #a8832e 100%)'
-          : '#1e1e1e',
-        border: active ? 'none' : '1px solid #2a2a2a',
-        borderRadius: 14,
-        color: active ? '#0a0a0a' : '#444',
-        fontSize: 15, fontWeight: 900,
-        cursor: active ? 'pointer' : loading ? 'wait' : 'not-allowed',
-        marginBottom: 8,
-        transition: 'all .3s cubic-bezier(.22,1,.36,1)',
-        boxShadow: active ? '0 6px 24px rgba(201,168,76,.35)' : 'none',
-        transform: active ? 'translateY(0)' : 'none',
-        position: 'relative', overflow: 'hidden',
-        letterSpacing: '.01em',
-      }}
-      onMouseEnter={e => { if (active) e.currentTarget.style.transform = 'translateY(-2px)'; if (active) e.currentTarget.style.boxShadow = '0 10px 32px rgba(201,168,76,.45)' }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'none'; if (active) e.currentTarget.style.boxShadow = '0 6px 24px rgba(201,168,76,.35)' }}
-      onMouseDown={e => { if (active) e.currentTarget.style.transform = 'scale(.98)' }}
-      onMouseUp={e => { if (active) e.currentTarget.style.transform = 'translateY(-2px)' }}
-    >
-      {/* Shimmer permanent quand actif */}
-      {active && !loading && (
-        <span style={{
-          position: 'absolute', top: 0, left: '-100%', width: '60%', height: '100%',
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent)',
-          animation: 'btnShimmer 2.5s ease-in-out infinite',
-          pointerEvents: 'none',
-        }} />
-      )}
-
-      {/* Ripples au clic */}
-      {ripples.map(r => (
-        <span key={r.id} style={{
-          position: 'absolute',
-          left: r.x - 60, top: r.y - 60,
-          width: 120, height: 120,
-          background: 'rgba(255,255,255,.3)',
-          borderRadius: '50%',
-          animation: 'rippleOut .7s ease-out forwards',
-          pointerEvents: 'none',
-        }} />
-      ))}
-
-      {/* Contenu */}
-      <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        {loading ? (
-          <>
-            <span style={{
-              width: 18, height: 18, border: '2px solid rgba(0,0,0,.3)',
-              borderTopColor: '#0a0a0a', borderRadius: '50%',
-              animation: 'spinBtn .7s linear infinite', display: 'inline-block',
-            }} />
-            {labelLoading}
-          </>
-        ) : (
-          label
-        )}
-      </span>
-
-      <style>{`
-        @keyframes btnShimmer {
-          0%   { left: -100%; }
-          60%  { left: 150%; }
-          100% { left: 150%; }
-        }
-        @keyframes rippleOut {
-          from { transform: scale(0); opacity: 1; }
-          to   { transform: scale(3); opacity: 0; }
-        }
-        @keyframes spinBtn {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </button>
-  )
-}
-
-// ── Modal principale ─────────────────────────────────────
 export default function OrderModal({ items, onClose, onSubmit }) {
   const [lang, setLang] = useState('fr')
   // ── Lock body scroll quand modal ouvert ──
@@ -398,7 +342,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
 
   function waOrder() {
     const livTxt = modeLiv === 'bureau'
-      ? (rtl ? 'استلام من المكتب (تيزي وزو)' : 'Retrait bureau (Tizi Ouzou)')
+      ? (rtl ? 'استلام من المكتب' : 'Retrait bureau')
       : (rtl ? 'توصيل للمنزل' : 'Livraison à domicile')
     const msg = items.map(i => `• ${i.nom} ×${i.qty} = ${fmt(Number(i.prix) * i.qty)}`).join('\n')
     const txt = `🛍️ Commande Smart Luxy\n\nClient: ${form.nom || '…'}\nTél: ${form.tel || '…'}\nWilaya: ${form.wilaya || '…'} / ${form.commune || '…'}\n\nArticles:\n${msg}\n\nSous-total: ${fmt(totalProduits)}\nLivraison (${livTxt}): ${fraisLiv !== null ? fmt(fraisLiv) : '?'}\n\n💰 TOTAL: ${fmt(totalFinal)}`
