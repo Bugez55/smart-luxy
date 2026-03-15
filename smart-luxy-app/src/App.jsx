@@ -14,6 +14,12 @@ import AdminPanel from './components/admin/AdminPanel'
 import { notifyTelegram, genId } from './utils/notify'
 
 // ✅ Nouveau mot de passe admin
+
+// ── Facebook Pixel — Tracking événements ──
+function fbq(...args) {
+  if (typeof window !== 'undefined' && window.fbq) window.fbq(...args)
+}
+
 const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
 
 export default function App() {
@@ -80,6 +86,13 @@ export default function App() {
       return [...prev, { ...product, qty }]
     })
     toast(`✅ ${product.nom} ajouté au panier`)
+    fbq('track', 'AddToCart', {
+      content_name: product.nom,
+      content_ids: [product.id],
+      content_type: 'product',
+      value: product.prix * qty,
+      currency: 'DZD',
+    })
   }
 
   function removeFromCart(id) { setCart(prev => prev.filter(i => i.id !== id)) }
@@ -122,6 +135,13 @@ export default function App() {
       }
     }
 
+    fbq('track', 'Purchase', {
+      value: order.total,
+      currency: 'DZD',
+      content_ids: order.items.map(i => i.id),
+      content_type: 'product',
+      num_items: order.items.reduce((s,i) => s + i.qty, 0),
+    })
     notifyTelegram(order)
     setLastOrder(order)
     setOrderItems(null)
@@ -205,6 +225,13 @@ export default function App() {
           onProductClick={(p) => {
             setOpenProduct(p)
             window.history.pushState({}, '', '#produit-' + p.id)
+            fbq('track', 'ViewContent', {
+              content_name: p.nom,
+              content_ids: [p.id],
+              content_type: 'product',
+              value: p.prix,
+              currency: 'DZD',
+            })
           }}
           onAddToCart={addToCart}
           onBuyNow={p => setOrderItems([{ ...p, qty: 1 }])}
@@ -298,7 +325,12 @@ export default function App() {
         onClose={() => setCartOpen(false)}
         onRemove={removeFromCart}
         onChangeQty={changeQty}
-        onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart) }}
+        onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart)
+            fbq('track', 'InitiateCheckout', {
+              value: cart.reduce((s,i) => s + i.prix * i.qty, 0),
+              currency: 'DZD',
+              num_items: cart.reduce((s,i) => s + i.qty, 0),
+            }) }}
       />
 
       {/* Order modal */}
