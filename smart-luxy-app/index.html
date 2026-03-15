@@ -9,6 +9,49 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+
+  <!-- ══════════════════════════════════════════
+       OPEN GRAPH — Pour Facebook, WhatsApp, Messenger
+       Contrôle l'aperçu quand tu partages le lien
+  ══════════════════════════════════════════ -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="Smart Luxy" />
+  <meta property="og:title"       content="Smart Luxy — Boutique en ligne Algérie 🇩🇿" />
+  <meta property="og:description" content="Produits premium livrés partout en Algérie. Paiement à la livraison ✅ Stock limité 🔥" />
+  <meta property="og:url"         content="https://smart-luxy.vercel.app" />
+  <meta property="og:image"       content="https://smart-luxy.vercel.app/og-image.jpg" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale"      content="fr_DZ" />
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="Smart Luxy — Boutique Algérie" />
+  <meta name="twitter:description" content="Produits premium livrés partout en Algérie 🇩🇿" />
+  <meta name="twitter:image"       content="https://smart-luxy.vercel.app/og-image.jpg" />
+
+  <!-- ══════════════════════════════════════════
+       FACEBOOK PIXEL — Tracking des conversions
+       REMPLACE "2485119758546353" par ton vrai ID
+       (Gestionnaire de publicités Facebook → Pixels)
+  ══════════════════════════════════════════ -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '2485119758546353');
+    fbq('track', 'PageView');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=2485119758546353&ev=PageView&noscript=1"/>
+  </noscript>
+
   <style>
     html { background: #0a0a0a; }
 
