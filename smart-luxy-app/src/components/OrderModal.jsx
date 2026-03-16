@@ -3,7 +3,6 @@ import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
-// ── Prix livraison par wilaya (Yalidine) ──
 const LIVRAISON = {
   'Adrar':              { bureau: 1000, domicile: 1600 },
   'Chlef':              { bureau: 400,  domicile: 800  },
@@ -53,7 +52,6 @@ const LIVRAISON = {
   'Aïn Témouchent':     { bureau: 400,  domicile: 850  },
   'Ghardaïa':           { bureau: 750,  domicile: 1200 },
   'Relizane':           { bureau: 400,  domicile: 800  },
-  // Wilayas déléguées
   'Timimoun':           { bureau: 1000, domicile: 1600 },
   'Bordj Badji Mokhtar':{ bureau: 1500, domicile: 1900 },
   'Ouled Djellal':      { bureau: 600,  domicile: 1100 },
@@ -77,7 +75,6 @@ const LIVRAISON = {
   'Messaad':            { bureau: 600,  domicile: 1100 },
 }
 
-// ── Traductions ──────────────────────────────────────────
 const T = {
   fr: {
     title: 'Passer commande',
@@ -108,7 +105,6 @@ const T = {
     required: '*',
     delaiDom: '2–5 jours ouvrables',
     delaiBur: '1–3 jours, retrait au bureau',
-    search: '🔍 Rechercher…',
     aucun: 'Aucun résultat',
     communes: 'communes',
   },
@@ -140,14 +136,13 @@ const T = {
     whatsapp: 'الطلب عبر واتساب',
     required: '*',
     delaiDom: '2–5 أيام عمل',
-    delaiBur: '1–3 أيام، استلام بتيزي وزو',
-    search: '🔍 بحث…',
+    delaiBur: '1–3 أيام، استلام من المكتب',
     aucun: 'لا توجد نتائج',
     communes: 'بلدية',
   }
 }
 
-// ── Dropdown avec recherche ──────────────────────────────
+// ── Dropdown simple — liste à scroller, pas de clavier ──
 function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) {
   const [open, setOpen] = useState(false)
   const ref = useRef()
@@ -217,10 +212,53 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
   )
 }
 
+// ── Bouton confirmer animé ──
+function ConfirmButton({ loading, disabled, onClick, label, labelLoading }) {
+  const [ripple, setRipple] = useState(false)
+  function handleClick(e) {
+    if (disabled || loading) return
+    setRipple(true); setTimeout(() => setRipple(false), 600)
+    onClick(e)
+  }
+  return (
+    <button onClick={handleClick} disabled={disabled || loading} style={{
+      width: '100%', padding: '14px',
+      background: disabled ? '#1e1e1e' : 'linear-gradient(135deg,#C9A84C,#E9C46A)',
+      border: disabled ? '1px solid #2a2a2a' : 'none',
+      borderRadius: 12, color: disabled ? '#444' : '#000',
+      fontSize: 15, fontWeight: 900, cursor: disabled ? 'not-allowed' : 'pointer',
+      marginBottom: 10, position: 'relative', overflow: 'hidden',
+      transition: 'all .3s',
+    }}>
+      {!disabled && !loading && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,.25) 50%,transparent 100%)',
+          animation: 'shimmer 2.5s infinite', backgroundSize: '200% 100%',
+        }} />
+      )}
+      {ripple && <div style={{
+        position: 'absolute', inset: 0,
+        background: 'rgba(255,255,255,.3)',
+        animation: 'ripple .6s ease-out',
+        borderRadius: 12,
+      }} />}
+      <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {loading && <div style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,.3)', borderTopColor: '#000', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />}
+        {loading ? labelLoading : label}
+      </span>
+      <style>{`
+        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+        @keyframes ripple { from{opacity:1;transform:scale(0)} to{opacity:0;transform:scale(1)} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+      `}</style>
+    </button>
+  )
+}
 
 export default function OrderModal({ items, onClose, onSubmit }) {
   const [lang, setLang] = useState('fr')
-  // ── Lock body scroll quand modal ouvert ──
+
   useEffect(() => {
     const scrollY = window.scrollY
     document.body.style.overflow = 'hidden'
@@ -236,8 +274,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
     }
   }, [])
 
-
-  const [modeLiv, setModeLiv] = useState('domicile') // 'domicile' | 'bureau'
+  const [modeLiv, setModeLiv] = useState('domicile')
   const [form, setForm] = useState({ nom: '', tel: '', wilaya: '', commune: '', adresse: '', note: '' })
   const [loading, setLoading] = useState(false)
 
@@ -245,8 +282,6 @@ export default function OrderModal({ items, onClose, onSubmit }) {
   const rtl = lang === 'ar'
 
   const totalProduits = items.reduce((s, i) => s + Number(i.prix) * i.qty, 0)
-
-  // Wilaya sélectionnée (nom pur sans code)
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
   const prixLiv = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][modeLiv] : null
   const fraisLiv = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
@@ -318,7 +353,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
         direction: rtl ? 'rtl' : 'ltr',
       }}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div style={{
           background: '#1a1a1a', borderBottom: '1px solid #2a2a2a',
           padding: '14px 16px', flexShrink: 0,
@@ -343,7 +378,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
           </div>
         </div>
 
-        {/* ── Corps ── */}
+        {/* Corps */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
 
           {/* Récap articles */}
@@ -362,7 +397,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             ))}
           </div>
 
-          {/* ── Mode livraison ── */}
+          {/* Mode livraison */}
           <div style={{ marginBottom: 16 }}>
             <div style={labelStyle}>{t.livraison}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -387,7 +422,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             </div>
           </div>
 
-          {/* ── Wilaya + Commune ── */}
+          {/* Wilaya + Commune */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div>
               <label style={labelStyle}>{t.wilaya} <span style={{ color: '#C9A84C' }}>*</span></label>
@@ -403,7 +438,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
               <label style={labelStyle}>
                 {t.commune} <span style={{ color: '#C9A84C' }}>*</span>
                 {communes.length > 0 && (
-                  <span style={{ color: '#C9A84C', fontWeight: 400, marginRight: rtl ? 0 : 0, marginLeft: rtl ? 0 : 4 }}>
+                  <span style={{ color: '#C9A84C', fontWeight: 400, marginLeft: rtl ? 0 : 4 }}>
                     ({communes.length})
                   </span>
                 )}
@@ -419,7 +454,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             </div>
           </div>
 
-          {/* ── Prix livraison affiché ── */}
+          {/* Prix livraison */}
           {form.wilaya && (
             <div style={{
               background: 'rgba(201,168,76,.07)',
@@ -436,84 +471,50 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             </div>
           )}
 
-          {/* ── Nom + Tel ── */}
+          {/* Nom + Tel */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div>
               <label style={labelStyle}>{t.nom} <span style={{ color: '#C9A84C' }}>*</span></label>
-              <input
-                placeholder={t.nomPh}
-                value={form.nom}
-                onChange={e => set('nom', e.target.value)}
-                style={inputStyle}
-              />
+              <input placeholder={t.nomPh} value={form.nom} onChange={e => set('nom', e.target.value)} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>{t.tel} <span style={{ color: '#C9A84C' }}>*</span></label>
-              <input
-                placeholder={t.telPh}
-                value={form.tel}
-                onChange={e => set('tel', e.target.value)}
-                style={inputStyle}
-                type="tel"
-              />
+              <input placeholder={t.telPh} value={form.tel} onChange={e => set('tel', e.target.value)} style={inputStyle} type="tel" />
             </div>
           </div>
 
-          {/* ── Adresse (domicile uniquement) ── */}
+          {/* Adresse */}
           {modeLiv === 'domicile' && (
             <div style={{ marginBottom: 10 }}>
               <label style={labelStyle}>{t.adresse}</label>
-              <input
-                placeholder={t.adressePh}
-                value={form.adresse}
-                onChange={e => set('adresse', e.target.value)}
-                style={inputStyle}
-              />
+              <input placeholder={t.adressePh} value={form.adresse} onChange={e => set('adresse', e.target.value)} style={inputStyle} />
             </div>
           )}
 
           <div style={{ marginBottom: 4 }}>
             <label style={labelStyle}>{t.note}</label>
-            <textarea
-              placeholder={t.notePh}
-              rows={2}
-              value={form.note}
-              onChange={e => set('note', e.target.value)}
-              style={{ ...inputStyle, resize: 'vertical', minHeight: 56 }}
-            />
+            <textarea placeholder={t.notePh} rows={2} value={form.note} onChange={e => set('note', e.target.value)} style={{ ...inputStyle, resize: 'vertical', minHeight: 56 }} />
           </div>
         </div>
 
-        {/* ── Footer total + boutons ── */}
-        <div style={{
-          background: '#1a1a1a', borderTop: '1px solid #2a2a2a',
-          padding: '12px 16px', flexShrink: 0,
-        }}>
-          {/* Récap prix */}
-          <div style={{
-            display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12,
-          }}>
+        {/* Footer */}
+        <div style={{ background: '#1a1a1a', borderTop: '1px solid #2a2a2a', padding: '12px 16px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#666' }}>
-              <span>{t.totalCmd}</span>
-              <span>{fmt(totalProduits)}</span>
+              <span>{t.totalCmd}</span><span>{fmt(totalProduits)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#666' }}>
               <span>{t.fraisLiv}</span>
               <span style={{ color: fraisLiv === 0 ? '#4CAF50' : '#aaa' }}>
-                {fraisLiv === null ? '—' : fraisLiv === 0 ? (rtl ? 'مجاناً' : 'Gratuit') : fmt(fraisLiv)}
+                {fraisLiv === null ? '—' : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
               </span>
             </div>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              paddingTop: 6, borderTop: '1px solid #2a2a2a',
-              fontSize: 17, fontWeight: 900, color: 'white',
-            }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #2a2a2a', fontSize: 17, fontWeight: 900, color: 'white' }}>
               <span>{t.totalPayer}</span>
               <span style={{ color: '#C9A84C' }}>{fmt(totalFinal)}</span>
             </div>
           </div>
 
-          {/* ✅ Bouton confirmer — version premium animée */}
           <ConfirmButton
             loading={loading}
             disabled={!form.nom || !form.tel || !form.wilaya || !form.commune}
@@ -522,7 +523,6 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             labelLoading={t.envoi}
           />
 
-          {/* Bouton WhatsApp */}
           <button onClick={waOrder} style={{
             width: '100%', padding: '12px',
             background: '#25D366', border: 'none', borderRadius: 12,
@@ -538,10 +538,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
       </div>
 
       <style>{`
-        @keyframes omSlide {
-          from { transform: translateY(50px); opacity: 0; }
-          to   { transform: translateY(0);    opacity: 1; }
-        }
+        @keyframes omSlide { from{transform:translateY(50px);opacity:0} to{transform:translateY(0);opacity:1} }
         input:focus, textarea:focus { border-color: #C9A84C !important; }
         input::placeholder, textarea::placeholder { color: #444; }
       `}</style>
