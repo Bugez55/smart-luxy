@@ -4,6 +4,110 @@ import CountdownTimer from './CountdownTimer'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
+// ── Lightbox plein écran avec swipe natif ──
+function LightBox({ imgs, curImg, imgIdx, setImgIdx, onClose }) {
+  const ref = useRef()
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let tx = 0
+    function onTS(e) { tx = e.touches[0].clientX }
+    function onTM(e) {
+      if (Math.abs(e.touches[0].clientX - tx) > 10) e.preventDefault()
+    }
+    function onTE(e) {
+      const dx = e.changedTouches[0].clientX - tx
+      if (Math.abs(dx) > 40) {
+        if (dx < 0) setImgIdx(i => (i + 1) % imgs.length)
+        else        setImgIdx(i => (i - 1 + imgs.length) % imgs.length)
+      } else {
+        onClose()
+      }
+    }
+    el.addEventListener('touchstart', onTS, { passive: true })
+    el.addEventListener('touchmove',  onTM, { passive: false })
+    el.addEventListener('touchend',   onTE, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTS)
+      el.removeEventListener('touchmove',  onTM)
+      el.removeEventListener('touchend',   onTE)
+    }
+  }, [imgs.length, onClose, setImgIdx])
+
+  const src = imgs.length > 0 ? imgs[imgIdx]?.url : curImg
+
+  return (
+    <div ref={ref} style={{
+      position:'fixed', inset:0, zIndex:9999,
+      background:'rgba(0,0,0,.97)',
+      display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center',
+    }}>
+      {/* Fermer */}
+      <button onClick={onClose} style={{
+        position:'absolute', top:16, right:16,
+        background:'rgba(255,255,255,.12)', border:'none', borderRadius:'50%',
+        width:44, height:44, color:'white', fontSize:20, cursor:'pointer', zIndex:2,
+        display:'flex', alignItems:'center', justifyContent:'center',
+      }}>✕</button>
+
+      {/* Compteur */}
+      {imgs.length > 1 && (
+        <div style={{
+          position:'absolute', top:20, left:'50%', transform:'translateX(-50%)',
+          background:'rgba(0,0,0,.5)', borderRadius:20, padding:'4px 14px',
+          fontSize:12, color:'rgba(255,255,255,.6)', fontWeight:700,
+        }}>{imgIdx + 1} / {imgs.length}</div>
+      )}
+
+      {/* Image */}
+      <img key={`lb${imgIdx}`} src={src} alt="" style={{
+        maxWidth:'100%', maxHeight:'80vh', objectFit:'contain',
+        animation:'lbIn .2s ease', borderRadius:4,
+      }} />
+
+      {/* Flèches */}
+      {imgs.length > 1 && <>
+        <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
+          style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)',
+            background:'rgba(255,255,255,.1)', border:'none', borderRadius:'50%',
+            width:48, height:48, color:'white', fontSize:26, cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center' }}>‹</button>
+        <button onClick={() => setImgIdx(i => (i + 1) % imgs.length)}
+          style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)',
+            background:'rgba(255,255,255,.1)', border:'none', borderRadius:'50%',
+            width:48, height:48, color:'white', fontSize:26, cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center' }}>›</button>
+      </>}
+
+      {/* Miniatures */}
+      {imgs.length > 1 && (
+        <div style={{ position:'absolute', bottom:20,
+          display:'flex', gap:8, padding:'0 16px',
+          overflowX:'auto', maxWidth:'100%', scrollbarWidth:'none' }}>
+          {imgs.map((img, i) => (
+            <div key={i} onClick={() => setImgIdx(i)} style={{
+              width:46, height:46, borderRadius:8, overflow:'hidden', flexShrink:0,
+              border:`2px solid ${i === imgIdx ? '#C9A84C' : 'rgba(255,255,255,.2)'}`,
+              cursor:'pointer', opacity: i === imgIdx ? 1 : .5, transition:'all .2s',
+            }}>
+              <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ position:'absolute', bottom: imgs.length > 1 ? 78 : 20,
+        fontSize:11, color:'rgba(255,255,255,.2)', textAlign:'center' }}>
+        {imgs.length > 1 ? 'Glisser · Tap pour fermer' : 'Tap pour fermer'}
+      </div>
+
+      <style>{`@keyframes lbIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}`}</style>
+    </div>
+  )
+}
+
 export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow }) {
   const [qty, setQty] = useState(1)
   const [tab, setTab] = useState('desc')
@@ -11,6 +115,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [lb, setLb] = useState(false)
   const [stickyVisible, setStickyVisible] = useState(false)
   const buyBarRef = useRef()
+  const imgRef = useRef()
 
   const imgs = (() => { try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []) } catch { return [] } })()
   const specs = (() => { try { return typeof p.specs === 'string' ? JSON.parse(p.specs) : (p.specs || []) } catch { return [] } })()
@@ -61,9 +166,45 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     )
     if (buyBarRef.current) obs.observe(buyBarRef.current)
 
+    // ── Swipe natif sur l'image (passive:false pour bloquer scroll) ──
+    let tx = 0, ty = 0
+    const el = imgRef.current
+    function onTS(e) {
+      tx = e.touches[0].clientX
+      ty = e.touches[0].clientY
+    }
+    function onTM(e) {
+      const dx = Math.abs(e.touches[0].clientX - tx)
+      const dy = Math.abs(e.touches[0].clientY - ty)
+      // Bloquer le scroll vertical si swipe horizontal
+      if (dx > dy && dx > 8) e.preventDefault()
+    }
+    function onTE(e) {
+      const dx = e.changedTouches[0].clientX - tx
+      const dy = Math.abs(e.changedTouches[0].clientY - ty)
+      if (Math.abs(dx) > 40 && Math.abs(dx) > dy) {
+        if (imgs.length > 1) {
+          if (dx < 0) setImgIdx(i => (i + 1) % imgs.length)
+          else        setImgIdx(i => (i - 1 + imgs.length) % imgs.length)
+        }
+      } else if (Math.abs(dx) < 10 && dy < 10) {
+        setLb(true)
+      }
+    }
+    if (el) {
+      el.addEventListener('touchstart', onTS, { passive: true })
+      el.addEventListener('touchmove',  onTM, { passive: false })
+      el.addEventListener('touchend',   onTE, { passive: true })
+    }
+
     return () => {
       window.removeEventListener('keydown', onKey)
       obs.disconnect()
+      if (el) {
+        el.removeEventListener('touchstart', onTS)
+        el.removeEventListener('touchmove',  onTM)
+        el.removeEventListener('touchend',   onTE)
+      }
     }
   }, [p.id, imgs.length, lb])
 
@@ -102,45 +243,85 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         )}
       </div>
 
-      {/* ── Image principale ── */}
-      <div style={{
-        background: '#111', position: 'relative',
-        height: hasImgs || p.img ? 300 : 200,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: hasImgs ? 'zoom-in' : 'default',
-        overflow: 'hidden', flexShrink: 0,
-      }} onClick={() => hasImgs && setLb(true)}>
+      {/* ── Image principale — Swipe + Plein écran ── */}
+      <div
+        ref={imgRef}
+        style={{
+          background: '#111', position: 'relative',
+          height: hasImgs || p.img ? 310 : 200,
+          overflow: 'hidden', flexShrink: 0,
+          cursor: 'zoom-in', userSelect: 'none',
+        }}
+      >
         {curImg
-          ? <img src={curImg} alt={p.nom} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontSize: 80 }}>{p.emoji || '📦'}</span>
+          ? <img key={imgIdx} src={curImg} alt={p.nom}
+              style={{ width: '100%', height: '100%', objectFit: 'cover',
+                animation: 'imgIn .22s ease' }} />
+          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ fontSize: 80 }}>{p.emoji || '📦'}</span>
+            </div>
         }
-        {hasImgs && (
-          <div style={{
-            position: 'absolute', bottom: 10, right: 10,
-            background: 'rgba(0,0,0,.6)', borderRadius: 8, padding: '4px 10px',
-            fontSize: 11, color: 'white', fontWeight: 700,
-          }}>🔍 Voir photos</div>
+
+        {/* Flèches gauche/droite */}
+        {imgs.length > 1 && <>
+          <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i - 1 + imgs.length) % imgs.length) }}
+            style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)',
+              background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%',
+              width:38, height:38, color:'white', fontSize:20, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              backdropFilter:'blur(4px)', zIndex:3 }}>‹</button>
+          <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i + 1) % imgs.length) }}
+            style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)',
+              background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%',
+              width:38, height:38, color:'white', fontSize:20, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              backdropFilter:'blur(4px)', zIndex:3 }}>›</button>
+        </>}
+
+        {/* Points indicateurs */}
+        {imgs.length > 1 && (
+          <div style={{ position:'absolute', bottom:10, left:'50%', transform:'translateX(-50%)',
+            display:'flex', gap:5, zIndex:3 }}>
+            {imgs.map((_, i) => (
+              <div key={i} onClick={e => { e.stopPropagation(); setImgIdx(i) }} style={{
+                width: i === imgIdx ? 18 : 6, height: 6, borderRadius: 3,
+                background: i === imgIdx ? '#C9A84C' : 'rgba(255,255,255,.35)',
+                transition: 'all .25s', cursor: 'pointer',
+              }} />
+            ))}
+          </div>
+        )}
+
+        {/* Hint plein écran */}
+        <div style={{ position:'absolute', top:10, right:10,
+          background:'rgba(0,0,0,.5)', borderRadius:8, padding:'4px 10px',
+          fontSize:11, color:'rgba(255,255,255,.7)', fontWeight:600,
+          backdropFilter:'blur(4px)', zIndex:3 }}>🔍 Plein écran</div>
+
+        {imgs.length > 1 && (
+          <div style={{ position:'absolute', bottom:24, right:12,
+            fontSize:10, color:'rgba(255,255,255,.3)', zIndex:3 }}>← glisser →</div>
         )}
       </div>
 
-      {/* ── Miniatures ── */}
+      {/* ── Miniatures scrollables ── */}
       {imgs.length > 1 && (
-        <div style={{
-          display: 'flex', gap: 8, padding: '12px 16px',
-          overflowX: 'auto', flexShrink: 0,
-        }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 16px',
+          overflowX:'auto', flexShrink:0, scrollbarWidth:'none' }}>
           {imgs.map((img, i) => (
             <div key={i} onClick={() => setImgIdx(i)} style={{
-              width: 60, height: 60, borderRadius: 10, overflow: 'hidden',
-              border: `2px solid ${imgIdx === i ? '#C9A84C' : 'transparent'}`,
-              cursor: 'pointer', flexShrink: 0,
-              background: '#1a1a1a',
+              width:58, height:58, borderRadius:10, overflow:'hidden',
+              border:`2px solid ${imgIdx === i ? '#C9A84C' : 'rgba(255,255,255,.1)'}`,
+              cursor:'pointer', flexShrink:0, background:'#1a1a1a',
+              transform: imgIdx === i ? 'scale(1.06)' : 'scale(1)',
+              transition:'all .2s',
             }}>
-              <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
             </div>
           ))}
         </div>
       )}
+      <style>{`@keyframes imgIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}`}</style>
 
       {/* ── Infos produit ── */}
       <div style={{ padding: '16px 16px 0', flexShrink: 0 }}>
@@ -340,23 +521,15 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       </div>
 
       {/* ── Lightbox photos ── */}
+      {/* ── Lightbox plein écran ── */}
       {lb && (
-        <div onClick={() => setLb(false)} style={{
-          position: 'fixed', inset: 0, zIndex: 500,
-          background: 'rgba(0,0,0,.95)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <img src={imgs[imgIdx]?.url} alt="" style={{ maxWidth: '95%', maxHeight: '90vh', objectFit: 'contain', borderRadius: 12 }} />
-          {imgs.length > 1 && (
-            <>
-              <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i - 1 + imgs.length) % imgs.length) }}
-                style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: '50%', width: 44, height: 44, color: 'white', fontSize: 20, cursor: 'pointer' }}>‹</button>
-              <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i + 1) % imgs.length) }}
-                style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: '50%', width: 44, height: 44, color: 'white', fontSize: 20, cursor: 'pointer' }}>›</button>
-            </>
-          )}
-          <button onClick={() => setLb(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: '50%', width: 40, height: 40, color: 'white', fontSize: 18, cursor: 'pointer' }}>✕</button>
-        </div>
+        <LightBox
+          imgs={imgs}
+          curImg={curImg}
+          imgIdx={imgIdx}
+          setImgIdx={setImgIdx}
+          onClose={() => setLb(false)}
+        />
       )}
     </div>
   )
