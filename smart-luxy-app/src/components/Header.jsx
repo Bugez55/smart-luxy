@@ -188,7 +188,7 @@ function LogoCercle() {
 //  HEADER PRINCIPAL
 //  Change LOGO_CHOICE entre 1 et 2
 // ══════════════════════════════════════════════
-const LOGO_CHOICE = 2  // ← 1 = Couronne  |  2 = Cercle
+const LOGO_CHOICE = 1  // ← 1 = Couronne  |  2 = Cercle
 
 export default function Header({ cartCount, onCartOpen, search, onSearch }) {
   return (
