@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import DOMPurify from 'dompurify'
 import ReviewSection from './ReviewSection'
 import CountdownTimer from './CountdownTimer'
 
@@ -390,7 +391,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         <div style={{ padding: '14px 16px' }}>
           {tab === 'desc' ? (
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,.65)', lineHeight: 1.7 }}
-              dangerouslySetInnerHTML={{ __html: p.description || 'Aucune description.' }} />
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description || 'Aucune description.') }} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {specs.length === 0
