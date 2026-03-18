@@ -195,6 +195,188 @@ function printInvoice(order) {
 }
 
 // ── AdminPanel ────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════
+//  OUTIL COMPRESSION IMAGES EXISTANTES
+// ═══════════════════════════════════════════════════
+function ImageOptimizer({ products, supabase }) {
+  const [results, setResults] = useState([])
+  const [running, setRunning] = useState(false)
+  const [done, setDone] = useState(false)
+  const [current, setCurrent] = useState('')
+  const [savings, setSavings] = useState(0)
+
+  async function compressImg(url) {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const MAX = 1200
+        let { width, height } = img
+        if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.82)
+      }
+      img.onerror = () => resolve(null)
+      img.src = url
+    })
+  }
+
+  async function reupload(blob, originalPath) {
+    const path = `products/opt-${Date.now()}.jpg`
+    const { error } = await supabase.storage.from('product-images').upload(path, blob, { contentType: 'image/jpeg', upsert: false })
+    if (error) return null
+    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
+    return publicUrl
+  }
+
+  async function run() {
+    setRunning(true); setDone(false); setResults([]); setSavings(0)
+    let totalSaved = 0
+    const res = []
+
+    for (const prod of products) {
+      if (!prod.img) continue
+      setCurrent(prod.nom)
+
+      // Vérifier taille via fetch HEAD
+      try {
+        const r = await fetch(prod.img, { method: 'HEAD' })
+        const size = parseInt(r.headers.get('content-length') || '0')
+
+        if (size > 300 * 1024) { // > 300KB → compresser
+          const blob = await compressImg(prod.img)
+          if (blob && blob.size < size) {
+            const saved = size - blob.size
+            totalSaved += saved
+            const newUrl = await reupload(blob)
+            if (newUrl) {
+              await supabase.from('products').update({ img: newUrl }).eq('id', prod.id)
+              res.push({ nom: prod.nom, avant: size, apres: blob.size, url: newUrl, ok: true })
+            } else {
+              res.push({ nom: prod.nom, avant: size, apres: blob?.size, ok: false, err: 'Upload échoué' })
+            }
+          } else {
+            res.push({ nom: prod.nom, avant: size, apres: size, skipped: true })
+          }
+        } else {
+          res.push({ nom: prod.nom, avant: size, skipped: true, reason: 'Déjà optimisée' })
+        }
+      } catch(e) {
+        res.push({ nom: prod.nom, skipped: true, reason: 'Inaccessible' })
+      }
+
+      setResults([...res])
+      setSavings(totalSaved)
+    }
+
+    setCurrent('')
+    setRunning(false)
+    setDone(true)
+  }
+
+  function fmtSize(b) {
+    if (!b) return '?'
+    if (b > 1024*1024) return (b/1024/1024).toFixed(1) + ' MB'
+    return Math.round(b/1024) + ' KB'
+  }
+
+  const toOptimize = products.filter(p => p.img).length
+
+  return (
+    <div>
+      <h3 style={{ color:'white', fontSize:15, fontWeight:800, marginBottom:8 }}>
+        🗜️ Optimisation des images existantes
+      </h3>
+      <p style={{ color:'rgba(255,255,255,.4)', fontSize:12, marginBottom:20, lineHeight:1.6 }}>
+        Compresse automatiquement toutes les images de tes produits déjà en ligne.
+        Les images &gt; 300KB seront réduites à max 1200px et 82% de qualité — invisible à l'œil mais 3-5x plus léger.
+      </p>
+
+      {/* Stats */}
+      <div style={{ display:'flex', gap:10, marginBottom:20 }}>
+        <div style={{ flex:1, background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:10, padding:'12px', textAlign:'center' }}>
+          <div style={{ fontSize:22, fontWeight:900, color:'#C9A84C' }}>{toOptimize}</div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>Produits avec images</div>
+        </div>
+        <div style={{ flex:1, background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:10, padding:'12px', textAlign:'center' }}>
+          <div style={{ fontSize:22, fontWeight:900, color:'#22c55e' }}>
+            {savings > 0 ? fmtSize(savings) : '—'}
+          </div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>Économisé</div>
+        </div>
+      </div>
+
+      {/* Bouton lancer */}
+      {!running && !done && (
+        <button
+          onClick={run}
+          disabled={toOptimize === 0}
+          style={{
+            width:'100%', padding:'13px',
+            background: toOptimize > 0 ? 'linear-gradient(135deg,#C9A84C,#E9C46A)' : '#1a1a1a',
+            border:'none', borderRadius:12,
+            color: toOptimize > 0 ? '#000' : '#333',
+            fontSize:14, fontWeight:800, cursor: toOptimize > 0 ? 'pointer' : 'default',
+            marginBottom:16,
+          }}
+        >
+          🗜️ Lancer la compression ({toOptimize} images)
+        </button>
+      )}
+
+      {/* En cours */}
+      {running && (
+        <div style={{ background:'rgba(201,168,76,.07)', border:'1px solid rgba(201,168,76,.2)', borderRadius:10, padding:'14px', marginBottom:16, textAlign:'center' }}>
+          <div style={{ fontSize:14, fontWeight:700, color:'#C9A84C', marginBottom:4 }}>
+            ⏳ Compression en cours…
+          </div>
+          <div style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>{current}</div>
+          <div style={{ marginTop:10, height:4, background:'rgba(255,255,255,.08)', borderRadius:2, overflow:'hidden' }}>
+            <div style={{
+              height:'100%', background:'#C9A84C', borderRadius:2,
+              width: `${results.length / Math.max(toOptimize,1) * 100}%`,
+              transition:'width .3s',
+            }} />
+          </div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:6 }}>
+            {results.length} / {toOptimize} traités
+          </div>
+        </div>
+      )}
+
+      {/* Résultats */}
+      {results.length > 0 && (
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          {done && (
+            <div style={{ background:'rgba(34,197,94,.08)', border:'1px solid rgba(34,197,94,.2)', borderRadius:10, padding:'12px 14px', marginBottom:8, textAlign:'center' }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'#86efac' }}>
+                ✅ Terminé — {fmtSize(savings)} économisés
+              </div>
+            </div>
+          )}
+          {results.map((r, i) => (
+            <div key={i} style={{
+              display:'flex', justifyContent:'space-between', alignItems:'center',
+              background:'#1a1a1a', borderRadius:8, padding:'8px 12px',
+              border:`1px solid ${r.ok ? 'rgba(34,197,94,.15)' : 'rgba(255,255,255,.05)'}`,
+            }}>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,.7)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {r.nom}
+              </span>
+              <span style={{ fontSize:11, color: r.ok ? '#86efac' : 'rgba(255,255,255,.3)', marginLeft:8, flexShrink:0 }}>
+                {r.ok ? `${fmtSize(r.avant)} → ${fmtSize(r.apres)}` : r.reason || r.err || 'Ignorée'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminPanel({ onLogout, onToast }) {
   const [tab, setTab] = useState('orders')
   const [promos, setPromos] = useState([])
@@ -374,7 +556,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Smart <em>Luxy</em> — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -650,6 +832,12 @@ export default function AdminPanel({ onLogout, onToast }) {
               </div>
             )}
           </div>
+        )}
+
+
+        {/* ── IMAGES TAB ── */}
+        {tab === 'images' && (
+          <ImageOptimizer products={products} supabase={supabase} />
         )}
 
       {editProd !== null && (
