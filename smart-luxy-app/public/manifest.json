@@ -1,0 +1,20 @@
+{
+  "name": "Smart Luxy — Boutique Algérie",
+  "short_name": "Smart Luxy",
+  "description": "Boutique en ligne premium — livraison partout en Algérie",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#C9A84C",
+  "orientation": "portrait",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/og-image.jpg", "sizes": "1200x630", "type": "image/jpeg" }
+  ],
+  "categories": ["shopping", "lifestyle"],
+  "related_applications": []
+}
