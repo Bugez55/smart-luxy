@@ -12,6 +12,8 @@ import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
 import { notifyTelegram, genId } from './utils/notify'
+import NotFound from './components/NotFound'
+import WAButton from './components/WAButton'
 
 // ✅ Nouveau mot de passe admin
 
@@ -23,6 +25,11 @@ function fbq(...args) {
 const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
 
 export default function App() {
+  const [isNotFound] = useState(() => {
+    const path = window.location.pathname
+    return path !== '/' && path !== '' && !path.startsWith('/#')
+  })
+
   const [isAdmin] = useState(() =>
     window.location.search.includes('admin') || localStorage.getItem('sl_admin') === '1'
   )
@@ -360,6 +367,7 @@ export default function App() {
 
       {/* Tracking */}
       {trackingOpen && <TrackingPage onClose={() => setTrackingOpen(false)} />}
+      <WAButton />
 
       {/* Toasts */}
       <div className="toasts">
