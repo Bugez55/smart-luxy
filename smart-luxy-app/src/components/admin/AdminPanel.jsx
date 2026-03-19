@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
+import { saveSettings, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
 
@@ -211,11 +212,25 @@ function AdminSettings({ onLogout, onToast }) {
 
   // ── Infos boutique ──
   const [shop, setShop] = useState({
-    name:    localStorage.getItem('sl_shop_name')    || 'Smart Luxy',
-    phone:   localStorage.getItem('sl_shop_phone')   || '213556688810',
-    address: localStorage.getItem('sl_shop_address') || 'Tizi Ouzou, Algérie',
-    email:   localStorage.getItem('sl_shop_email')   || '',
+    name:    'Smart Luxy',
+    phone:   '213556688810',
+    address: 'Tizi Ouzou, Algérie',
+    email:   '',
   })
+
+  // Charger depuis Supabase au montage
+  useEffect(() => {
+    getSettings().then(s => {
+      setShop({
+        name:    s.shop_name    || 'Smart Luxy',
+        phone:   s.shop_phone   || '213556688810',
+        address: s.shop_address || 'Tizi Ouzou, Algérie',
+        email:   s.shop_email   || '',
+      })
+      setFreeShip(s.free_ship || '')
+      setMaintenance(s.maintenance === 'true')
+    })
+  }, [])
   const [shopSaving, setShopSaving] = useState(false)
 
   // ── Mode maintenance ──
@@ -251,24 +266,27 @@ function AdminSettings({ onLogout, onToast }) {
   }
 
   // ── Sauvegarder infos boutique ──
-  function saveShop() {
+  async function saveShop() {
     setShopSaving(true)
-    Object.entries(shop).forEach(([k, v]) => localStorage.setItem(`sl_shop_${k}`, v))
-    setTimeout(() => {
-      setShopSaving(false)
-      onToast && onToast('✅ Informations boutique sauvegardées', 'default')
-    }, 600)
+    await saveSettings({
+      shop_name:    shop.name,
+      shop_phone:   shop.phone,
+      shop_email:   shop.email,
+      shop_address: shop.address,
+    })
+    setShopSaving(false)
+    onToast && onToast('✅ Informations boutique sauvegardées ! Le numéro WA est mis à jour.', 'default')
   }
 
-  function toggleMaintenance() {
+  async function toggleMaintenance() {
     const val = !maintenance
     setMaintenance(val)
-    localStorage.setItem('sl_maintenance', val ? '1' : '0')
+    await saveSettings({ maintenance: String(val) })
     onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
   }
 
-  function saveFreeShip() {
-    localStorage.setItem('sl_free_ship', freeShip)
+  async function saveFreeShip() {
+    await saveSettings({ free_ship: freeShip })
     onToast && onToast('✅ Seuil livraison gratuite sauvegardé', 'default')
   }
 
