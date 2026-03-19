@@ -246,23 +246,37 @@ function AdminSettings({ onLogout, onToast }) {
 
   // ── Changer mot de passe ──
   async function changePw() {
-    const current = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
-    if (pwForm.current !== current) {
-      onToast && onToast('❌ Mot de passe actuel incorrect', 'error'); return
-    }
     if (pwForm.new1.length < 8) {
       onToast && onToast('❌ Nouveau mot de passe trop court (min 8 caractères)', 'error'); return
     }
     if (pwForm.new1 !== pwForm.new2) {
       onToast && onToast('❌ Les deux mots de passe ne correspondent pas', 'error'); return
     }
+
     setPwSaving(true)
     try {
+      // Récupérer le mot de passe actuel depuis Supabase
+      const settings = await getSettings()
+      const pwEnVercel   = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
+      const pwEnSupabase = settings.admin_password || ''
+
+      // Accepter si correspond à l'un ou l'autre
+      const pwOk = pwForm.current === pwEnVercel ||
+                   (pwEnSupabase && pwForm.current === pwEnSupabase)
+
+      if (!pwOk) {
+        onToast && onToast('❌ Mot de passe actuel incorrect', 'error')
+        setPwSaving(false)
+        return
+      }
+
+      // Sauvegarder le nouveau mot de passe dans Supabase
       await saveSettings({ admin_password: pwForm.new1 })
       localStorage.setItem('sl_admin_pw_override', pwForm.new1)
       setPwForm({ current: '', new1: '', new2: '' })
-      onToast && onToast('✅ Mot de passe changé avec succès !', 'default')
+      onToast && onToast('✅ Mot de passe changé ! Reconnecte-toi avec le nouveau.', 'default')
     } catch(e) {
+      console.error('changePw:', e)
       onToast && onToast('❌ Erreur : ' + (e?.message || 'vérifier Supabase'), 'error')
     }
     setPwSaving(false)
