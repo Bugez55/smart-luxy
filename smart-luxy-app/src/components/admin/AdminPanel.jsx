@@ -707,6 +707,8 @@ export default function AdminPanel({ onLogout, onToast }) {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState(null)
+  const [selectedOrders, setSelectedOrders] = useState(new Set())
+  const [bulkLoading, setBulkLoading] = useState(false)
   const [editProd, setEditProd] = useState(null)
 
   const loadOrders = useCallback(async () => {
@@ -733,6 +735,118 @@ export default function AdminPanel({ onLogout, onToast }) {
     }
     return true
   })
+
+  // ── Actions groupées ──
+  function toggleSelect(id) {
+    setSelectedOrders(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function selectAll() {
+    if (selectedOrders.size === filteredOrders.length) {
+      setSelectedOrders(new Set())
+    } else {
+      setSelectedOrders(new Set(filteredOrders.map(o => o.id)))
+    }
+  }
+
+  async function bulkSetStatus(statut) {
+    if (selectedOrders.size === 0) return
+    if (!window.confirm(`Confirmer ${selectedOrders.size} commandes ?`)) return
+    setBulkLoading(true)
+    await supabase.from('orders')
+      .update({ statut })
+      .in('id', Array.from(selectedOrders))
+    setOrders(prev => prev.map(o =>
+      selectedOrders.has(o.id) ? { ...o, statut } : o
+    ))
+    onToast && onToast(`✅ ${selectedOrders.size} commandes ${statut === 'confirmed' ? 'confirmées' : statut === 'delivered' ? 'livrées' : 'mises à jour'}`, 'default')
+    setSelectedOrders(new Set())
+    setBulkLoading(false)
+  }
+
+  async function bulkDelete() {
+    if (selectedOrders.size === 0) return
+    if (!window.confirm(`Supprimer ${selectedOrders.size} commandes définitivement ?`)) return
+    setBulkLoading(true)
+    await supabase.from('orders').delete().in('id', Array.from(selectedOrders))
+    setOrders(prev => prev.filter(o => !selectedOrders.has(o.id)))
+    onToast && onToast(`🗑️ ${selectedOrders.size} commandes supprimées`, 'default')
+    setSelectedOrders(new Set())
+    setBulkLoading(false)
+  }
+
+  function printSelected() {
+    const toPrint = orders.filter(o => selectedOrders.has(o.id))
+    if (toPrint.length === 0) { onToast && onToast('Sélectionne des commandes d'abord', 'error'); return }
+    const html = toPrint.map(order => {
+      const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
+      return `
+        <div style="border:2px solid #333; border-radius:10px; padding:20px; margin-bottom:20px; page-break-inside:avoid;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+            <div>
+              <div style="font-size:18px; font-weight:900;">Smart Luxy</div>
+              <div style="font-size:11px; color:#666;">Boutique en ligne · Algérie</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px; font-weight:700;">N° ${order.id}</div>
+              <div style="font-size:11px; color:#666;">${new Date(order.created_at).toLocaleDateString('fr-DZ')}</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; background:#f9f9f9; padding:12px; border-radius:8px;">
+            <div><strong>Client :</strong> ${order.nom_client}</div>
+            <div><strong>Tél :</strong> ${order.telephone}</div>
+            <div><strong>Wilaya :</strong> ${order.wilaya}</div>
+            <div><strong>Commune :</strong> ${order.commune}</div>
+            <div><strong>Adresse :</strong> ${order.adresse || '—'}</div>
+            <div><strong>Livraison :</strong> ${order.mode_livraison === 'bureau' ? '📦 Bureau' : '🏠 Domicile'}</div>
+          </div>
+          <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+            <tr style="background:#333; color:white;">
+              <th style="padding:7px; text-align:left; border-radius:4px 0 0 4px;">Produit</th>
+              <th style="padding:7px; text-align:center;">Qté</th>
+              <th style="padding:7px; text-align:right; border-radius:0 4px 4px 0;">Prix</th>
+            </tr>
+            ${items.map((it, i) => `
+              <tr style="background:${i%2?'#f5f5f5':'white'}">
+                <td style="padding:7px; border-bottom:1px solid #eee;">${it.nom}</td>
+                <td style="padding:7px; text-align:center; border-bottom:1px solid #eee;">×${it.qty}</td>
+                <td style="padding:7px; text-align:right; border-bottom:1px solid #eee; font-weight:700;">${(it.prix * it.qty).toLocaleString()} DA</td>
+              </tr>
+            `).join('')}
+          </table>
+          <div style="text-align:right; padding:10px; background:#f0f0f0; border-radius:8px;">
+            <div style="font-size:12px; color:#666;">Frais livraison : ${(order.frais_livraison || 0).toLocaleString()} DA</div>
+            <div style="font-size:18px; font-weight:900; color:#000;">TOTAL : ${Number(order.total).toLocaleString()} DA</div>
+          </div>
+          ${order.note ? `<div style="margin-top:8px; font-size:12px; color:#666;">📝 Note : ${order.note}</div>` : ''}
+        </div>
+      `
+    }).join('')
+
+    const win = window.open('', '_blank')
+    win.document.write(`
+      <html><head><title>Factures Smart Luxy</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        @media print {
+          @page { margin: 15mm; }
+          .no-print { display: none; }
+        }
+      </style>
+      </head><body>
+      <div class="no-print" style="text-align:center; margin-bottom:20px;">
+        <button onclick="window.print()" style="background:#000; color:white; border:none; padding:12px 32px; border-radius:8px; font-size:15px; cursor:pointer; margin-right:10px;">🖨️ Imprimer tout (${toPrint.length} factures)</button>
+        <button onclick="window.close()" style="background:#eee; border:none; padding:12px 24px; border-radius:8px; cursor:pointer;">✕ Fermer</button>
+      </div>
+      ${html}
+      </body></html>
+    `)
+    win.document.close()
+  }
 
   async function setStatus(id, statut) {
     await supabase.from('orders').update({ statut }).eq('id', id)
@@ -993,11 +1107,63 @@ export default function AdminPanel({ onLogout, onToast }) {
                   color: '#86efac', fontSize: 12, fontWeight: 800,
                   cursor: orders.length > 0 ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', gap: 6,
-                  whiteSpace: 'nowrap', marginLeft: 'auto', flexShrink: 0,
+                  whiteSpace: 'nowrap', flexShrink: 0,
                 }}
-              >
-                📥 Exporter Excel ({orders.length})
+              >📥 Excel ({orders.length})</button>
+            </div>
+
+            {/* ── BARRE ACTIONS GROUPÉES ── */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 0', marginBottom: 8,
+              borderBottom: '1px solid rgba(255,255,255,.06)',
+              flexWrap: 'wrap',
+            }}>
+              {/* Tout sélectionner */}
+              <button onClick={selectAll} style={{
+                background: selectedOrders.size > 0 ? 'rgba(201,168,76,.15)' : 'rgba(255,255,255,.05)',
+                border: `1px solid ${selectedOrders.size > 0 ? 'rgba(201,168,76,.4)' : 'rgba(255,255,255,.1)'}`,
+                borderRadius: 8, padding: '5px 12px',
+                color: selectedOrders.size > 0 ? '#C9A84C' : 'rgba(255,255,255,.4)',
+                fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                {selectedOrders.size === filteredOrders.length && filteredOrders.length > 0
+                  ? '☑ Tout désélect.' : `☐ Tout sélect. (${filteredOrders.length})`}
               </button>
+
+              {/* Actions — visibles seulement si sélection */}
+              {selectedOrders.size > 0 && (
+                <>
+                  <div style={{ fontSize: 11, color: '#C9A84C', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                    {selectedOrders.size} sélectionnée{selectedOrders.size > 1 ? 's' : ''}
+                  </div>
+
+                  <button onClick={() => bulkSetStatus('confirmed')} disabled={bulkLoading} style={{
+                    background: 'rgba(34,197,94,.15)', border: '1px solid rgba(34,197,94,.3)',
+                    borderRadius: 8, padding: '5px 12px',
+                    color: '#86efac', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}>✅ Confirmer tout</button>
+
+                  <button onClick={() => bulkSetStatus('delivered')} disabled={bulkLoading} style={{
+                    background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.25)',
+                    borderRadius: 8, padding: '5px 12px',
+                    color: '#93c5fd', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}>📦 Marquer livrée</button>
+
+                  <button onClick={printSelected} style={{
+                    background: 'rgba(201,168,76,.12)', border: '1px solid rgba(201,168,76,.25)',
+                    borderRadius: 8, padding: '5px 12px',
+                    color: '#C9A84C', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}>🖨️ Imprimer ({selectedOrders.size})</button>
+
+                  <button onClick={bulkDelete} disabled={bulkLoading} style={{
+                    background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)',
+                    borderRadius: 8, padding: '5px 12px',
+                    color: '#fca5a5', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                    marginLeft: 'auto',
+                  }}>🗑️ Supprimer</button>
+                </>
+              )}
             </div>
 
             {filteredOrders.length === 0 ? (
@@ -1009,8 +1175,24 @@ export default function AdminPanel({ onLogout, onToast }) {
               const modeLiv = o.mode_livraison || 'domicile'
 
               return (
-                <div key={o.id} className="ocard">
-                  <div className="ocard-hdr" onClick={() => setExpanded(isOpen ? null : o.id)}>
+                <div key={o.id} className="ocard" style={{
+                  border: selectedOrders.has(o.id) ? '1px solid rgba(201,168,76,.5)' : undefined,
+                  background: selectedOrders.has(o.id) ? 'rgba(201,168,76,.04)' : undefined,
+                }}>
+                  <div className="ocard-hdr" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {/* Checkbox sélection */}
+                    <div
+                      onClick={e => { e.stopPropagation(); toggleSelect(o.id) }}
+                      style={{
+                        width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                        border: `2px solid ${selectedOrders.has(o.id) ? '#C9A84C' : 'rgba(255,255,255,.2)'}`,
+                        background: selectedOrders.has(o.id) ? '#C9A84C' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', fontSize: 12, color: '#000', fontWeight: 900,
+                        transition: 'all .15s',
+                      }}
+                    >{selectedOrders.has(o.id) ? '✓' : ''}</div>
+                  <div style={{ flex: 1 }} onClick={() => setExpanded(isOpen ? null : o.id)}>
                     <div style={{flex:1}}>
                       <div className="ocard-id">#{o.id?.slice(0,8).toUpperCase()}</div>
                       <div className="ocard-client">{o.nom_client}</div>
@@ -1029,6 +1211,7 @@ export default function AdminPanel({ onLogout, onToast }) {
                       <div className="ocard-date">{new Date(o.created_at).toLocaleDateString('fr-DZ')}</div>
                     </div>
                     <span style={{color:'#444', marginLeft:8}}>{isOpen ? '▲' : '▼'}</span>
+                  </div>
                   </div>
 
                   {isOpen && (
