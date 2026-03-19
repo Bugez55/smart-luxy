@@ -1,57 +1,66 @@
-// ══════════════════════════════════════════════
-//  HOOK useSettings — Paramètres depuis Supabase
-//  Utilisé partout pour avoir le vrai téléphone/email
-// ══════════════════════════════════════════════
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
-// Cache en mémoire pour éviter trop de requêtes
 let cache = null
 let cacheTime = 0
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL = 2 * 60 * 1000 // 2 minutes seulement
 
-// Valeurs par défaut
 const DEFAULTS = {
-  shop_name:    'Smart Luxy',
-  shop_phone:   '213556688810',
-  shop_email:   'nabilmohellebi2@gmail.com',
-  shop_address: 'Tizi Ouzou, Algérie',
-  free_ship:    '',
-  maintenance:  'false',
+  shop_name:      'Smart Luxy',
+  shop_phone:     '213556688810',
+  shop_email:     'nabilmohellebi2@gmail.com',
+  shop_address:   'Tizi Ouzou, Algérie',
+  free_ship:      '',
+  maintenance:    'false',
+  admin_password: '',
 }
 
 export async function getSettings() {
-  // Retourner le cache si frais
   if (cache && Date.now() - cacheTime < CACHE_TTL) return cache
-
-  const { data } = await supabase.from('settings').select('key, value')
-  if (!data) return DEFAULTS
-
-  const settings = { ...DEFAULTS }
-  data.forEach(({ key, value }) => { settings[key] = value })
-  cache = settings
+  const { data, error } = await supabase.from('settings').select('key, value')
+  if (error) { console.error('getSettings:', error); return DEFAULTS }
+  if (!data || data.length === 0) return DEFAULTS
+  const s = { ...DEFAULTS }
+  data.forEach(({ key, value }) => { s[key] = value })
+  cache = s
   cacheTime = Date.now()
-  return settings
+  return s
 }
 
+// ── Sauvegarder UNE seule clé ──
 export async function saveSetting(key, value) {
-  const { error } = await supabase.from('settings').upsert({ key, value, updated_at: new Date().toISOString() })
-  cache = null
-  cacheTime = 0
-  if (error) console.error('saveSetting error:', error)
+  cache = null; cacheTime = 0
+
+  // D'abord essayer update
+  const { error: errU } = await supabase
+    .from('settings')
+    .update({ value: String(value), updated_at: new Date().toISOString() })
+    .eq('key', key)
+
+  if (errU) {
+    // Si update échoue → insert
+    const { error: errI } = await supabase
+      .from('settings')
+      .insert({ key, value: String(value), updated_at: new Date().toISOString() })
+    if (errI) { console.error('saveSetting insert:', errI); throw errI }
+  }
 }
 
+// ── Sauvegarder PLUSIEURS clés ──
 export async function saveSettings(obj) {
-  const rows = Object.entries(obj).map(([key, value]) => ({
-    key, value: String(value), updated_at: new Date().toISOString()
-  }))
-  const { error } = await supabase.from('settings').upsert(rows)
-  // Vider le cache pour forcer rechargement
-  cache = null
-  cacheTime = 0
-  if (error) {
-    console.error('saveSettings error:', error)
-    throw error
+  cache = null; cacheTime = 0
+
+  const errors = []
+  for (const [key, value] of Object.entries(obj)) {
+    try {
+      await saveSetting(key, value)
+    } catch(e) {
+      errors.push(key + ': ' + e.message)
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error('Erreurs : ' + errors.join(', '))
   }
   return true
 }
