@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
+import { alertStockBas, resumeQuotidien } from '../../utils/notify'
 import { saveSettings, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
@@ -815,6 +816,50 @@ export default function AdminPanel({ onLogout, onToast }) {
     setPromos(prev => prev.filter(p => p.id!==id))
   }
 
+  // ── Export Excel ──
+  function exportExcel() {
+    const rows = orders.map(o => {
+      const items = (() => { try { return typeof o.items === 'string' ? JSON.parse(o.items) : (o.items||[]) } catch { return [] } })()
+      return {
+        'N° Commande':      o.id,
+        'Date':             new Date(o.created_at).toLocaleDateString('fr-DZ'),
+        'Heure':            new Date(o.created_at).toLocaleTimeString('fr-DZ', { hour:'2-digit', minute:'2-digit' }),
+        'Client':           o.nom_client,
+        'Téléphone':        o.telephone,
+        'Wilaya':           o.wilaya,
+        'Commune':          o.commune,
+        'Adresse':          o.adresse || '',
+        'Mode livraison':   o.mode_livraison === 'bureau' ? 'Bureau' : 'Domicile',
+        'Articles':         items.map(i => `${i.nom} x${i.qty}`).join(' | '),
+        'Sous-total (DA)':  items.reduce((s,i) => s + Number(i.prix)*i.qty, 0),
+        'Frais liv. (DA)':  o.frais_livraison || 0,
+        'Total (DA)':       o.total,
+        'Statut':           o.statut,
+        'Note':             o.note || '',
+      }
+    })
+
+    // Générer CSV (compatible Excel)
+    const cols = Object.keys(rows[0] || {})
+    const bom = '\uFEFF' // BOM pour UTF-8 avec accents
+    const csv = bom + [
+      cols.join(';'),
+      ...rows.map(r => cols.map(c => {
+        const v = String(r[c] || '').replace(/"/g, '""')
+        return v.includes(';') || v.includes('\n') ? `"${v}"` : v
+      }).join(';'))
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `smart-luxy-commandes-${new Date().toISOString().slice(0,10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    onToast && onToast(`✅ ${rows.length} commandes exportées`, 'default')
+  }
+
   async function toggleActive(id, val) {
     await supabase.from('products').update({ is_active: val }).eq('id', id)
     setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: val } : p))
@@ -857,6 +902,41 @@ export default function AdminPanel({ onLogout, onToast }) {
       </div>
 
       <div className="adm-body">
+        {/* Barre actions rapides */}
+        <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+          <button
+            onClick={async () => {
+              await resumeQuotidien(orders, products)
+              onToast && onToast('📊 Résumé envoyé sur Telegram !', 'default')
+            }}
+            style={{
+              background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)',
+              borderRadius:8, padding:'7px 14px',
+              color:'#C9A84C', fontSize:12, fontWeight:800, cursor:'pointer',
+              display:'flex', alignItems:'center', gap:6,
+            }}
+          >📊 Résumé Telegram maintenant</button>
+
+          <button
+            onClick={async () => {
+              // Vérifier tous les produits en stock bas
+              const bas = products.filter(p => p.stock !== null && p.stock !== undefined && p.stock <= 5)
+              if (bas.length === 0) {
+                onToast && onToast('✅ Tous les stocks sont OK !', 'default')
+                return
+              }
+              for (const p of bas) await alertStockBas(p, p.stock)
+              onToast && onToast(`⚠️ ${bas.length} alerte(s) stock envoyée(s) sur Telegram`, 'default')
+            }}
+            style={{
+              background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.2)',
+              borderRadius:8, padding:'7px 14px',
+              color:'#fca5a5', fontSize:12, fontWeight:800, cursor:'pointer',
+              display:'flex', alignItems:'center', gap:6,
+            }}
+          >⚠️ Vérifier stocks maintenant</button>
+        </div>
+
         {/* Stats */}
         <div className="adm-stats">
           <div className="stat-card"><div className="label">Total commandes</div><div className="value">{stats.total}</div></div>
@@ -880,6 +960,20 @@ export default function AdminPanel({ onLogout, onToast }) {
                   {s.label}
                 </button>
               ))}
+              <button
+                onClick={exportExcel}
+                disabled={orders.length === 0}
+                style={{
+                  background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.25)',
+                  borderRadius: 8, padding: '6px 14px',
+                  color: '#86efac', fontSize: 12, fontWeight: 800,
+                  cursor: orders.length > 0 ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  whiteSpace: 'nowrap', marginLeft: 'auto', flexShrink: 0,
+                }}
+              >
+                📥 Exporter Excel ({orders.length})
+              </button>
             </div>
 
             {filteredOrders.length === 0 ? (
