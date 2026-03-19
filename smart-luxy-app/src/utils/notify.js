@@ -1,4 +1,4 @@
-import { getSettings } from './useSettings'
+import CONFIG from '../config'
 
 const TG_TOKEN  = import.meta.env.VITE_TELEGRAM_TOKEN
 const TG_CHAT   = import.meta.env.VITE_TELEGRAM_CHAT_ID
@@ -53,10 +53,9 @@ export function buildWAMessage(order) {
   )
 }
 
-// Ouvrir WA avec le numéro de la boutique (depuis Supabase settings)
-export async function openWA(order) {
-  const s = await getSettings()
-  const phone = s.shop_phone || import.meta.env.VITE_WA_NUMBER || '213556688810'
+// Ouvrir WA avec le numéro depuis config
+export function openWA(order) {
+  const phone = CONFIG.whatsapp || import.meta.env.VITE_WA_NUMBER || '213556688810'
   window.open(`https://wa.me/${phone}?text=${buildWAMessage(order)}`, '_blank')
 }
 
