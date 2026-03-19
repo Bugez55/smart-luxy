@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react'
-import { getSettings } from '../utils/useSettings'
+import CONFIG from '../config'
 
 export default function WAButton() {
   const [visible, setVisible] = useState(false)
@@ -8,10 +9,8 @@ export default function WAButton() {
   const [phone, setPhone] = useState('213556688810')
 
   useEffect(() => {
-    // Charger le vrai numéro depuis Supabase
-    getSettings().then(s => {
-      if (s.shop_phone) setPhone(s.shop_phone)
-    })
+    // Numéro depuis config
+    setPhone(CONFIG.whatsapp || '213556688810')
     const t1 = setTimeout(() => setVisible(true), 3000)
     const t2 = setTimeout(() => setTooltip(false), 9000)
     const t3 = setTimeout(() => setPulse(false), 12000)
