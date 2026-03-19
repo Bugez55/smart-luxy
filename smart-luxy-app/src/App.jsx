@@ -11,7 +11,7 @@ import SuccessScreen from './components/SuccessScreen'
 import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
-import { notifyTelegram, genId } from './utils/notify'
+import { notifyTelegram, genId, alertStockBas, resumeQuotidien } from './utils/notify'
 import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
 
@@ -133,12 +133,16 @@ export default function App() {
     const { error } = await supabase.from('orders').insert(order)
     if (error) { toast('❌ Erreur. Veuillez réessayer.', 'error'); return }
 
-    // ── Déduire le stock pour chaque article commandé ──
+    // ── Déduire le stock + alerter si stock bas ──
     for (const item of form.items) {
       const prod = products.find(p => p.id === item.id)
       if (prod && prod.stock !== null && prod.stock !== undefined) {
         const newStock = Math.max(0, prod.stock - item.qty)
         await supabase.from('products').update({ stock: newStock }).eq('id', item.id)
+        // Alerte Telegram si stock devient bas (≤5) ou épuisé
+        if (newStock <= 5) {
+          alertStockBas(prod, newStock)
+        }
       }
     }
 
