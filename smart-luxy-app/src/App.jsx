@@ -12,6 +12,7 @@ import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
 import { notifyTelegram, genId, alertStockBas, resumeQuotidien } from './utils/notify'
+import CONFIG from './config'
 import { getSettings } from './utils/useSettings'
 import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
@@ -261,7 +262,26 @@ export default function App() {
       {/* ── Footer ── */}
       <footer className="footer">
         <div className="fbn">Smart <em>Luxy</em></div>
-        <p className="ftag">Boutique en ligne · Algérie 🇩🇿</p>
+        <p className="ftag">{CONFIG.slogan}</p>
+
+        {/* Infos contact */}
+        <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:10, flexWrap:'wrap' }}>
+          <a href={`tel:+${CONFIG.telephone}`} style={{
+            color:'rgba(255,255,255,.4)', fontSize:12, textDecoration:'none',
+            display:'flex', alignItems:'center', gap:4,
+          }}>📞 +{CONFIG.telephone}</a>
+          <span style={{ color:'rgba(255,255,255,.1)', fontSize:12 }}>|</span>
+          <a href={`mailto:${CONFIG.email}`} style={{
+            color:'rgba(255,255,255,.4)', fontSize:12, textDecoration:'none',
+            display:'flex', alignItems:'center', gap:4,
+          }}>✉️ {CONFIG.email}</a>
+          <span style={{ color:'rgba(255,255,255,.1)', fontSize:12 }}>|</span>
+          <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noreferrer" style={{
+            color:'rgba(37,211,102,.5)', fontSize:12, textDecoration:'none',
+            display:'flex', alignItems:'center', gap:4,
+          }}>💬 WhatsApp</a>
+        </div>
+
         <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:12, flexWrap:'wrap' }}>
           <button
             onClick={() => setPolitiqueTab('confidentialite')}
