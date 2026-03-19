@@ -12,6 +12,7 @@ import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
 import { notifyTelegram, genId, alertStockBas, resumeQuotidien } from './utils/notify'
+import { getSettings } from './utils/useSettings'
 import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
 
@@ -163,8 +164,16 @@ export default function App() {
     loadProducts()
   }
 
-  function handleLogin(pw) {
-    if (pw === ADMIN_PW) {
+  async function handleLogin(pw) {
+    // 1. Vérifier d'abord le mot de passe dans Supabase (settings)
+    const settings = await getSettings()
+    const pwSupabase = settings.admin_password || null
+
+    // 2. Vérifier le mot de passe Vercel (fallback)
+    const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
+
+    // 3. Accepter si correspond à l'un ou l'autre
+    if (pw === pwSupabase || pw === pwVercel) {
       localStorage.setItem('sl_admin', '1')
       setAdminAuth(true)
     } else {
