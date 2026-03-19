@@ -199,6 +199,281 @@ function printInvoice(order) {
 // ═══════════════════════════════════════════════════
 //  OUTIL COMPRESSION IMAGES EXISTANTES
 // ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  ADMIN SETTINGS — Paramètres complets
+// ═══════════════════════════════════════════════════
+function AdminSettings({ onLogout, onToast }) {
+  // ── Mot de passe ──
+  const [pwForm, setPwForm] = useState({ current: '', new1: '', new2: '' })
+  const [pwSaving, setPwSaving] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+
+  // ── Infos boutique ──
+  const [shop, setShop] = useState({
+    name:    localStorage.getItem('sl_shop_name')    || 'Smart Luxy',
+    phone:   localStorage.getItem('sl_shop_phone')   || '213556688810',
+    address: localStorage.getItem('sl_shop_address') || 'Tizi Ouzou, Algérie',
+    email:   localStorage.getItem('sl_shop_email')   || '',
+  })
+  const [shopSaving, setShopSaving] = useState(false)
+
+  // ── Mode maintenance ──
+  const [maintenance, setMaintenance] = useState(
+    localStorage.getItem('sl_maintenance') === '1'
+  )
+
+  // ── Livraison gratuite seuil ──
+  const [freeShip, setFreeShip] = useState(
+    localStorage.getItem('sl_free_ship') || ''
+  )
+
+  // ── Changer mot de passe ──
+  async function changePw() {
+    const current = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
+    if (pwForm.current !== current) {
+      onToast && onToast('❌ Mot de passe actuel incorrect', 'error'); return
+    }
+    if (pwForm.new1.length < 8) {
+      onToast && onToast('❌ Nouveau mot de passe trop court (min 8 caractères)', 'error'); return
+    }
+    if (pwForm.new1 !== pwForm.new2) {
+      onToast && onToast('❌ Les deux mots de passe ne correspondent pas', 'error'); return
+    }
+    setPwSaving(true)
+    // Stocker localement (en prod → changer dans Vercel env vars)
+    localStorage.setItem('sl_admin_pw_override', pwForm.new1)
+    setTimeout(() => {
+      setPwSaving(false)
+      setPwForm({ current: '', new1: '', new2: '' })
+      onToast && onToast('✅ Mot de passe changé ! Mets aussi à jour la variable VITE_ADMIN_PASSWORD dans Vercel.', 'default')
+    }, 800)
+  }
+
+  // ── Sauvegarder infos boutique ──
+  function saveShop() {
+    setShopSaving(true)
+    Object.entries(shop).forEach(([k, v]) => localStorage.setItem(`sl_shop_${k}`, v))
+    setTimeout(() => {
+      setShopSaving(false)
+      onToast && onToast('✅ Informations boutique sauvegardées', 'default')
+    }, 600)
+  }
+
+  function toggleMaintenance() {
+    const val = !maintenance
+    setMaintenance(val)
+    localStorage.setItem('sl_maintenance', val ? '1' : '0')
+    onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
+  }
+
+  function saveFreeShip() {
+    localStorage.setItem('sl_free_ship', freeShip)
+    onToast && onToast('✅ Seuil livraison gratuite sauvegardé', 'default')
+  }
+
+  const inp = {
+    background: '#1e1e1e', border: '1px solid #333', borderRadius: 8,
+    padding: '10px 12px', color: 'white', fontSize: '16px',
+    outline: 'none', width: '100%', boxSizing: 'border-box',
+    fontFamily: 'inherit',
+  }
+  const lbl = {
+    fontSize: 11, fontWeight: 800, color: '#888',
+    letterSpacing: '.05em', textTransform: 'uppercase',
+    display: 'block', marginBottom: 6,
+  }
+  const section = {
+    background: '#1a1a1a', border: '1px solid rgba(255,255,255,.07)',
+    borderRadius: 14, padding: '18px 16px', marginBottom: 14,
+  }
+  const sectionTitle = {
+    fontSize: 14, fontWeight: 800, color: 'white',
+    marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8,
+  }
+
+  return (
+    <div>
+      <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:20 }}>⚙️ Paramètres</h3>
+
+      {/* ── MOT DE PASSE ── */}
+      <div style={section}>
+        <div style={sectionTitle}>🔐 Changer le mot de passe admin</div>
+
+        <div style={{ marginBottom: 10 }}>
+          <label style={lbl}>Mot de passe actuel</label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPw ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={pwForm.current}
+              onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
+              style={inp}
+            />
+            <button onClick={() => setShowPw(s => !s)} style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16,
+            }}>{showPw ? '🙈' : '👁'}</button>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <div>
+            <label style={lbl}>Nouveau mot de passe</label>
+            <input
+              type={showPw ? 'text' : 'password'}
+              placeholder="Min. 8 caractères"
+              value={pwForm.new1}
+              onChange={e => setPwForm(f => ({ ...f, new1: e.target.value }))}
+              style={inp}
+            />
+          </div>
+          <div>
+            <label style={lbl}>Confirmer</label>
+            <input
+              type={showPw ? 'text' : 'password'}
+              placeholder="Répéter"
+              value={pwForm.new2}
+              onChange={e => setPwForm(f => ({ ...f, new2: e.target.value }))}
+              style={{ ...inp, borderColor: pwForm.new2 && pwForm.new1 !== pwForm.new2 ? '#ef4444' : '#333' }}
+            />
+          </div>
+        </div>
+
+        {/* Indicateur force mdp */}
+        {pwForm.new1 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+              {[1,2,3,4].map(i => {
+                const strength = pwForm.new1.length >= 12 && /[A-Z]/.test(pwForm.new1) && /[0-9]/.test(pwForm.new1) && /[^a-zA-Z0-9]/.test(pwForm.new1) ? 4
+                  : pwForm.new1.length >= 10 && (/[A-Z]/.test(pwForm.new1) || /[0-9]/.test(pwForm.new1)) ? 3
+                  : pwForm.new1.length >= 8 ? 2 : 1
+                return <div key={i} style={{
+                  flex: 1, height: 4, borderRadius: 2,
+                  background: i <= strength
+                    ? strength === 1 ? '#ef4444' : strength === 2 ? '#f59e0b' : strength === 3 ? '#84cc16' : '#22c55e'
+                    : 'rgba(255,255,255,.1)',
+                  transition: 'background .2s',
+                }} />
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)' }}>
+              {pwForm.new1.length < 8 ? '❌ Trop court' : pwForm.new1.length < 10 ? '⚠️ Faible — ajoute chiffres et majuscules' : '✅ Bon mot de passe'}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={changePw}
+          disabled={pwSaving || !pwForm.current || !pwForm.new1 || !pwForm.new2}
+          style={{
+            width: '100%', padding: '11px',
+            background: pwForm.current && pwForm.new1 && pwForm.new2 ? 'linear-gradient(135deg,#C9A84C,#E9C46A)' : '#222',
+            border: 'none', borderRadius: 10,
+            color: pwForm.current && pwForm.new1 && pwForm.new2 ? '#000' : '#444',
+            fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}
+        >{pwSaving ? '⏳ Sauvegarde…' : '🔐 Changer le mot de passe'}</button>
+
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.25)', marginTop: 8, lineHeight: 1.5 }}>
+          ⚠️ Après le changement, va aussi dans <strong style={{ color:'rgba(255,255,255,.4)' }}>Vercel → Settings → Environment Variables → VITE_ADMIN_PASSWORD</strong> pour mettre à jour le vrai mot de passe en production.
+        </div>
+      </div>
+
+      {/* ── INFOS BOUTIQUE ── */}
+      <div style={section}>
+        <div style={sectionTitle}>🏪 Informations de la boutique</div>
+
+        <div style={{ marginBottom: 10 }}>
+          <label style={lbl}>Nom de la boutique</label>
+          <input value={shop.name} onChange={e => setShop(s => ({ ...s, name: e.target.value }))} style={inp} placeholder="Smart Luxy" />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div>
+            <label style={lbl}>Téléphone WhatsApp</label>
+            <input value={shop.phone} onChange={e => setShop(s => ({ ...s, phone: e.target.value }))} style={inp} placeholder="213XXXXXXXXX" type="tel" />
+          </div>
+          <div>
+            <label style={lbl}>Email</label>
+            <input value={shop.email} onChange={e => setShop(s => ({ ...s, email: e.target.value }))} style={inp} placeholder="contact@smart-luxy.dz" type="email" />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label style={lbl}>Adresse</label>
+          <input value={shop.address} onChange={e => setShop(s => ({ ...s, address: e.target.value }))} style={inp} placeholder="Tizi Ouzou, Algérie" />
+        </div>
+
+        <button onClick={saveShop} style={{
+          padding: '10px 20px', background: 'rgba(201,168,76,.15)',
+          border: '1px solid rgba(201,168,76,.3)', borderRadius: 10,
+          color: '#C9A84C', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+        }}>{shopSaving ? '⏳…' : '💾 Sauvegarder'}</button>
+      </div>
+
+      {/* ── LIVRAISON GRATUITE ── */}
+      <div style={section}>
+        <div style={sectionTitle}>🚚 Seuil livraison gratuite</div>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginBottom: 12, lineHeight: 1.5 }}>
+          Si le total commande dépasse ce montant, la livraison devient gratuite automatiquement. Laisser vide pour désactiver.
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="number" value={freeShip}
+            onChange={e => setFreeShip(e.target.value)}
+            placeholder="Ex: 5000 DA — vide = désactivé"
+            style={{ ...inp, flex: 1 }}
+          />
+          <button onClick={saveFreeShip} style={{
+            background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.25)',
+            borderRadius: 10, padding: '0 16px',
+            color: '#86efac', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}>✅</button>
+        </div>
+      </div>
+
+      {/* ── MODE MAINTENANCE ── */}
+      <div style={{ ...section, border: `1px solid ${maintenance ? 'rgba(239,68,68,.3)' : 'rgba(255,255,255,.07)'}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={sectionTitle}>🔧 Mode maintenance</div>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginTop: -8, lineHeight: 1.5 }}>
+              {maintenance ? '⚠️ Le site est en maintenance — les clients voient une page d'attente' : 'Le site est en ligne et accessible aux clients'}
+            </p>
+          </div>
+          <button
+            onClick={toggleMaintenance}
+            style={{
+              flexShrink: 0, marginLeft: 12,
+              padding: '8px 16px', border: 'none', borderRadius: 10,
+              background: maintenance ? 'rgba(239,68,68,.2)' : 'rgba(34,197,94,.15)',
+              color: maintenance ? '#fca5a5' : '#86efac',
+              fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              border: `1px solid ${maintenance ? 'rgba(239,68,68,.3)' : 'rgba(34,197,94,.25)'}`,
+            }}
+          >{maintenance ? '🔴 Actif' : '🟢 Inactif'}</button>
+        </div>
+      </div>
+
+      {/* ── DÉCONNEXION ── */}
+      <div style={section}>
+        <div style={sectionTitle}>🚪 Session admin</div>
+        <button
+          onClick={onLogout}
+          style={{
+            width: '100%', padding: '11px',
+            background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)',
+            borderRadius: 10, color: '#fca5a5',
+            fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}
+        >🚪 Se déconnecter</button>
+      </div>
+
+    </div>
+  )
+}
+
 function ImageOptimizer({ products, supabase }) {
   const [results, setResults] = useState([])
   const [running, setRunning] = useState(false)
@@ -556,7 +831,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Smart <em>Luxy</em> — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -838,6 +1113,12 @@ export default function AdminPanel({ onLogout, onToast }) {
         {/* ── IMAGES TAB ── */}
         {tab === 'images' && (
           <ImageOptimizer products={products} supabase={supabase} />
+        )}
+
+
+        {/* ── SETTINGS TAB ── */}
+        {tab === 'settings' && (
+          <AdminSettings onLogout={onLogout} onToast={onToast} />
         )}
 
       {editProd !== null && (
