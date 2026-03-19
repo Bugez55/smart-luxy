@@ -35,19 +35,25 @@ export async function getSettings() {
 }
 
 export async function saveSetting(key, value) {
-  await supabase.from('settings').upsert({ key, value, updated_at: new Date().toISOString() })
-  // Invalider le cache
+  const { error } = await supabase.from('settings').upsert({ key, value, updated_at: new Date().toISOString() })
   cache = null
   cacheTime = 0
+  if (error) console.error('saveSetting error:', error)
 }
 
 export async function saveSettings(obj) {
   const rows = Object.entries(obj).map(([key, value]) => ({
     key, value: String(value), updated_at: new Date().toISOString()
   }))
-  await supabase.from('settings').upsert(rows)
+  const { error } = await supabase.from('settings').upsert(rows)
+  // Vider le cache pour forcer rechargement
   cache = null
   cacheTime = 0
+  if (error) {
+    console.error('saveSettings error:', error)
+    throw error
+  }
+  return true
 }
 
 export function useSettings() {
