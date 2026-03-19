@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
 import { alertStockBas, resumeQuotidien } from '../../utils/notify'
-import { saveSettings, getSettings } from '../../utils/useSettings'
+import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
 
@@ -271,7 +271,7 @@ function AdminSettings({ onLogout, onToast }) {
       }
 
       // Sauvegarder le nouveau mot de passe dans Supabase
-      await saveSettings({ admin_password: pwForm.new1 })
+      await saveSetting('admin_password', pwForm.new1)
       localStorage.setItem('sl_admin_pw_override', pwForm.new1)
       setPwForm({ current: '', new1: '', new2: '' })
       onToast && onToast('✅ Mot de passe changé ! Reconnecte-toi avec le nouveau.', 'default')
@@ -286,16 +286,19 @@ function AdminSettings({ onLogout, onToast }) {
   async function saveShop() {
     setShopSaving(true)
     try {
-      await saveSettings({
-        shop_name:    shop.name,
-        shop_phone:   shop.phone,
-        shop_email:   shop.email,
-        shop_address: shop.address,
-      })
-      onToast && onToast('✅ Infos boutique sauvegardées ! Numéro WA mis à jour.', 'default')
+      // Sauvegarder chaque champ séparément
+      await saveSetting('shop_name',    shop.name)
+      await saveSetting('shop_phone',   shop.phone)
+      await saveSetting('shop_email',   shop.email)
+      await saveSetting('shop_address', shop.address)
+
+      // Relire depuis Supabase pour confirmer
+      const check = await getSettings()
+      console.log('✅ Settings sauvegardés:', check)
+      onToast && onToast('✅ Sauvegardé ! Téléphone: ' + check.shop_phone, 'default')
     } catch(e) {
-      console.error('saveShop:', e)
-      onToast && onToast('❌ Erreur sauvegarde : ' + (e?.message || 'vérifier Supabase'), 'error')
+      console.error('saveShop error:', e)
+      onToast && onToast('❌ Erreur : ' + (e?.message || JSON.stringify(e)), 'error')
     }
     setShopSaving(false)
   }
