@@ -781,7 +781,7 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   function printSelected() {
     const toPrint = orders.filter(o => selectedOrders.has(o.id))
-    if (toPrint.length === 0) { onToast && onToast('Sélectionne des commandes d'abord', 'error'); return }
+    if (toPrint.length === 0) { onToast && onToast("Sélectionne des commandes d'abord", "error"); return }
     const html = toPrint.map(order => {
       const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
       return `
