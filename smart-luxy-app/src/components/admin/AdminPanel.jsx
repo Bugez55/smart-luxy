@@ -457,7 +457,7 @@ function AdminSettings({ onLogout, onToast }) {
           <div>
             <div style={sectionTitle}>🔧 Mode maintenance</div>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginTop: -8, lineHeight: 1.5 }}>
-              {maintenance ? '⚠️ Le site est en maintenance — les clients voient une page d'attente' : 'Le site est en ligne et accessible aux clients'}
+              {maintenance ? "⚠️ Le site est en maintenance — les clients voient une page d'attente" : 'Le site est en ligne et accessible aux clients'}
             </p>
           </div>
           <button
