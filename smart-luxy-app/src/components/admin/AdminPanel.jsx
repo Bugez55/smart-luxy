@@ -257,26 +257,33 @@ function AdminSettings({ onLogout, onToast }) {
       onToast && onToast('❌ Les deux mots de passe ne correspondent pas', 'error'); return
     }
     setPwSaving(true)
-    // Stocker localement (en prod → changer dans Vercel env vars)
-    localStorage.setItem('sl_admin_pw_override', pwForm.new1)
-    setTimeout(() => {
-      setPwSaving(false)
+    try {
+      await saveSettings({ admin_password: pwForm.new1 })
+      localStorage.setItem('sl_admin_pw_override', pwForm.new1)
       setPwForm({ current: '', new1: '', new2: '' })
-      onToast && onToast('✅ Mot de passe changé ! Mets aussi à jour la variable VITE_ADMIN_PASSWORD dans Vercel.', 'default')
-    }, 800)
+      onToast && onToast('✅ Mot de passe changé avec succès !', 'default')
+    } catch(e) {
+      onToast && onToast('❌ Erreur : ' + (e?.message || 'vérifier Supabase'), 'error')
+    }
+    setPwSaving(false)
   }
 
   // ── Sauvegarder infos boutique ──
   async function saveShop() {
     setShopSaving(true)
-    await saveSettings({
-      shop_name:    shop.name,
-      shop_phone:   shop.phone,
-      shop_email:   shop.email,
-      shop_address: shop.address,
-    })
+    try {
+      await saveSettings({
+        shop_name:    shop.name,
+        shop_phone:   shop.phone,
+        shop_email:   shop.email,
+        shop_address: shop.address,
+      })
+      onToast && onToast('✅ Infos boutique sauvegardées ! Numéro WA mis à jour.', 'default')
+    } catch(e) {
+      console.error('saveShop:', e)
+      onToast && onToast('❌ Erreur sauvegarde : ' + (e?.message || 'vérifier Supabase'), 'error')
+    }
     setShopSaving(false)
-    onToast && onToast('✅ Informations boutique sauvegardées ! Le numéro WA est mis à jour.', 'default')
   }
 
   async function toggleMaintenance() {
