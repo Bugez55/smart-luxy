@@ -19,6 +19,8 @@ export default function ProductForm({ product, onClose, onSave }) {
     img:           product?.img || '',
     display_order: product?.display_order || 99,
     stock:         product?.stock !== undefined && product?.stock !== null ? String(product.stock) : '',
+    card_color:    product?.card_color || '',
+    ventes:        product?.ventes || 0,
   })
   const [newSpec, setNewSpec] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -92,6 +94,8 @@ export default function ProductForm({ product, onClose, onSave }) {
       img:           form.img || form.images[0]?.url || null,
       display_order: Number(form.display_order) || 99,
       stock:         form.stock !== '' ? Number(form.stock) : null,
+      card_color:    form.card_color || null,
+      ventes:        Number(form.ventes) || 0,
     })
   }
 
@@ -209,6 +213,91 @@ export default function ProductForm({ product, onClose, onSave }) {
             </div>
           </div>
 
+          {/* ── Personnalisation carte ── */}
+          <div className="pf-section">
+            <h3>🎨 Personnalisation de la carte</h3>
+
+            <div className="pf-grid">
+              <div className="form-field">
+                <label>Couleur de fond de la carte</label>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <input
+                    type="color"
+                    value={form.card_color || '#141414'}
+                    onChange={e => set('card_color', e.target.value)}
+                    style={{ width:44, height:36, borderRadius:8, border:'1px solid #333', background:'none', cursor:'pointer', padding:2 }}
+                  />
+                  <input
+                    placeholder="Ex: #1a1a2e ou vide = noir"
+                    value={form.card_color}
+                    onChange={e => set('card_color', e.target.value)}
+                    style={{ flex:1, background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'8px 12px', color:'white', fontSize:13, outline:'none' }}
+                  />
+                  {form.card_color && (
+                    <button onClick={() => set('card_color', '')} style={{ background:'none', border:'none', color:'#555', cursor:'pointer', fontSize:16 }}>✕</button>
+                  )}
+                </div>
+                {/* Palettes rapides */}
+                <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
+                  {[
+                    { label:'Noir', color:'#141414' },
+                    { label:'Verre', color:'rgba(255,255,255,0.05)' },
+                    { label:'Bleu nuit', color:'#0d1526' },
+                    { label:'Violet', color:'#120f1e' },
+                    { label:'Vert', color:'#071410' },
+                    { label:'Rouge', color:'#170b0b' },
+                    { label:'Or', color:'#1a1200' },
+                    { label:'Rose', color:'#1a0a10' },
+                  ].map(p => (
+                    <button
+                      key={p.color}
+                      onClick={() => set('card_color', p.color)}
+                      style={{
+                        background: p.color,
+                        border: `2px solid ${form.card_color === p.color ? '#C9A84C' : 'rgba(255,255,255,.15)'}`,
+                        borderRadius:8, padding:'4px 10px',
+                        color:'rgba(255,255,255,.7)', fontSize:10, fontWeight:700,
+                        cursor:'pointer',
+                      }}
+                    >{p.label}</button>
+                  ))}
+                </div>
+
+                {/* Aperçu de la carte */}
+                <div style={{ marginTop:12, padding:12, borderRadius:12, background:'#0a0a0a', border:'1px solid #333' }}>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginBottom:8, fontWeight:700, letterSpacing:'.06em' }}>APERÇU</div>
+                  <div style={{
+                    background: form.card_color || '#141414',
+                    borderRadius:12, overflow:'hidden',
+                    border:'1px solid rgba(255,255,255,.08)', maxWidth:160,
+                  }}>
+                    <div style={{ height:80, background:'rgba(0,0,0,.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32 }}>
+                      {form.emoji || '📦'}
+                    </div>
+                    <div style={{ padding:'8px 10px' }}>
+                      <div style={{ fontSize:11, color:'white', fontWeight:700, marginBottom:4 }}>{form.nom || 'Nom du produit'}</div>
+                      <div style={{ fontSize:13, color:'#C9A84C', fontWeight:900 }}>{form.prix ? Number(form.prix).toLocaleString() + ' DA' : '0 DA'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label>Nombre de ventes affiché</label>
+                <input
+                  type="number" min="0"
+                  placeholder="Ex: 127"
+                  value={form.ventes}
+                  onChange={e => set('ventes', e.target.value)}
+                  style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:'16px', outline:'none', width:'100%', boxSizing:'border-box' }}
+                />
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:6 }}>
+                  S'affiche sous forme "⚡ {form.ventes || 0} vendus" sur la carte
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* ── Description ── */}
           <div className="pf-section">
             <h3>Description</h3>
@@ -261,7 +350,10 @@ export default function ProductForm({ product, onClose, onSave }) {
               <input ref={fileRef} type="file" accept="image/*,.gif,.webp" multiple onChange={handleFileSelect} />
               <div style={{ fontSize: 28, marginBottom: 6 }}>📁</div>
               <div style={{ fontSize: 13, color: 'var(--g4)' }}>
-                {uploading ? '⏳ Upload en cours…' : 'Cliquer ou glisser des photos ici'}
+                {uploading
+                ? '⏳ Compression + upload en cours…'
+                : 'Cliquer ou glisser des photos ici'
+              }
               </div>
               <div style={{ fontSize: 11, color: 'var(--g5)', marginTop: 4 }}>JPG, PNG, WebP, GIF</div>
             </label>
