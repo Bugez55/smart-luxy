@@ -342,7 +342,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {/* Quantité si pas de bundles */}
           {!hasBundles && (
             <div style={{ marginBottom:14 }}>
-              <label style={lbl}>{{ lang==='ar' ? 'الكمية' : 'Quantité' }}</label>
+              <label style={lbl}>{lang==='ar' ? 'الكمية' : 'Quantité' }</label>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'white', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
                 <span style={{ color:'white', fontWeight:900, fontSize:20, minWidth:32, textAlign:'center' }}>{qty}</span>
@@ -353,7 +353,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           {/* ── Mode livraison ── */}
           <div style={{ marginBottom:14 }}>
-            <label style={lbl}>{{ lang==='ar' ? 'طريقة التوصيل' : 'Mode de livraison' }}</label>
+            <label style={lbl}>{lang==='ar' ? 'طريقة التوصيل' : 'Mode de livraison' }</label>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {['domicile','bureau'].map(mode => (
                 <button key={mode} onClick={() => setModeLiv(mode)} style={{ padding:'11px 8px', background:modeLiv===mode?'rgba(201,168,76,.12)':'#1a1a1a', border:`2px solid ${modeLiv===mode?'#C9A84C':'#2a2a2a'}`, borderRadius:10, color:modeLiv===mode?'#C9A84C':'#666', fontSize:12, fontWeight:800, cursor:'pointer', textAlign:'center', lineHeight:1.4, transition:'all .2s' }}>
@@ -366,7 +366,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           {/* ── Wilaya ── */}
           <div style={{ marginBottom:10 }}>
-            <label style={lbl}>{{ lang==='ar' ? 'الولاية *' : 'Wilaya *' }}</label>
+            <label style={lbl}>{lang==='ar' ? 'الولاية *' : 'Wilaya *' }</label>
             <div style={{ position:'relative' }}>
               <div onClick={() => { setWilayaOpen(o=>!o); setCommuneOpen(false) }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', color:form.wilaya?'white':'#444' }}>
                 <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{form.wilaya||lang==='ar' ? 'اختر الولاية' : 'Choisir une wilaya'}</span>
@@ -407,11 +407,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {/* ── Nom + Tel ── */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
             <div>
-              <label style={lbl}>{{ lang==='ar' ? 'الاسم الكامل *' : 'Nom complet *' }}</label>
+              <label style={lbl}>{lang==='ar' ? 'الاسم الكامل *' : 'Nom complet *' }</label>
               <input placeholder="Votre nom" value={form.nom} onChange={e => setF('nom',e.target.value)} style={inp} />
             </div>
             <div>
-              <label style={lbl}>{{ lang==='ar' ? 'الهاتف *' : 'Téléphone *' }}</label>
+              <label style={lbl}>{lang==='ar' ? 'الهاتف *' : 'Téléphone *' }</label>
               <input placeholder="0555 00 00 00" value={form.tel} onChange={e => setF('tel',e.target.value)} style={inp} type="tel" />
             </div>
           </div>
@@ -419,7 +419,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {/* Adresse */}
           {modeLiv==='domicile' && (
             <div style={{ marginBottom:10 }}>
-              <label style={lbl}>{{ lang==='ar' ? 'العنوان' : 'Adresse' }}</label>
+              <label style={lbl}>{lang==='ar' ? 'العنوان' : 'Adresse' }</label>
               <input placeholder="Rue, quartier, N°..." value={form.adresse} onChange={e => setF('adresse',e.target.value)} style={inp} />
             </div>
           )}
