@@ -21,6 +21,8 @@ export default function ProductForm({ product, onClose, onSave }) {
     stock:         product?.stock !== undefined && product?.stock !== null ? String(product.stock) : '',
     card_color:    product?.card_color || '',
     ventes:        product?.ventes || 0,
+    note_etoiles:  product?.note_etoiles !== undefined ? String(product.note_etoiles) : '5',
+    nb_commandes:  product?.nb_commandes || 0,
     bundles:       product?.bundles ? (typeof product.bundles === 'string' ? JSON.parse(product.bundles) : product.bundles) : [],
     faq:           product?.faq ? (typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq) : [],
   })
@@ -98,6 +100,8 @@ export default function ProductForm({ product, onClose, onSave }) {
       stock:         form.stock !== '' ? Number(form.stock) : null,
       card_color:    form.card_color || null,
       ventes:        Number(form.ventes) || 0,
+      note_etoiles:  form.note_etoiles !== '' ? Number(form.note_etoiles) : null,
+      nb_commandes:  Number(form.nb_commandes) || 0,
       bundles:       form.bundles.length > 0 ? form.bundles : null,
       faq:           form.faq.length > 0 ? form.faq : null,
     })
@@ -296,7 +300,39 @@ export default function ProductForm({ product, onClose, onSave }) {
                   style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:'16px', outline:'none', width:'100%', boxSizing:'border-box' }}
                 />
                 <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:6 }}>
-                  S'affiche sous forme "⚡ {form.ventes || 0} vendus" sur la carte
+                  S'affiche "⚡ {form.ventes || 0} vendus" sur la carte
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label>Note étoiles (1 à 5)</label>
+                <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
+                  {[1,2,3,4,5].map(n => (
+                    <button key={n} type="button" onClick={() => set('note_etoiles', String(n))} style={{
+                      background: Number(form.note_etoiles) >= n ? 'rgba(249,168,37,.2)' : '#1a1a1a',
+                      border: `1px solid ${Number(form.note_etoiles) >= n ? '#F9A825' : '#333'}`,
+                      borderRadius:8, width:36, height:36, fontSize:18, cursor:'pointer',
+                      color: Number(form.note_etoiles) >= n ? '#F9A825' : '#444',
+                    }}>★</button>
+                  ))}
+                  <span style={{ fontSize:14, fontWeight:800, color:'#F9A825' }}>{form.note_etoiles}/5</span>
+                </div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>
+                  Note fixe affichée sur la carte (indépendant des vrais avis)
+                </div>
+              </div>
+
+              <div className="form-field">
+                <label>Nombre de commandes</label>
+                <input
+                  type="number" min="0"
+                  placeholder="Ex: 348"
+                  value={form.nb_commandes}
+                  onChange={e => set('nb_commandes', e.target.value)}
+                  style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:'16px', outline:'none', width:'100%', boxSizing:'border-box' }}
+                />
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:6 }}>
+                  S'affiche "📦 {form.nb_commandes || 0} commandes" sur la page produit
                 </div>
               </div>
             </div>
