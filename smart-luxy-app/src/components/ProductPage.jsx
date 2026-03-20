@@ -27,8 +27,10 @@ const LIVRAISON = {
   'Bordj Badji Mokhtar':{bureau:1500,domicile:1900},'Ouled Djellal':{bureau:600,domicile:1100},
 }
 
-export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder }) {
+export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique }) {
   const [openFaq, setOpenFaq] = useState(null)
+  const [lang, setLang] = useState('fr')
+  const rtl = lang === 'ar'
   const [imgIdx, setImgIdx] = useState(0)
   const [lb, setLb] = useState(false)
   const imgRef2 = useRef()
@@ -144,6 +146,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
         <button onClick={onClose} style={{ background:'rgba(255,255,255,.07)', border:'none', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'white', fontSize:18, flexShrink:0 }}>✕</button>
         <span style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
+        <button onClick={() => setLang(l => l==='fr'?'ar':'fr')} style={{ background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)', borderRadius:20, padding:'4px 10px', color:'#C9A84C', fontSize:11, fontWeight:800, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap' }}>
+          {lang==='fr' ? '🇩🇿 عربي' : '🇫🇷 FR'}
+        </button>
         {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
       </div>
 
@@ -286,7 +291,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {/* ══════════════════════════════════════════
           FORMULAIRE DE COMMANDE — style MarketDZ
       ══════════════════════════════════════════ */}
-      <div ref={formRef} style={{ margin:'0 12px 16px', background:'#141414', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, overflow:'hidden' }}>
+      <div ref={formRef} style={{ margin:'0 12px 16px', background:'#141414', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, overflow:'hidden', direction: rtl ? 'rtl' : 'ltr' }}>
 
         {/* En-tête formulaire */}
         <div style={{ background:'linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05))', borderBottom:'1px solid rgba(201,168,76,.2)', padding:'16px', textAlign:'center' }}>
@@ -467,6 +472,19 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Avis clients ── */}
       <ReviewSection productId={p.id} />
+
+      {/* ── Liens utiles ── */}
+      <div style={{ display:'flex', gap:16, justifyContent:'center', padding:'0 16px 16px', flexWrap:'wrap' }}>
+        {[
+          { label: lang==='ar' ? 'سياسة الخصوصية' : '🔒 Politique de confidentialité', tab:'confidentialite' },
+          { label: lang==='ar' ? 'سياسة الإرجاع' : '🔄 Politique de retour', tab:'retour' },
+        ].map(item => (
+          <button key={item.tab} onClick={() => onPolitique && onPolitique(item.tab)} style={{ background:'none', border:'none', color:'rgba(255,255,255,.3)', fontSize:11, cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3, padding:0, transition:'color .2s' }}
+            onMouseEnter={e => e.target.style.color='#C9A84C'}
+            onMouseLeave={e => e.target.style.color='rgba(255,255,255,.3)'}
+          >{item.label}</button>
+        ))}
+      </div>
 
       {/* ── Produits similaires ── */}
       {(allProducts||[]).filter(x=>x.id!==p.id&&x.categorie===p.categorie&&x.is_active).slice(0,4).length > 0 && (
