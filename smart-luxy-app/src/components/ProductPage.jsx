@@ -29,6 +29,9 @@ const LIVRAISON = {
 
 export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder }) {
   const [openFaq, setOpenFaq] = useState(null)
+  const [imgIdx, setImgIdx] = useState(0)
+  const [lb, setLb] = useState(false)
+  const imgRef2 = useRef()
   const [selectedBundle, setSelectedBundle] = useState(null)
   const [qty, setQty] = useState(1)
   const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'' })
@@ -81,6 +84,27 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     }
   }, [])
 
+  // Swipe natif sur l'image
+  useEffect(() => {
+    const el = document.querySelector('[data-img-swipe]')
+    if (!el || imgs.length < 2) return
+    let tx = 0, ty = 0
+    const onTS = e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY }
+    const onTM = e => { if (Math.abs(e.touches[0].clientX - tx) > Math.abs(e.touches[0].clientY - ty)) e.preventDefault() }
+    const onTE = e => {
+      const dx = e.changedTouches[0].clientX - tx
+      const dy = Math.abs(e.changedTouches[0].clientY - ty)
+      if (Math.abs(dx) > 40 && Math.abs(dx) > dy) {
+        if (dx < 0) setImgIdx(i => (i+1)%imgs.length)
+        else setImgIdx(i => (i-1+imgs.length)%imgs.length)
+      } else if (Math.abs(dx) < 10 && dy < 10) setLb(true)
+    }
+    el.addEventListener('touchstart', onTS, { passive: true })
+    el.addEventListener('touchmove', onTM, { passive: false })
+    el.addEventListener('touchend', onTE, { passive: true })
+    return () => { el.removeEventListener('touchstart', onTS); el.removeEventListener('touchmove', onTM); el.removeEventListener('touchend', onTE) }
+  }, [imgs.length])
+
   // Observer sticky
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => setStickyVisible(!e.isIntersecting), { threshold: 0 })
@@ -123,20 +147,74 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
       </div>
 
-      {/* ── Image principale ── */}
-      <div ref={topRef} style={{ position:'relative', background:'#111' }}>
-        {mainImg
-          ? <img src={mainImg} alt={p.nom} style={{ width:'100%', maxHeight:380, objectFit:'cover', display:'block' }} onClick={() => {}} />
-          : <div style={{ height:280, display:'flex', alignItems:'center', justifyContent:'center', fontSize:80 }}>{p.emoji||'📦'}</div>
-        }
-        {outOfStock && <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fca5a5', letterSpacing:'.06em' }}>ÉPUISÉ</div>}
-        {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:12, left:12, background:'rgba(239,68,68,.92)', color:'white', fontSize:11, fontWeight:800, padding:'4px 10px', borderRadius:8 }}>🔥 Plus que {p.stock} en stock</div>}
-        {imgs.length > 1 && <div style={{ position:'absolute', bottom:12, right:12, background:'rgba(0,0,0,.6)', color:'rgba(255,255,255,.7)', fontSize:11, padding:'4px 10px', borderRadius:8 }}>1/{imgs.length} · défiler ↓</div>}
-      </div>
+      {/* ── Carrousel images en haut — swipe gauche/droite ── */}
+      {imgs.length > 0 ? (
+        <div ref={topRef} data-img-swipe style={{ position:'relative', background:'#111', lineHeight:0 }}>
+          {/* Image affichée */}
+          <img
+            key={imgIdx}
+            src={imgs[imgIdx]?.url || mainImg}
+            alt={p.nom}
+            style={{ width:'100%', maxHeight:380, objectFit:'cover', display:'block', animation:'imgIn .2s ease' }}
+            onClick={() => setLb(true)}
+          />
+          {/* Flèches */}
+          {imgs.length > 1 && <>
+            <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i-1+imgs.length)%imgs.length) }}
+              style={{ position:'absolute', left:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'white', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>‹</button>
+            <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i+1)%imgs.length) }}
+              style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'white', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>›</button>
+            {/* Points */}
+            <div style={{ position:'absolute', bottom:10, left:'50%', transform:'translateX(-50%)', display:'flex', gap:5, zIndex:3 }}>
+              {imgs.map((_,i) => (
+                <div key={i} onClick={() => setImgIdx(i)} style={{ width:i===imgIdx?18:6, height:6, borderRadius:3, background:i===imgIdx?'#C9A84C':'rgba(255,255,255,.4)', transition:'all .25s', cursor:'pointer' }} />
+              ))}
+            </div>
+          </>}
+          {outOfStock && <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fca5a5' }}>ÉPUISÉ</div>}
+          {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:32, left:10, background:'rgba(239,68,68,.92)', color:'white', fontSize:11, fontWeight:800, padding:'3px 8px', borderRadius:6 }}>🔥 Plus que {p.stock}</div>}
+          {imgs.length > 1 && <div style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.55)', color:'rgba(255,255,255,.7)', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20, zIndex:3 }}>{imgIdx+1}/{imgs.length}</div>}
+        </div>
+      ) : (
+        <div ref={topRef} style={{ height:280, background:'#111', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <span style={{ fontSize:80 }}>{p.emoji||'📦'}</span>
+        </div>
+      )}
+
+      {/* Miniatures scrollables */}
+      {imgs.length > 1 && (
+        <div style={{ display:'flex', gap:6, padding:'8px 12px', overflowX:'auto', scrollbarWidth:'none', background:'#0f0f0f' }}>
+          {imgs.map((img, i) => (
+            <div key={i} onClick={() => setImgIdx(i)} style={{ width:60, height:60, borderRadius:8, overflow:'hidden', border:`2px solid ${imgIdx===i?'#C9A84C':'rgba(255,255,255,.1)'}`, cursor:'pointer', flexShrink:0, transition:'all .2s', transform:imgIdx===i?'scale(1.06)':'scale(1)' }}>
+              <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Infos produit ── */}
       <div style={{ padding:'16px 16px 0' }}>
-        <h1 style={{ margin:'0 0 12px', fontSize:20, fontWeight:900, color:'white', lineHeight:1.3 }}>{p.nom}</h1>
+        <h1 style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'white', lineHeight:1.3 }}>{p.nom}</h1>
+
+        {/* Étoiles + commandes */}
+        {(p.note_etoiles || p.nb_commandes > 0) && (
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12, flexWrap:'wrap' }}>
+            {p.note_etoiles && (
+              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                {[1,2,3,4,5].map(i => (
+                  <span key={i} style={{ fontSize:16, color: i <= Math.round(p.note_etoiles) ? '#F9A825' : 'rgba(255,255,255,.15)' }}>★</span>
+                ))}
+                <span style={{ fontSize:13, fontWeight:800, color:'#F9A825', marginLeft:3 }}>{Number(p.note_etoiles).toFixed(1)}</span>
+              </div>
+            )}
+            {p.nb_commandes > 0 && (
+              <div style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(201,168,76,.08)', border:'1px solid rgba(201,168,76,.2)', borderRadius:20, padding:'3px 10px' }}>
+                <span style={{ fontSize:13 }}>📦</span>
+                <span style={{ fontSize:12, fontWeight:800, color:'rgba(255,255,255,.7)' }}>{p.nb_commandes.toLocaleString()} commandes</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Prix */}
         <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:14 }}>
@@ -172,24 +250,15 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── TOUTES LES PHOTOS défilantes verticalement ── */}
       {imgs.length > 1 && (
-        <div style={{ padding:'0 0 16px' }}>
-          <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.3)', letterSpacing:'.08em', padding:'0 16px', marginBottom:10 }}>
-            📸 PHOTOS DU PRODUIT
-          </div>
+        <div style={{ margin:0, padding:0, lineHeight:0 }}>
           {imgs.map((img, i) => (
-            <div key={i} style={{ marginBottom: i < imgs.length-1 ? 4 : 0 }}>
-              <img
-                src={img.url}
-                alt={`Photo ${i+1}`}
-                style={{ width:'100%', display:'block', objectFit:'cover' }}
-                loading={i === 0 ? 'eager' : 'lazy'}
-              />
-              {img.label && (
-                <div style={{ background:'rgba(201,168,76,.08)', padding:'8px 16px', fontSize:12, color:'rgba(255,255,255,.5)', fontStyle:'italic' }}>
-                  {img.label}
-                </div>
-              )}
-            </div>
+            <img
+              key={i}
+              src={img.url}
+              alt=""
+              style={{ width:'100%', display:'block', objectFit:'cover', lineHeight:0, margin:0, padding:0 }}
+              loading={i === 0 ? 'eager' : 'lazy'}
+            />
           ))}
         </div>
       )}
@@ -444,7 +513,22 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         </button>
       </div>
 
-      <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
+      {/* Lightbox */}
+      {lb && imgs.length > 0 && (
+        <div onClick={() => setLb(false)} style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.97)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <img src={imgs[imgIdx]?.url} alt="" style={{ maxWidth:'100%', maxHeight:'90vh', objectFit:'contain' }} />
+          <button onClick={() => setLb(false)} style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,.12)', border:'none', borderRadius:'50%', width:44, height:44, color:'white', fontSize:20, cursor:'pointer' }}>✕</button>
+          {imgs.length > 1 && <>
+            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i-1+imgs.length)%imgs.length)}} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,.1)', border:'none', borderRadius:'50%', width:48, height:48, color:'white', fontSize:26, cursor:'pointer' }}>‹</button>
+            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i+1)%imgs.length)}} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,.1)', border:'none', borderRadius:'50%', width:48, height:48, color:'white', fontSize:26, cursor:'pointer' }}>›</button>
+          </>}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+        @keyframes imgIn{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:scale(1)}}
+      `}</style>
     </div>
   )
 }
