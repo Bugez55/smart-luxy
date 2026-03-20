@@ -1,465 +1,326 @@
-import { useState, useEffect, useRef } from 'react'
-import ReviewSection from './ReviewSection'
-import CountdownTimer from './CountdownTimer'
-import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
+import { useState } from 'react'
 
-function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
+import CONFIG from '../config'
 
-const LIVRAISON = {
-  'Adrar':{bureau:1000,domicile:1600},'Chlef':{bureau:400,domicile:800},'Laghouat':{bureau:600,domicile:1100},
-  'Oum El Bouaghi':{bureau:400,domicile:950},'Batna':{bureau:400,domicile:950},'Béjaïa':{bureau:400,domicile:850},
-  'Biskra':{bureau:600,domicile:1100},'Béchar':{bureau:750,domicile:1400},'Blida':{bureau:400,domicile:800},
-  'Bouira':{bureau:400,domicile:850},'Tamanrasset':{bureau:1000,domicile:1800},'Tébessa':{bureau:600,domicile:1100},
-  'Tlemcen':{bureau:400,domicile:850},'Tiaret':{bureau:400,domicile:850},'Tizi Ouzou':{bureau:0,domicile:300},
-  'Alger':{bureau:300,domicile:750},'Djelfa':{bureau:600,domicile:1100},'Jijel':{bureau:400,domicile:950},
-  'Sétif':{bureau:400,domicile:900},'Saïda':{bureau:400,domicile:850},'Skikda':{bureau:400,domicile:950},
-  'Sidi Bel Abbès':{bureau:400,domicile:850},'Annaba':{bureau:400,domicile:900},'Guelma':{bureau:400,domicile:950},
-  'Constantine':{bureau:400,domicile:900},'Médéa':{bureau:400,domicile:850},'Mostaganem':{bureau:400,domicile:800},
-  "M'Sila":{bureau:400,domicile:900},'Mascara':{bureau:400,domicile:850},'Ouargla':{bureau:750,domicile:1200},
-  'Oran':{bureau:400,domicile:850},'El Bayadh':{bureau:400,domicile:900},'Illizi':{bureau:1500,domicile:1900},
-  'Bordj Bou Arréridj':{bureau:400,domicile:900},'Boumerdès':{bureau:400,domicile:850},'El Tarf':{bureau:400,domicile:1000},
-  'Tindouf':{bureau:1500,domicile:1900},'Tissemsilt':{bureau:400,domicile:850},'El Oued':{bureau:750,domicile:1200},
-  'Khenchela':{bureau:600,domicile:1000},'Souk Ahras':{bureau:600,domicile:1000},'Tipaza':{bureau:400,domicile:850},
-  'Mila':{bureau:400,domicile:950},'Aïn Defla':{bureau:400,domicile:850},'Naâma':{bureau:600,domicile:1200},
-  'Aïn Témouchent':{bureau:400,domicile:850},'Ghardaïa':{bureau:750,domicile:1200},'Relizane':{bureau:400,domicile:800},
-  'Timimoun':{bureau:1000,domicile:1600},'Touggourt':{bureau:750,domicile:1200},'Djanet':{bureau:1500,domicile:1900},
-  'In Salah':{bureau:1000,domicile:1800},'In Guezzam':{bureau:1500,domicile:1900},
-  'Bordj Badji Mokhtar':{bureau:1500,domicile:1900},'Ouled Djellal':{bureau:600,domicile:1100},
-}
+export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose }) {
+  const [tab, setTab] = useState(defaultTab)
+  const [lang, setLang] = useState('fr')
 
-export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder }) {
-  const [openFaq, setOpenFaq] = useState(null)
-  const [selectedBundle, setSelectedBundle] = useState(null)
-  const [qty, setQty] = useState(1)
-  const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'' })
-  const [modeLiv, setModeLiv] = useState('domicile')
-  const [ordering, setOrdering] = useState(false)
-  const [wilayaOpen, setWilayaOpen] = useState(false)
-  const [communeOpen, setCommuneOpen] = useState(false)
-  const [stickyVisible, setStickyVisible] = useState(false)
-  const formRef = useRef()
-  const topRef = useRef()
-
-  const imgs = (() => { try { return typeof p.images==='string' ? JSON.parse(p.images) : (p.images||[]) } catch { return [] } })()
-  const specs = (() => { try { return typeof p.specs==='string' ? JSON.parse(p.specs) : (p.specs||[]) } catch { return [] } })()
-  const bundles = (() => { try { return typeof p.bundles==='string' ? JSON.parse(p.bundles) : (p.bundles||[]) } catch { return [] } })()
-  const faq = (() => { try { return typeof p.faq==='string' ? JSON.parse(p.faq) : (p.faq||[]) } catch { return [] } })()
-
-  const mainImg = imgs[0]?.url || p.img
-  const hasBundles = bundles.length > 0
-  const activeBundle = selectedBundle !== null ? bundles[selectedBundle] : null
-  const currentPrix = activeBundle ? activeBundle.prix : p.prix
-  const currentQty = activeBundle ? activeBundle.qty : qty
-
-  const outOfStock = p.stock !== null && p.stock !== undefined && p.stock <= 0
-  const lowStock = p.stock !== null && p.stock !== undefined && p.stock > 0 && p.stock <= 5
-  const isPromo = p.badge?.includes('Promo') || p.prix_old
-  const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100-(p.prix/p.prix_old)*100) : 0
-
-  const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
-  const prixLiv = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][modeLiv] : null
-  const fraisLiv = prixLiv !== null ? prixLiv : null
-  const totalFinal = currentPrix + (fraisLiv || 0)
-  const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
-  const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
-
-  function setF(k, v) { setForm(f => ({ ...f, [k]:v, ...(k==='wilaya'?{commune:''}:{}) })) }
-
-  // Lock body scroll
-  useEffect(() => {
-    const scrollY = window.scrollY
-    document.body.style.overflow = 'hidden'
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.width = '100%'
-    return () => {
-      document.body.style.overflow = ''
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      window.scrollTo(0, scrollY)
+  const content = {
+    confidentialite: {
+      fr: {
+        title: 'Politique de Confidentialité',
+        emoji: '🔒',
+        date: 'Dernière mise à jour : Mars 2025',
+        sections: [
+          {
+            title: '1. Informations collectées',
+            text: `Dans le cadre de votre commande, Smart Luxy collecte uniquement les informations suivantes :\n• Nom et prénom\n• Numéro de téléphone\n• Wilaya et commune de livraison\n• Adresse de livraison (optionnel)\n• Note de commande (optionnel)\n\nCes informations sont strictement nécessaires au traitement et à la livraison de votre commande.`
+          },
+          {
+            title: '2. Utilisation des données',
+            text: `Vos données personnelles sont utilisées exclusivement pour :\n• Traiter et confirmer votre commande\n• Organiser la livraison à votre adresse\n• Vous contacter en cas de besoin concernant votre commande\n• Améliorer nos services\n\nNous ne vendons, ne louons et ne partageons jamais vos données avec des tiers à des fins commerciales.`
+          },
+          {
+            title: '3. Conservation des données',
+            text: `Vos données sont conservées uniquement pendant la durée nécessaire au traitement de votre commande, et pendant une période maximale de 12 mois après la livraison, conformément aux obligations légales algériennes.`
+          },
+          {
+            title: '4. Sécurité',
+            text: `Smart Luxy met en place toutes les mesures techniques nécessaires pour protéger vos données contre tout accès non autorisé, modification, divulgation ou destruction. Vos informations sont stockées de manière sécurisée via des services certifiés.`
+          },
+          {
+            title: '5. Vos droits',
+            text: `Conformément à la loi algérienne n°18-07 relative à la protection des données personnelles, vous disposez des droits suivants :\n• Droit d'accès à vos données\n• Droit de rectification de vos données\n• Droit de suppression de vos données\n• Droit d'opposition au traitement\n\nPour exercer ces droits, contactez-nous via WhatsApp : +' + CONFIG.telephone + '.replace('${CONFIG.telephone}', CONFIG.telephone)`
+          },
+          {
+            title: '6. Cookies',
+            text: `Notre site utilise uniquement des données de session techniques nécessaires au bon fonctionnement de la boutique (panier, préférences). Aucun cookie publicitaire ou de traçage tiers n'est utilisé.`
+          },
+          {
+            title: '7. Modifications',
+            text: `Smart Luxy se réserve le droit de modifier cette politique à tout moment. Les modifications entrent en vigueur dès leur publication sur le site. Nous vous encourageons à consulter régulièrement cette page.`
+          },
+          {
+            title: '8. Contact',
+            text: `Pour toute question relative à votre vie privée :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : nabilmohellebi2@gmail.com`
+          }
+        ]
+      },
+      ar: {
+        title: 'سياسة الخصوصية',
+        emoji: '🔒',
+        date: 'آخر تحديث: مارس 2025',
+        dir: 'rtl',
+        sections: [
+          {
+            title: '١. المعلومات التي نجمعها',
+            text: `عند تقديم طلبك، تقوم Smart Luxy بجمع المعلومات التالية فقط:\n• الاسم واللقب\n• رقم الهاتف\n• الولاية والبلدية للتوصيل\n• عنوان التوصيل (اختياري)\n• ملاحظة الطلب (اختياري)\n\nهذه المعلومات ضرورية فقط لمعالجة طلبك وتسليمه.`
+          },
+          {
+            title: '٢. استخدام البيانات',
+            text: `تُستخدم بياناتك الشخصية حصريًا من أجل:\n• معالجة طلبك وتأكيده\n• تنظيم التوصيل إلى عنوانك\n• التواصل معك عند الحاجة بخصوص طلبك\n• تحسين خدماتنا\n\nنحن لا نبيع أو نؤجر أو نشارك بياناتك مع أطراف ثالثة لأغراض تجارية أبدًا.`
+          },
+          {
+            title: '٣. الاحتفاظ بالبيانات',
+            text: `يتم الاحتفاظ ببياناتك فقط طوال المدة اللازمة لمعالجة طلبك، وبعد ذلك لمدة لا تتجاوز 12 شهرًا من تاريخ التسليم، وفقًا للالتزامات القانونية الجزائرية.`
+          },
+          {
+            title: '٤. الأمان',
+            text: `تتخذ Smart Luxy جميع التدابير التقنية اللازمة لحماية بياناتك من أي وصول غير مصرح به أو تعديل أو إفصاح أو تدمير. يتم تخزين معلوماتك بشكل آمن عبر خدمات معتمدة.`
+          },
+          {
+            title: '٥. حقوقك',
+            text: `وفقًا للقانون الجزائري رقم 18-07 المتعلق بحماية البيانات الشخصية، تتمتع بالحقوق التالية:\n• الحق في الوصول إلى بياناتك\n• الحق في تصحيح بياناتك\n• الحق في حذف بياناتك\n• الحق في الاعتراض على المعالجة\n\nلممارسة هذه الحقوق، تواصل معنا عبر واتساب: 213 556 688 810+`
+          },
+          {
+            title: '٦. ملفات تعريف الارتباط',
+            text: `يستخدم موقعنا فقط البيانات التقنية الضرورية لحسن سير المتجر (سلة التسوق، التفضيلات). لا يتم استخدام أي ملفات تتبع أو إعلانات خارجية.`
+          },
+          {
+            title: '٧. التعديلات',
+            text: `تحتفظ Smart Luxy بحق تعديل هذه السياسة في أي وقت. تدخل التعديلات حيز التنفيذ فور نشرها على الموقع. نشجعك على مراجعة هذه الصفحة بانتظام.`
+          },
+          {
+            title: '٨. التواصل',
+            text: `لأي سؤال يتعلق بخصوصيتك:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: nabilmohellebi2@gmail.com`
+          }
+        ]
+      }
+    },
+    retour: {
+      fr: {
+        title: 'Politique de Retour & Remboursement',
+        emoji: '🔄',
+        date: 'Dernière mise à jour : Mars 2025',
+        sections: [
+          {
+            title: '1. Délai de retour',
+            text: `Vous disposez de 7 jours calendaires à compter de la date de réception de votre commande pour demander un retour ou un échange, sous réserve que le produit soit dans son état d'origine (non utilisé, emballage intact, accessoires inclus).`
+          },
+          {
+            title: '2. Conditions de retour acceptées ✅',
+            text: `Un retour est accepté dans les cas suivants :\n✅ Produit reçu défectueux ou endommagé\n✅ Produit ne correspondant pas à la description sur le site\n✅ Erreur dans la commande (mauvaise référence, mauvaise couleur, mauvaise taille)\n✅ Produit non conforme à ce qui a été commandé\n✅ Colis endommagé à la livraison`
+          },
+          {
+            title: '3. Cas de non-retour ❌',
+            text: `Les retours ne sont pas acceptés dans les cas suivants :\n❌ Produit utilisé, lavé ou endommagé par le client\n❌ Emballage ouvert pour les produits d'hygiène, cosmétiques ou alimentaires\n❌ Demande de retour après le délai de 7 jours\n❌ Changement d'avis du client sans défaut constaté sur le produit\n❌ Produit retourné incomplet (accessoires manquants)`
+          },
+          {
+            title: '4. Procédure de retour',
+            text: `Pour effectuer un retour, suivez ces étapes :\n\n1️⃣ Contactez-nous via WhatsApp dans les 7 jours suivant la réception\n2️⃣ Envoyez des photos claires du produit et du problème constaté\n3️⃣ Après validation de votre demande, nous vous indiquons la procédure d'envoi\n4️⃣ Emballez soigneusement le produit dans son emballage d'origine\n5️⃣ Nous organisons l'enlèvement ou vous indiquons le point de dépôt\n\n📱 WhatsApp : ${CONFIG.telephone}`
+          },
+          {
+            title: '5. Remboursement',
+            text: `En cas de retour validé par notre équipe :\n• Remboursement intégral du montant payé (produit + livraison si erreur de notre part)\n• Le remboursement est effectué dans un délai de 5 à 10 jours ouvrables après réception du retour\n• Mode de remboursement : virement bancaire CCP/CIB ou espèces, selon votre préférence\n\n⚠️ Les frais de retour sont à votre charge sauf en cas de produit défectueux ou erreur de notre part.`
+          },
+          {
+            title: '6. Échange',
+            text: `Si vous préférez un échange plutôt qu'un remboursement :\n• L'échange est possible sous réserve de disponibilité du produit\n• Livraison du produit de remplacement offerte par Smart Luxy en cas de défaut ou erreur de notre part\n• Délai d'échange : 3 à 7 jours ouvrables après réception du retour\n\nContactez-nous via WhatsApp pour organiser l'échange.`
+          },
+          {
+            title: '7. Colis endommagé à la livraison',
+            text: `Si votre colis arrive endommagé :\n📸 Prenez des photos du colis et du produit immédiatement, avant ouverture complète\n📱 Contactez-nous dans les 24h via WhatsApp avec les photos\n✅ Nous procédons à un remplacement ou remboursement intégral sans frais supplémentaires\n\n⚠️ Important : Acceptez le colis même endommagé, puis contactez-nous avec les preuves. Ne refusez pas la livraison.`
+          },
+          {
+            title: '8. Responsabilité',
+            text: `Smart Luxy s'engage à :\n• Vendre uniquement des produits conformes aux descriptions publiées\n• Traiter toutes les réclamations dans un délai de 24 à 48 heures\n• Assurer un service après-vente sérieux et réactif\n\nSmart Luxy n'est pas responsable des retards de livraison causés par des événements exceptionnels (grèves, catastrophes naturelles, etc.).`
+          },
+          {
+            title: '9. Contact SAV',
+            text: `Pour toute réclamation ou question :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : nabilmohellebi2@gmail.com\n🕐 Disponible 7j/7 de 8h à 22h`
+          }
+        ]
+      },
+      ar: {
+        title: 'سياسة الإرجاع والاسترداد',
+        emoji: '🔄',
+        date: 'آخر تحديث: مارس 2025',
+        dir: 'rtl',
+        sections: [
+          {
+            title: '١. مدة الإرجاع',
+            text: `لديك 7 أيام تقويمية من تاريخ استلام طلبك لطلب الإرجاع أو الاستبدال، بشرط أن يكون المنتج في حالته الأصلية (غير مستخدم، العبوة سليمة، مع جميع الملحقات).`
+          },
+          {
+            title: '٢. حالات قبول الإرجاع ✅',
+            text: `يُقبل الإرجاع في الحالات التالية:\n✅ استلام منتج معيب أو تالف\n✅ المنتج لا يطابق الوصف المنشور على الموقع\n✅ خطأ في الطلب (مرجع خاطئ، لون خاطئ، مقاس خاطئ)\n✅ المنتج لا يوافق ما تم طلبه\n✅ وصول الطرد تالفًا عند التسليم`
+          },
+          {
+            title: '٣. حالات رفض الإرجاع ❌',
+            text: `لا يُقبل الإرجاع في الحالات التالية:\n❌ منتج مستخدم أو تالف من قِبَل العميل\n❌ عبوة مفتوحة لمنتجات النظافة أو مستحضرات التجميل\n❌ طلب الإرجاع بعد مرور 7 أيام\n❌ تغيير رأي العميل دون وجود عيب في المنتج\n❌ إرجاع المنتج ناقصًا (ملحقات مفقودة)`
+          },
+          {
+            title: '٤. إجراءات الإرجاع',
+            text: `لإجراء الإرجاع، اتبع الخطوات التالية:\n\n1️⃣ تواصل معنا عبر واتساب خلال 7 أيام من الاستلام\n2️⃣ أرسل صورًا واضحة للمنتج والمشكلة الملاحظة\n3️⃣ بعد التحقق من طلبك، سنوضح لك إجراءات الإرسال\n4️⃣ قم بتعبئة المنتج بعناية في عبوته الأصلية\n5️⃣ سننظم الاستلام أو نوضح لك نقطة الإيداع\n\n📱 واتساب: 213 556 688 810+`
+          },
+          {
+            title: '٥. الاسترداد',
+            text: `في حالة قبول الإرجاع من قِبَل فريقنا:\n• استرداد كامل للمبلغ المدفوع (المنتج + التوصيل في حالة الخطأ من جانبنا)\n• يتم الاسترداد خلال 5 إلى 10 أيام عمل بعد استلام المُرجَع\n• طريقة الاسترداد: تحويل بنكي CCP/CIB أو نقدًا حسب تفضيلك\n\n⚠️ تكاليف الإرجاع على عاتقك إلا في حالة المنتج المعيب أو الخطأ من جانبنا.`
+          },
+          {
+            title: '٦. الاستبدال',
+            text: `إذا كنت تفضل الاستبدال بدلاً من الاسترداد:\n• الاستبدال ممكن بشرط توفر المنتج\n• تكاليف شحن المنتج البديل على عاتق Smart Luxy في حالة العيب أو الخطأ من جانبنا\n• مدة الاستبدال: 3 إلى 7 أيام عمل بعد استلام المُرجَع\n\nتواصل معنا عبر واتساب لتنظيم الاستبدال.`
+          },
+          {
+            title: '٧. الطرود التالفة عند التسليم',
+            text: `إذا وصل طردك تالفًا:\n📸 التقط صورًا للطرد والمنتج فورًا قبل الفتح الكامل\n📱 تواصل معنا خلال 24 ساعة عبر واتساب مع الصور\n✅ سنقوم بالاستبدال أو الاسترداد الكامل بدون رسوم إضافية\n\n⚠️ مهم: اقبل الطرد حتى وإن كان تالفًا، ثم تواصل معنا بالإثباتات. لا ترفض التسليم.`
+          },
+          {
+            title: '٨. المسؤولية',
+            text: `تلتزم Smart Luxy بـ:\n• بيع المنتجات المطابقة للأوصاف المنشورة فقط\n• معالجة جميع الشكاوى في غضون 24 إلى 48 ساعة\n• ضمان خدمة ما بعد البيع جدية وسريعة الاستجابة\n\nلا تتحمل Smart Luxy المسؤولية عن تأخيرات التوصيل الناجمة عن أحداث استثنائية (إضرابات، كوارث طبيعية، إلخ).`
+          },
+          {
+            title: '٩. خدمة ما بعد البيع',
+            text: `لأي شكوى أو سؤال:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: nabilmohellebi2@gmail.com\n🕐 متاح 7 أيام/7 من 8 صباحًا إلى 10 مساءً`
+          }
+        ]
+      }
     }
-  }, [])
-
-  // Observer sticky
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => setStickyVisible(!e.isIntersecting), { threshold: 0 })
-    if (topRef.current) obs.observe(topRef.current)
-    return () => obs.disconnect()
-  }, [])
-
-  async function handleOrder() {
-    if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
-    if (hasBundles && selectedBundle === null) return
-    setOrdering(true)
-    const prixUnit = activeBundle ? Math.round(activeBundle.prix / activeBundle.qty) : p.prix
-    await onSubmitOrder({
-      ...form,
-      items: [{ ...p, qty: currentQty, prix: prixUnit }],
-      mode_livraison: modeLiv,
-      frais_livraison: fraisLiv || 0,
-      total: totalFinal,
-    })
-    setOrdering(false)
   }
 
-  const inp = {
-    background:'#1a1a1a', border:'1px solid #2a2a2a', borderRadius:10,
-    padding:'12px 14px', color:'white', fontSize:'16px', width:'100%',
-    outline:'none', boxSizing:'border-box', fontFamily:'inherit',
-    WebkitTextSizeAdjust:'100%', touchAction:'manipulation',
-  }
-  const lbl = { fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
-
-  const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null)
+  const current = content[tab][lang]
+  const isRtl = lang === 'ar'
 
   return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background:'#0a0a0a', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9000,
+      background: 'rgba(0,0,0,.88)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
 
-      {/* ── Header sticky ── */}
-      <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
-        <button onClick={onClose} style={{ background:'rgba(255,255,255,.07)', border:'none', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'white', fontSize:18, flexShrink:0 }}>✕</button>
-        <span style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
-        {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
-      </div>
+      <div style={{
+        background: '#141414',
+        width: '100%', maxWidth: 680,
+        maxHeight: '92vh',
+        borderRadius: '20px 20px 0 0',
+        display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+        animation: 'polSlideUp .3s cubic-bezier(.22,1,.36,1)',
+      }}>
 
-      {/* ── Image principale ── */}
-      <div ref={topRef} style={{ position:'relative', background:'#111' }}>
-        {mainImg
-          ? <img src={mainImg} alt={p.nom} style={{ width:'100%', maxHeight:380, objectFit:'cover', display:'block' }} onClick={() => {}} />
-          : <div style={{ height:280, display:'flex', alignItems:'center', justifyContent:'center', fontSize:80 }}>{p.emoji||'📦'}</div>
-        }
-        {outOfStock && <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fca5a5', letterSpacing:'.06em' }}>ÉPUISÉ</div>}
-        {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:12, left:12, background:'rgba(239,68,68,.92)', color:'white', fontSize:11, fontWeight:800, padding:'4px 10px', borderRadius:8 }}>🔥 Plus que {p.stock} en stock</div>}
-        {imgs.length > 1 && <div style={{ position:'absolute', bottom:12, right:12, background:'rgba(0,0,0,.6)', color:'rgba(255,255,255,.7)', fontSize:11, padding:'4px 10px', borderRadius:8 }}>1/{imgs.length} · défiler ↓</div>}
-      </div>
-
-      {/* ── Infos produit ── */}
-      <div style={{ padding:'16px 16px 0' }}>
-        <h1 style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'white', lineHeight:1.3 }}>{p.nom}</h1>
-
-        {/* Étoiles + commandes */}
-        {(p.note_etoiles || p.nb_commandes > 0) && (
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12, flexWrap:'wrap' }}>
-            {p.note_etoiles && (
-              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                {[1,2,3,4,5].map(i => (
-                  <span key={i} style={{ fontSize:16, color: i <= Math.round(p.note_etoiles) ? '#F9A825' : 'rgba(255,255,255,.15)' }}>★</span>
-                ))}
-                <span style={{ fontSize:13, fontWeight:800, color:'#F9A825', marginLeft:3 }}>{Number(p.note_etoiles).toFixed(1)}</span>
-              </div>
-            )}
-            {p.nb_commandes > 0 && (
-              <div style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(201,168,76,.08)', border:'1px solid rgba(201,168,76,.2)', borderRadius:20, padding:'3px 10px' }}>
-                <span style={{ fontSize:13 }}>📦</span>
-                <span style={{ fontSize:12, fontWeight:800, color:'rgba(255,255,255,.7)' }}>{p.nb_commandes.toLocaleString()} commandes</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Prix */}
-        <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:14 }}>
-          <span style={{ fontSize:30, fontWeight:900, color:'#C9A84C' }}>{fmt(p.prix)}</span>
-          {p.prix_old && <>
-            <span style={{ fontSize:15, color:'#555', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
-            <span style={{ background:'#ef4444', color:'white', fontSize:11, fontWeight:800, padding:'2px 8px', borderRadius:6 }}>-{disc}%</span>
-          </>}
-        </div>
-
-        {isPromo && <CountdownTimer />}
-      </div>
-
-      {/* ── Description ── */}
-      {p.description && (
-        <div style={{ padding:'0 16px 16px' }}>
-          <div style={{ fontSize:14, color:'rgba(255,255,255,.7)', lineHeight:1.8 }}
-            dangerouslySetInnerHTML={{ __html: p.description }} />
-        </div>
-      )}
-
-      {/* ── Caractéristiques ── */}
-      {specs.length > 0 && (
-        <div style={{ padding:'0 16px 16px' }}>
-          {specs.map((s,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
-              <span style={{ color:'#C9A84C', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
-              <span style={{ color:'rgba(255,255,255,.75)', fontSize:14, lineHeight:1.5 }}>{s}</span>
+        {/* ── Header ── */}
+        <div style={{
+          background: '#1a1a1a',
+          borderBottom: '1px solid #2a2a2a',
+          padding: '16px 16px 12px',
+          flexShrink: 0,
+        }}>
+          {/* Row 1: titre + actions */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontWeight: 900, fontSize: 15, color: 'white', letterSpacing: '-.02em' }}>
+              Smart <span style={{ color: '#C9A84C' }}>Luxy</span>
+              <span style={{ color: '#555', fontWeight: 400, marginLeft: 6, fontSize: 13 }}>· Informations légales</span>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── TOUTES LES PHOTOS défilantes verticalement ── */}
-      {imgs.length > 1 && (
-        <div style={{ padding:'0 0 16px' }}>
-          <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.3)', letterSpacing:'.08em', padding:'0 16px', marginBottom:10 }}>
-            📸 PHOTOS DU PRODUIT
-          </div>
-          {imgs.map((img, i) => (
-            <div key={i}>
-              <img
-                src={img.url}
-                alt={`Photo ${i+1}`}
-                style={{ width:'100%', display:'block', objectFit:'cover' }}
-                loading={i === 0 ? 'eager' : 'lazy'}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── FAQ ── */}
-      {faq.length > 0 && (
-        <div style={{ padding:'0 16px 16px' }}>
-          <h3 style={{ fontSize:16, fontWeight:900, color:'white', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
-          {faq.map((item,i) => (
-            <div key={i} style={{ marginBottom:6, borderRadius:12, overflow:'hidden', border:'1px solid rgba(255,255,255,.08)' }}>
-              <button onClick={() => setOpenFaq(openFaq===i?null:i)} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background:openFaq===i?'rgba(201,168,76,.1)':'#141414', border:'none', padding:'13px 14px', color:'white', fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'left', gap:8 }}>
-                <span style={{ flex:1 }}>{item.q}</span>
-                <span style={{ color:'#C9A84C', fontSize:18, flexShrink:0, fontWeight:900 }}>{openFaq===i?'−':'+'}</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setLang(l => l === 'fr' ? 'ar' : 'fr')} style={{
+                background: 'rgba(201,168,76,.12)', border: '1px solid rgba(201,168,76,.25)',
+                borderRadius: 20, padding: '5px 14px', color: '#C9A84C',
+                fontSize: 12, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                {lang === 'fr' ? '🇩🇿 عربي' : '🇫🇷 Français'}
               </button>
-              {openFaq===i && (
-                <div style={{ background:'#111', padding:'12px 14px', fontSize:13, color:'rgba(255,255,255,.65)', lineHeight:1.7, borderTop:'1px solid rgba(255,255,255,.05)' }}>
-                  {item.r}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════
-          FORMULAIRE DE COMMANDE — style MarketDZ
-      ══════════════════════════════════════════ */}
-      <div ref={formRef} style={{ margin:'0 12px 16px', background:'#141414', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, overflow:'hidden' }}>
-
-        {/* En-tête formulaire */}
-        <div style={{ background:'linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05))', borderBottom:'1px solid rgba(201,168,76,.2)', padding:'16px', textAlign:'center' }}>
-          <div style={{ fontSize:17, fontWeight:900, color:'white', marginBottom:3 }}>🛒 Passer commande</div>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>Paiement à la livraison ✅ Partout en Algérie 🇩🇿</div>
-        </div>
-
-        <div style={{ padding:16 }}>
-
-          {/* ── PACKS / BUNDLES ── */}
-          {hasBundles && (
-            <div style={{ marginBottom:18 }}>
-              <div style={lbl}>Choisir une offre</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                {bundles.map((b, i) => {
-                  const isSelected = selectedBundle === i
-                  const prixParUnit = b.qty > 1 ? Math.round(b.prix / b.qty) : null
-                  return (
-                    <div key={i} onClick={() => setSelectedBundle(isSelected ? null : i)} style={{
-                      display:'flex', alignItems:'center', gap:12,
-                      background: isSelected ? 'rgba(201,168,76,.12)' : '#1a1a1a',
-                      border:`2px solid ${isSelected ? '#C9A84C' : 'rgba(255,255,255,.08)'}`,
-                      borderRadius:12, padding:'12px 14px', cursor:'pointer', transition:'all .2s',
-                    }}>
-                      {/* Radio */}
-                      <div style={{ width:22, height:22, borderRadius:'50%', border:`2px solid ${isSelected?'#C9A84C':'rgba(255,255,255,.2)'}`, background:isSelected?'#C9A84C':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .2s' }}>
-                        {isSelected && <span style={{ fontSize:12, color:'#000', fontWeight:900 }}>✓</span>}
-                      </div>
-                      {/* Image si disponible */}
-                      {mainImg && <img src={mainImg} alt="" style={{ width:44, height:44, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
-                      {/* Label */}
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:14, fontWeight:700, color:'white' }}>{b.label}</div>
-                        {prixParUnit && <div style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginTop:1 }}>{fmt(prixParUnit)} / unité</div>}
-                      </div>
-                      {/* Prix */}
-                      <div style={{ textAlign:'right', flexShrink:0 }}>
-                        <div style={{ fontSize:16, fontWeight:900, color:isSelected?'#C9A84C':'white' }}>{fmt(b.prix)}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Quantité si pas de bundles */}
-          {!hasBundles && (
-            <div style={{ marginBottom:14 }}>
-              <label style={lbl}>Quantité</label>
-              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'white', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
-                <span style={{ color:'white', fontWeight:900, fontSize:20, minWidth:32, textAlign:'center' }}>{qty}</span>
-                <button onClick={() => setQty(q => q+1)} style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'#C9A84C', fontSize:20, cursor:'pointer', fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Mode livraison ── */}
-          <div style={{ marginBottom:14 }}>
-            <label style={lbl}>Mode de livraison</label>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-              {['domicile','bureau'].map(mode => (
-                <button key={mode} onClick={() => setModeLiv(mode)} style={{ padding:'11px 8px', background:modeLiv===mode?'rgba(201,168,76,.12)':'#1a1a1a', border:`2px solid ${modeLiv===mode?'#C9A84C':'#2a2a2a'}`, borderRadius:10, color:modeLiv===mode?'#C9A84C':'#666', fontSize:12, fontWeight:800, cursor:'pointer', textAlign:'center', lineHeight:1.4, transition:'all .2s' }}>
-                  {mode==='domicile'?'🏠 À domicile':'📦 Retrait bureau'}
-                  <div style={{ fontSize:9, marginTop:3, color:modeLiv===mode?'rgba(201,168,76,.6)':'#444' }}>{mode==='domicile'?'2–5 jours':'1–3 jours'}</div>
-                </button>
-              ))}
+              <button onClick={onClose} style={{
+                background: '#2a2a2a', border: 'none', borderRadius: '50%',
+                width: 32, height: 32, color: '#aaa', fontSize: 15,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>✕</button>
             </div>
           </div>
 
-          {/* ── Wilaya ── */}
-          <div style={{ marginBottom:10 }}>
-            <label style={lbl}>Wilaya *</label>
-            <div style={{ position:'relative' }}>
-              <div onClick={() => { setWilayaOpen(o=>!o); setCommuneOpen(false) }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', color:form.wilaya?'white':'#444' }}>
-                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{form.wilaya||'Choisir une wilaya'}</span>
-                <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{wilayaOpen?'▲':'▼'}</span>
-              </div>
-              {wilayaOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#1a1a1a', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
-                  {wilayasOptions.map(opt => (
-                    <div key={opt} onClick={() => { setF('wilaya',opt); setWilayaOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.wilaya?'#C9A84C':'rgba(255,255,255,.85)', background:opt===form.wilaya?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid rgba(255,255,255,.04)', touchAction:'manipulation' }}>
-                      {opt}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Commune ── */}
-          <div style={{ marginBottom:10 }}>
-            <label style={lbl}>Commune {communes.length>0&&`(${communes.length})`} *</label>
-            <div style={{ position:'relative' }}>
-              <div onClick={() => { if(form.wilaya){setCommuneOpen(o=>!o); setWilayaOpen(false)} }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:form.wilaya?'pointer':'not-allowed', opacity:form.wilaya?1:.5, color:form.commune?'white':'#444' }}>
-                <span>{form.commune||(form.wilaya?'Choisir une commune':"Choisir d'abord une wilaya")}</span>
-                <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{communeOpen?'▲':'▼'}</span>
-              </div>
-              {communeOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#1a1a1a', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
-                  {communes.map(opt => (
-                    <div key={opt} onClick={() => { setF('commune',opt); setCommuneOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.commune?'#C9A84C':'rgba(255,255,255,.85)', background:opt===form.commune?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid rgba(255,255,255,.04)', touchAction:'manipulation' }}>
-                      {opt}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Nom + Tel ── */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-            <div>
-              <label style={lbl}>Nom complet *</label>
-              <input placeholder="Votre nom" value={form.nom} onChange={e => setF('nom',e.target.value)} style={inp} />
-            </div>
-            <div>
-              <label style={lbl}>Téléphone *</label>
-              <input placeholder="0555 00 00 00" value={form.tel} onChange={e => setF('tel',e.target.value)} style={inp} type="tel" />
-            </div>
-          </div>
-
-          {/* Adresse */}
-          {modeLiv==='domicile' && (
-            <div style={{ marginBottom:10 }}>
-              <label style={lbl}>Adresse</label>
-              <input placeholder="Rue, quartier, N°..." value={form.adresse} onChange={e => setF('adresse',e.target.value)} style={inp} />
-            </div>
-          )}
-
-          {/* ── Récap prix ── */}
-          {form.wilaya && (
-            <div style={{ background:'rgba(255,255,255,.04)', borderRadius:12, padding:'12px 14px', marginBottom:16, border:'1px solid rgba(255,255,255,.06)' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'rgba(255,255,255,.5)', marginBottom:6 }}>
-                <span>🛍️ Prix produit</span><span>{fmt(currentPrix)}</span>
-              </div>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'rgba(255,255,255,.5)', marginBottom:8 }}>
-                <span>🚚 Frais livraison</span>
-                <span style={{ color:fraisLiv===0?'#22c55e':undefined }}>{fraisLiv===null?'—':fraisLiv===0?'Gratuit':fmt(fraisLiv)}</span>
-              </div>
-              <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, borderTop:'1px solid rgba(255,255,255,.08)', fontSize:17, fontWeight:900, color:'white' }}>
-                <span>💰 Total à payer</span>
-                <span style={{ color:'#C9A84C' }}>{fmt(totalFinal)}</span>
-              </div>
-            </div>
-          )}
-
-          {/* ── Bouton confirmer ── */}
-          <button
-            onClick={handleOrder}
-            disabled={!canOrder || ordering}
-            style={{
-              width:'100%', padding:'16px',
-              background: canOrder ? 'linear-gradient(135deg,#C9A84C,#E9C46A)' : '#222',
-              border:'none', borderRadius:14,
-              color: canOrder ? '#000' : '#444',
-              fontSize:16, fontWeight:900, cursor: canOrder ? 'pointer' : 'default',
-              display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-              transition:'all .3s', position:'relative', overflow:'hidden',
-            }}
-          >
-            {canOrder && !ordering && (
-              <div style={{ position:'absolute', inset:0, background:'linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent)', animation:'shimmer 2s infinite', backgroundSize:'200% 100%' }} />
-            )}
-            <span style={{ position:'relative', zIndex:1 }}>
-              {ordering ? '⏳ Envoi en cours…'
-                : outOfStock ? '🚫 Épuisé'
-                : hasBundles && selectedBundle===null ? '⬆️ Choisir une offre ci-dessus'
-                : '🛒 Confirmer la commande'}
-            </span>
-          </button>
-          <div style={{ textAlign:'center', marginTop:8, fontSize:11, color:'rgba(255,255,255,.2)' }}>
-            ✅ Paiement à la livraison · 100% sécurisé
-          </div>
-        </div>
-      </div>
-
-      {/* ── Avis clients ── */}
-      <ReviewSection productId={p.id} />
-
-      {/* ── Produits similaires ── */}
-      {(allProducts||[]).filter(x=>x.id!==p.id&&x.categorie===p.categorie&&x.is_active).slice(0,4).length > 0 && (
-        <div style={{ padding:'0 16px 100px' }}>
-          <h3 style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.5)', letterSpacing:'.06em', marginBottom:12 }}>VOUS AIMEREZ AUSSI</h3>
-          <div style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:4, scrollbarWidth:'none' }}>
-            {(allProducts||[]).filter(x=>x.id!==p.id&&x.categorie===p.categorie&&x.is_active).slice(0,4).map(sim => (
-              <div key={sim.id} onClick={onClose} style={{ background:'#141414', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, overflow:'hidden', cursor:'pointer', width:130, flexShrink:0 }}>
-                <div style={{ height:90, background:'#1a1a1a', overflow:'hidden' }}>
-                  {sim.img ? <img src={sim.img} alt={sim.nom} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30 }}>{sim.emoji||'📦'}</div>}
-                </div>
-                <div style={{ padding:'8px 10px' }}>
-                  <div style={{ fontSize:11, color:'white', fontWeight:700, marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{sim.nom}</div>
-                  <div style={{ fontSize:12, color:'#C9A84C', fontWeight:800 }}>{fmt(sim.prix)}</div>
-                </div>
-              </div>
+          {/* Row 2: Tabs */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {[
+              { key: 'confidentialite', labelFr: '🔒 Confidentialité', labelAr: '🔒 الخصوصية' },
+              { key: 'retour',          labelFr: '🔄 Retours & Remboursements', labelAr: '🔄 الإرجاع والاسترداد' },
+            ].map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{
+                padding: '10px 8px',
+                background: tab === t.key ? '#C9A84C' : 'rgba(255,255,255,.04)',
+                border: '1px solid ' + (tab === t.key ? '#C9A84C' : '#2e2e2e'),
+                borderRadius: 10,
+                color: tab === t.key ? '#0e0e0e' : 'rgba(255,255,255,.5)',
+                fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                transition: 'all .2s', lineHeight: 1.3,
+              }}>
+                {lang === 'fr' ? t.labelFr : t.labelAr}
+              </button>
             ))}
           </div>
         </div>
-      )}
 
-      {/* ── Sticky bouton commander ── */}
-      <div style={{
-        position:'fixed', bottom:0, left:0, right:0, zIndex:200,
-        background:'rgba(10,10,10,.97)', backdropFilter:'blur(20px)',
-        borderTop:'1px solid rgba(201,168,76,.2)',
-        padding:'10px 16px 14px',
-        display:'flex', alignItems:'center', gap:10,
-        transform: stickyVisible ? 'translateY(0)' : 'translateY(100%)',
-        transition:'transform .25s cubic-bezier(.22,1,.36,1)',
-        boxShadow:'0 -8px 32px rgba(0,0,0,.6)',
-      }}>
-        {(p.img||(imgs[0]?.url)) && <img src={p.img||(imgs[0]?.url)} alt="" style={{ width:42, height:42, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:12, color:'white', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.nom}</div>
-          <div style={{ fontSize:14, color:'#C9A84C', fontWeight:900 }}>{fmt(activeBundle?activeBundle.prix:p.prix)}</div>
+        {/* ── Contenu ── */}
+        <div style={{
+          flex: 1, overflowY: 'auto', padding: '20px 16px',
+          direction: isRtl ? 'rtl' : 'ltr',
+        }}>
+          {/* Titre de section */}
+          <div style={{
+            textAlign: 'center', marginBottom: 20,
+            padding: '16px', background: 'rgba(201,168,76,.06)',
+            border: '1px solid rgba(201,168,76,.15)', borderRadius: 14,
+          }}>
+            <div style={{ fontSize: 32, marginBottom: 6 }}>{current.emoji}</div>
+            <h1 style={{ fontSize: 18, fontWeight: 900, color: 'white', margin: '0 0 4px', letterSpacing: '-.02em' }}>
+              {current.title}
+            </h1>
+            <div style={{ fontSize: 11, color: '#555' }}>{current.date}</div>
+          </div>
+
+          {/* Sections */}
+          {current.sections.map((s, i) => (
+            <div key={i} style={{
+              marginBottom: 12,
+              background: '#1c1c1c',
+              border: '1px solid #272727',
+              borderRadius: 12,
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                padding: '10px 14px',
+                borderBottom: '1px solid #272727',
+                background: '#202020',
+              }}>
+                <h2 style={{
+                  fontSize: 13, fontWeight: 800, color: '#C9A84C', margin: 0,
+                }}>
+                  {s.title}
+                </h2>
+              </div>
+              <div style={{ padding: '12px 14px' }}>
+                <p style={{
+                  fontSize: 13.5, lineHeight: 1.9,
+                  color: 'rgba(255,255,255,.65)',
+                  margin: 0, whiteSpace: 'pre-line',
+                }}>
+                  {s.text}
+                </p>
+              </div>
+            </div>
+          ))}
+
+          {/* Footer légal */}
+          <div style={{
+            marginTop: 20, padding: '14px',
+            background: '#1a1a1a', border: '1px solid #272727',
+            borderRadius: 12, textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 12, color: '#444', lineHeight: 1.8 }}>
+              {lang === 'fr'
+                ? `© ${new Date().getFullYear()} Smart Luxy · Algérie 🇩🇿\nTous droits réservés`
+                : `© ${new Date().getFullYear()} Smart Luxy · الجزائر 🇩🇿\nجميع الحقوق محفوظة`
+              }
+            </div>
+          </div>
         </div>
-        <button
-          disabled={outOfStock}
-          onClick={() => formRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })}
-          style={{ background:outOfStock?'#333':'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:12, padding:'12px 20px', color:outOfStock?'#666':'#000', fontSize:14, fontWeight:900, cursor:outOfStock?'not-allowed':'pointer', flexShrink:0, whiteSpace:'nowrap' }}
-        >
-          {outOfStock ? '🚫 Épuisé' : '🛒 Commander'}
-        </button>
       </div>
 
-      <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
+      <style>{`
+        @keyframes polSlideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }
