@@ -134,6 +134,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     padding:'12px 14px', color:'white', fontSize:'16px', width:'100%',
     outline:'none', boxSizing:'border-box', fontFamily:'inherit',
     WebkitTextSizeAdjust:'100%', touchAction:'manipulation',
+    direction: rtl ? 'rtl' : 'ltr',
   }
   const lbl = { fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
 
@@ -341,7 +342,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {/* Quantité si pas de bundles */}
           {!hasBundles && (
             <div style={{ marginBottom:14 }}>
-              <label style={lbl}>Quantité</label>
+              <label style={lbl}>{{ lang==='ar' ? 'الكمية' : 'Quantité' }}</label>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'white', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
                 <span style={{ color:'white', fontWeight:900, fontSize:20, minWidth:32, textAlign:'center' }}>{qty}</span>
@@ -352,12 +353,12 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           {/* ── Mode livraison ── */}
           <div style={{ marginBottom:14 }}>
-            <label style={lbl}>Mode de livraison</label>
+            <label style={lbl}>{{ lang==='ar' ? 'طريقة التوصيل' : 'Mode de livraison' }}</label>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {['domicile','bureau'].map(mode => (
                 <button key={mode} onClick={() => setModeLiv(mode)} style={{ padding:'11px 8px', background:modeLiv===mode?'rgba(201,168,76,.12)':'#1a1a1a', border:`2px solid ${modeLiv===mode?'#C9A84C':'#2a2a2a'}`, borderRadius:10, color:modeLiv===mode?'#C9A84C':'#666', fontSize:12, fontWeight:800, cursor:'pointer', textAlign:'center', lineHeight:1.4, transition:'all .2s' }}>
-                  {mode==='domicile'?'🏠 À domicile':'📦 Retrait bureau'}
-                  <div style={{ fontSize:9, marginTop:3, color:modeLiv===mode?'rgba(201,168,76,.6)':'#444' }}>{mode==='domicile'?'2–5 jours':'1–3 jours'}</div>
+                  {mode==='domicile'?lang==='ar' ? '🏠 توصيل للمنزل' : '🏠 À domicile':lang==='ar' ? '📦 استلام من المكتب' : '📦 Retrait bureau'}
+                  <div style={{ fontSize:9, marginTop:3, color:modeLiv===mode?'rgba(201,168,76,.6)':'#444' }}>{mode==='domicile'?lang==='ar' ? '2–5 أيام' : '2–5 jours':lang==='ar' ? '1–3 أيام' : '1–3 jours'}</div>
                 </button>
               ))}
             </div>
@@ -365,10 +366,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           {/* ── Wilaya ── */}
           <div style={{ marginBottom:10 }}>
-            <label style={lbl}>Wilaya *</label>
+            <label style={lbl}>{{ lang==='ar' ? 'الولاية *' : 'Wilaya *' }}</label>
             <div style={{ position:'relative' }}>
               <div onClick={() => { setWilayaOpen(o=>!o); setCommuneOpen(false) }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', color:form.wilaya?'white':'#444' }}>
-                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{form.wilaya||'Choisir une wilaya'}</span>
+                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{form.wilaya||lang==='ar' ? 'اختر الولاية' : 'Choisir une wilaya'}</span>
                 <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{wilayaOpen?'▲':'▼'}</span>
               </div>
               {wilayaOpen && (
@@ -385,10 +386,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           {/* ── Commune ── */}
           <div style={{ marginBottom:10 }}>
-            <label style={lbl}>Commune {communes.length>0&&`(${communes.length})`} *</label>
+            <label style={lbl}>{lang==='ar' ? 'البلدية' : 'Commune'} {communes.length>0&&`(${communes.length})`} *</label>
             <div style={{ position:'relative' }}>
               <div onClick={() => { if(form.wilaya){setCommuneOpen(o=>!o); setWilayaOpen(false)} }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:form.wilaya?'pointer':'not-allowed', opacity:form.wilaya?1:.5, color:form.commune?'white':'#444' }}>
-                <span>{form.commune||(form.wilaya?'Choisir une commune':"Choisir d'abord une wilaya")}</span>
+                <span>{form.commune||(form.wilaya?lang==='ar' ? 'اختر البلدية' : 'Choisir une commune':lang==='ar' ? 'اختر الولاية أولاً' : "Choisir d'abord une wilaya")}</span>
                 <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{communeOpen?'▲':'▼'}</span>
               </div>
               {communeOpen && (
@@ -406,11 +407,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {/* ── Nom + Tel ── */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
             <div>
-              <label style={lbl}>Nom complet *</label>
+              <label style={lbl}>{{ lang==='ar' ? 'الاسم الكامل *' : 'Nom complet *' }}</label>
               <input placeholder="Votre nom" value={form.nom} onChange={e => setF('nom',e.target.value)} style={inp} />
             </div>
             <div>
-              <label style={lbl}>Téléphone *</label>
+              <label style={lbl}>{{ lang==='ar' ? 'الهاتف *' : 'Téléphone *' }}</label>
               <input placeholder="0555 00 00 00" value={form.tel} onChange={e => setF('tel',e.target.value)} style={inp} type="tel" />
             </div>
           </div>
@@ -418,7 +419,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {/* Adresse */}
           {modeLiv==='domicile' && (
             <div style={{ marginBottom:10 }}>
-              <label style={lbl}>Adresse</label>
+              <label style={lbl}>{{ lang==='ar' ? 'العنوان' : 'Adresse' }}</label>
               <input placeholder="Rue, quartier, N°..." value={form.adresse} onChange={e => setF('adresse',e.target.value)} style={inp} />
             </div>
           )}
@@ -431,7 +432,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'rgba(255,255,255,.5)', marginBottom:8 }}>
                 <span>🚚 Frais livraison</span>
-                <span style={{ color:fraisLiv===0?'#22c55e':undefined }}>{fraisLiv===null?'—':fraisLiv===0?'Gratuit':fmt(fraisLiv)}</span>
+                <span style={{ color:fraisLiv===0?'#22c55e':undefined }}>{fraisLiv===null?'—':fraisLiv===0?lang==='ar' ? 'مجاناً' : 'Gratuit':fmt(fraisLiv)}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, borderTop:'1px solid rgba(255,255,255,.08)', fontSize:17, fontWeight:900, color:'white' }}>
                 <span>💰 Total à payer</span>
