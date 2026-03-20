@@ -356,6 +356,11 @@ export default function App() {
             setOpenProduct(null)
             window.history.pushState({}, '', window.location.pathname)
           }}
+          onSubmitOrder={async (form) => {
+            await submitOrder(form)
+            setOpenProduct(null)
+            window.history.pushState({}, '', window.location.pathname)
+          }}
         />
       )}
 
