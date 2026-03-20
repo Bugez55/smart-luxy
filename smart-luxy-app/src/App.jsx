@@ -361,6 +361,7 @@ export default function App() {
             setOpenProduct(null)
             window.history.pushState({}, '', window.location.pathname)
           }}
+          onPolitique={(tab) => setPolitiqueTab(tab)}
         />
       )}
 
