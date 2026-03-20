@@ -138,7 +138,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null)
 
   return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background:'#0a0a0a', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background: p.card_color || '#0a0a0a', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
 
       {/* ── Header sticky ── */}
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
