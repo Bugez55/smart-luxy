@@ -18,14 +18,10 @@ import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
 import ProductGallery from './components/ProductGallery'
 
-// ✅ Nouveau mot de passe admin
-
 // ── Facebook Pixel — Tracking événements ──
 function fbq(...args) {
   if (typeof window !== 'undefined' && window.fbq) window.fbq(...args)
 }
-
-const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
 
 export default function App() {
   const [isNotFound] = useState(() => {
@@ -260,12 +256,10 @@ export default function App() {
         />
       </main>
 
-      {/* ── Footer ── */}
       {/* ════════════════════════════════════════
           GALERIE PRODUITS DÉFILANTE
-          Affiche les photos de tous les produits
       ════════════════════════════════════════ */}
-      {!openProduct && !cartOpen && !orderItems && !successOrder && !trackingOpen && (
+      {!openProduct && !cartOpen && !orderItems && !lastOrder && !trackingOpen && (
         <ProductGallery products={products} onProductClick={setOpenProduct} />
       )}
 
