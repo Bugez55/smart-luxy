@@ -21,6 +21,8 @@ export default function ProductForm({ product, onClose, onSave }) {
     stock:         product?.stock !== undefined && product?.stock !== null ? String(product.stock) : '',
     card_color:    product?.card_color || '',
     ventes:        product?.ventes || 0,
+    bundles:       product?.bundles ? (typeof product.bundles === 'string' ? JSON.parse(product.bundles) : product.bundles) : [],
+    faq:           product?.faq ? (typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq) : [],
   })
   const [newSpec, setNewSpec] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -96,6 +98,8 @@ export default function ProductForm({ product, onClose, onSave }) {
       stock:         form.stock !== '' ? Number(form.stock) : null,
       card_color:    form.card_color || null,
       ventes:        Number(form.ventes) || 0,
+      bundles:       form.bundles.length > 0 ? form.bundles : null,
+      faq:           form.faq.length > 0 ? form.faq : null,
     })
   }
 
@@ -296,6 +300,73 @@ export default function ProductForm({ product, onClose, onSave }) {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* ── BUNDLES / PACKS ── */}
+          <div className="pf-section">
+            <h3>📦 Packs & Quantités (optionnel)</h3>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:12, lineHeight:1.5 }}>
+              Ajoute des offres par quantité — ex: "1 unité = 850 DA", "3 unités = 2400 DA". Le client choisit son pack avant de commander.
+            </p>
+            {form.bundles.map((b, i) => (
+              <div key={i} style={{ display:'flex', gap:8, marginBottom:8, alignItems:'center' }}>
+                <input
+                  placeholder="Label ex: 3 unités"
+                  value={b.label}
+                  onChange={e => { const bl = [...form.bundles]; bl[i]={...bl[i],label:e.target.value}; set('bundles',bl) }}
+                  style={{ flex:2, background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'8px 12px', color:'white', fontSize:13, outline:'none' }}
+                />
+                <input
+                  type="number" placeholder="Quantité"
+                  value={b.qty}
+                  onChange={e => { const bl = [...form.bundles]; bl[i]={...bl[i],qty:Number(e.target.value)}; set('bundles',bl) }}
+                  style={{ flex:1, background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'8px 12px', color:'white', fontSize:13, outline:'none' }}
+                />
+                <input
+                  type="number" placeholder="Prix DA"
+                  value={b.prix}
+                  onChange={e => { const bl = [...form.bundles]; bl[i]={...bl[i],prix:Number(e.target.value)}; set('bundles',bl) }}
+                  style={{ flex:1, background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'8px 12px', color:'white', fontSize:13, outline:'none' }}
+                />
+                <button onClick={() => set('bundles', form.bundles.filter((_,j)=>j!==i))}
+                  style={{ background:'rgba(239,68,68,.15)', border:'none', borderRadius:8, width:32, height:36, color:'#fca5a5', cursor:'pointer', flexShrink:0 }}>✕</button>
+              </div>
+            ))}
+            <button className="act-btn" onClick={() => set('bundles', [...form.bundles, { label:'', qty:1, prix:0 }])}>
+              + Ajouter un pack
+            </button>
+          </div>
+
+          {/* ── FAQ ── */}
+          <div className="pf-section">
+            <h3>❓ FAQ (Questions fréquentes)</h3>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:12, lineHeight:1.5 }}>
+              Questions/réponses qui s'affichent en bas de la page produit. Rassure le client et réduit les abandons.
+            </p>
+            {form.faq.map((f, i) => (
+              <div key={i} style={{ background:'#111', borderRadius:10, padding:12, marginBottom:8, border:'1px solid #333' }}>
+                <div style={{ display:'flex', gap:8, marginBottom:6 }}>
+                  <input
+                    placeholder="Question"
+                    value={f.q}
+                    onChange={e => { const fq=[...form.faq]; fq[i]={...fq[i],q:e.target.value}; set('faq',fq) }}
+                    style={{ flex:1, background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'8px 12px', color:'white', fontSize:13, outline:'none' }}
+                  />
+                  <button onClick={() => set('faq', form.faq.filter((_,j)=>j!==i))}
+                    style={{ background:'rgba(239,68,68,.15)', border:'none', borderRadius:8, width:32, color:'#fca5a5', cursor:'pointer', flexShrink:0 }}>✕</button>
+                </div>
+                <textarea
+                  placeholder="Réponse"
+                  rows={2}
+                  value={f.r}
+                  onChange={e => { const fq=[...form.faq]; fq[i]={...fq[i],r:e.target.value}; set('faq',fq) }}
+                  style={{ width:'100%', background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'8px 12px', color:'white', fontSize:13, outline:'none', resize:'vertical', boxSizing:'border-box', fontFamily:'inherit' }}
+                />
+              </div>
+            ))}
+            <button className="act-btn" onClick={() => set('faq', [...form.faq, { q:'', r:'' }])}>
+              + Ajouter une question
+            </button>
           </div>
 
           {/* ── Description ── */}
