@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import CONFIG from '../config'
 
@@ -23,9 +22,9 @@ export default function WAButton() {
 
   return (
     <div style={{
-      position: 'fixed', bottom: 24, right: 20,
+      position: 'fixed', top: 70, right: 12,
       zIndex: 999, display: 'flex', flexDirection: 'column',
-      alignItems: 'flex-end', gap: 10,
+      alignItems: 'flex-end', gap: 8,
     }}>
       {tooltip && (
         <div style={{
