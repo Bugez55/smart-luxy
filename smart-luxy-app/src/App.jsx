@@ -16,6 +16,7 @@ import CONFIG from './config'
 import { getSettings } from './utils/useSettings'
 import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
+import ProductGallery from './components/ProductGallery'
 
 // ✅ Nouveau mot de passe admin
 
@@ -260,6 +261,14 @@ export default function App() {
       </main>
 
       {/* ── Footer ── */}
+      {/* ════════════════════════════════════════
+          GALERIE PRODUITS DÉFILANTE
+          Affiche les photos de tous les produits
+      ════════════════════════════════════════ */}
+      {!openProduct && !cartOpen && !orderItems && !successOrder && !trackingOpen && (
+        <ProductGallery products={products} onProductClick={setOpenProduct} />
+      )}
+
       <footer className="footer">
         <div className="fbn">Smart <em>Luxy</em></div>
         <p className="ftag">{CONFIG.slogan}</p>
