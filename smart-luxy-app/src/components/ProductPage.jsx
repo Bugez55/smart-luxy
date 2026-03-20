@@ -292,7 +292,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {/* ══════════════════════════════════════════
           FORMULAIRE DE COMMANDE — style MarketDZ
       ══════════════════════════════════════════ */}
-      <div ref={formRef} style={{ margin:'0 12px 16px', background:'#141414', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, overflow:'hidden', direction: rtl ? 'rtl' : 'ltr' }}>
+      <div ref={formRef} style={{ margin:'0 12px 16px', background:'#141414', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, direction: rtl ? 'rtl' : 'ltr' }}>
 
         {/* En-tête formulaire */}
         <div style={{ background:'linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05))', borderBottom:'1px solid rgba(201,168,76,.2)', padding:'16px', textAlign:'center' }}>
@@ -369,11 +369,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             <label style={lbl}>{lang==='ar' ? 'الولاية *' : 'Wilaya *' }</label>
             <div style={{ position:'relative' }}>
               <div onClick={() => { setWilayaOpen(o=>!o); setCommuneOpen(false) }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', color:form.wilaya?'white':'#444' }}>
-                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{form.wilaya||lang==='ar' ? 'اختر الولاية' : 'Choisir une wilaya'}</span>
+                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{form.wilaya || (lang==='ar' ? 'اختر الولاية' : 'Choisir une wilaya')}</span>
                 <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{wilayaOpen?'▲':'▼'}</span>
               </div>
               {wilayaOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#1a1a1a', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'#1a1a1a', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
                   {wilayasOptions.map(opt => (
                     <div key={opt} onClick={() => { setF('wilaya',opt); setWilayaOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.wilaya?'#C9A84C':'rgba(255,255,255,.85)', background:opt===form.wilaya?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid rgba(255,255,255,.04)', touchAction:'manipulation' }}>
                       {opt}
@@ -393,7 +393,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{communeOpen?'▲':'▼'}</span>
               </div>
               {communeOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#1a1a1a', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'#1a1a1a', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
                   {communes.map(opt => (
                     <div key={opt} onClick={() => { setF('commune',opt); setCommuneOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.commune?'#C9A84C':'rgba(255,255,255,.85)', background:opt===form.commune?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid rgba(255,255,255,.04)', touchAction:'manipulation' }}>
                       {opt}
