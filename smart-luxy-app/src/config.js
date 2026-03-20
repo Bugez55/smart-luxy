@@ -10,7 +10,7 @@ const CONFIG = {
   adresse:  'Tizi Ouzou, Algérie',
 
   // ── Contact ──
-  telephone:  '213149313',   // Format international sans +
+  telephone:  '213556688810',   // Format international sans +
   email:      'smartluxy@gmail.com',
   whatsapp:   '213556688810',   // Même numéro ou différent
 
