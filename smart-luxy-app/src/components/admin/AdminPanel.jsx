@@ -517,6 +517,208 @@ function AdminSettings({ onLogout, onToast }) {
   )
 }
 
+
+// ═══════════════════════════════════════════════════
+//  AI ASSISTANT — Admin Smart Luxy
+//  1. Réponse WhatsApp IA
+//  2. Analyse commandes IA
+// ═══════════════════════════════════════════════════
+function AIAssistant({ products, orders }) {
+  const [waInput, setWaInput] = useState('')
+  const [waReply, setWaReply] = useState('')
+  const [waLoading, setWaLoading] = useState(false)
+
+  const [statsQ, setStatsQ] = useState('')
+  const [statsA, setStatsA] = useState('')
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const QUESTIONS_RAPIDES = [
+    'Quelle wilaya génère le plus de ventes ?',
+    'Quel est mon meilleur produit ?',
+    'Combien de commandes cette semaine ?',
+    'Quel est mon CA du mois ?',
+  ]
+
+  async function genWAReply() {
+    if (!waInput.trim()) return
+    setWaLoading(true)
+    setWaReply('')
+    const productList = products.map(p => `${p.nom}: ${p.prix} DA`).join(', ')
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: `Tu es vendeur pour Smart Luxy, boutique algérienne en ligne. Un client t'a envoyé ce message WhatsApp :
+
+"${waInput}"
+
+Génère UNE réponse WhatsApp professionnelle et chaleureuse, en français ou en darija selon la langue du client. Maximum 4-5 phrases. Inclus les infos pertinentes (prix, livraison, disponibilité). Encourage à commander.
+
+Nos produits : ${productList}
+Livraison : 69 wilayas, paiement à la livraison, 2-5 jours.
+
+Réponds UNIQUEMENT avec le texte de la réponse WhatsApp, sans guillemets ni explication.`
+          }]
+        })
+      })
+      const data = await res.json()
+      setWaReply(data.content?.[0]?.text || 'Erreur de génération')
+    } catch { setWaReply('Erreur réseau') }
+    setWaLoading(false)
+  }
+
+  async function analyzeStats(q) {
+    const question = q || statsQ
+    if (!question.trim()) return
+    setStatsLoading(true)
+    setStatsA('')
+    // Préparer les données
+    const today = new Date()
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    const thisMonth = orders.filter(o => new Date(o.created_at) >= startOfMonth)
+    const thisWeek = orders.filter(o => {
+      const d = new Date(o.created_at)
+      const diff = (today - d) / (1000*60*60*24)
+      return diff <= 7
+    })
+    const wilayaCount = {}
+    const prodCount = {}
+    orders.forEach(o => {
+      wilayaCount[o.wilaya] = (wilayaCount[o.wilaya]||0) + 1
+      const items = (() => { try { return typeof o.items==='string'?JSON.parse(o.items):(o.items||[]) } catch { return [] } })()
+      items.forEach(it => { prodCount[it.nom] = (prodCount[it.nom]||0) + it.qty })
+    })
+    const topWilayas = Object.entries(wilayaCount).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w,n])=>`${w}(${n})`).join(', ')
+    const topProds = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([p,n])=>`${p}(${n})`).join(', ')
+    const caTotal = orders.filter(o=>o.statut!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0)
+    const caMois = thisMonth.filter(o=>o.statut!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0)
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: `Tu es analyste business pour Smart Luxy. Réponds à cette question en te basant sur les données ci-dessous. Sois concis (max 5 phrases), utilise des chiffres, donne des conseils actionnables.
+
+Question : ${question}
+
+Données :
+- Total commandes : ${orders.length}
+- Commandes ce mois : ${thisMonth.length}
+- Commandes cette semaine : ${thisWeek.length}
+- CA total : ${caTotal.toLocaleString()} DA
+- CA ce mois : ${caMois.toLocaleString()} DA
+- Top wilayas : ${topWilayas}
+- Top produits : ${topProds}
+- Produits actifs : ${products.length}
+
+Réponds directement à la question avec des insights pratiques.`
+          }]
+        })
+      })
+      const data = await res.json()
+      setStatsA(data.content?.[0]?.text || 'Erreur')
+    } catch { setStatsA('Erreur réseau') }
+    setStatsLoading(false)
+  }
+
+  function copyReply() {
+    navigator.clipboard?.writeText(waReply)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const boxSt = { background:'#1a1a1a', border:'1px solid #333', borderRadius:10, padding:'11px 14px', color:'white', fontSize:'16px', outline:'none', width:'100%', boxSizing:'border-box', fontFamily:'inherit', resize:'vertical' }
+  const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:14 }
+  const aiBtnSt = (active) => ({ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'11px', border:'none', borderRadius:10, background:active?'linear-gradient(135deg,#C9A84C,#E9C46A)':'#222', color:active?'#000':'#444', fontSize:13, fontWeight:800, cursor:active?'pointer':'default', width:'100%' })
+
+  return (
+    <div>
+      <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:20 }}>🤖 Assistant IA</h3>
+
+      {/* ── Réponse WhatsApp ── */}
+      <div style={sec}>
+        <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:4, display:'flex', alignItems:'center', gap:8 }}>
+          💬 Répondre à un client WhatsApp
+        </div>
+        <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:12, lineHeight:1.5 }}>
+          Colle le message du client → l'IA génère la réponse parfaite à copier-coller
+        </p>
+
+        <textarea
+          rows={3}
+          placeholder="Ex: wach kayn livraison l'oran ? chhal lweqt ?"
+          value={waInput}
+          onChange={e => setWaInput(e.target.value)}
+          style={boxSt}
+        />
+
+        <button onClick={genWAReply} disabled={!waInput.trim() || waLoading} style={{ ...aiBtnSt(!!waInput.trim() && !waLoading), marginTop:10 }}>
+          {waLoading ? '⏳ Génération...' : '✨ Générer la réponse'}
+        </button>
+
+        {waReply && (
+          <div style={{ marginTop:12 }}>
+            <div style={{ background:'rgba(37,211,102,.08)', border:'1px solid rgba(37,211,102,.2)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'rgba(255,255,255,.8)', lineHeight:1.6, marginBottom:8, whiteSpace:'pre-wrap' }}>
+              {waReply}
+            </div>
+            <button onClick={copyReply} style={{ background:copied?'rgba(34,197,94,.15)':'rgba(255,255,255,.06)', border:`1px solid ${copied?'rgba(34,197,94,.3)':'rgba(255,255,255,.1)'}`, borderRadius:8, padding:'7px 16px', color:copied?'#86efac':'rgba(255,255,255,.6)', fontSize:12, fontWeight:800, cursor:'pointer' }}>
+              {copied ? '✅ Copié !' : '📋 Copier la réponse'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Analyse Stats ── */}
+      <div style={sec}>
+        <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:4, display:'flex', alignItems:'center', gap:8 }}>
+          📊 Analyser mes ventes
+        </div>
+        <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:12, lineHeight:1.5 }}>
+          Pose une question sur tes données — l'IA analyse et répond avec des insights
+        </p>
+
+        {/* Questions rapides */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
+          {QUESTIONS_RAPIDES.map(q => (
+            <button key={q} onClick={() => { setStatsQ(q); analyzeStats(q) }} style={{ background:'rgba(201,168,76,.1)', border:'1px solid rgba(201,168,76,.2)', borderRadius:20, padding:'4px 10px', color:'#C9A84C', fontSize:10, fontWeight:700, cursor:'pointer' }}>
+              {q}
+            </button>
+          ))}
+        </div>
+
+        <textarea
+          rows={2}
+          placeholder="Ex: Pourquoi mes ventes ont baissé ? Quel produit lancer ?"
+          value={statsQ}
+          onChange={e => setStatsQ(e.target.value)}
+          style={boxSt}
+        />
+
+        <button onClick={() => analyzeStats()} disabled={!statsQ.trim() || statsLoading} style={{ ...aiBtnSt(!!statsQ.trim() && !statsLoading), marginTop:10 }}>
+          {statsLoading ? '⏳ Analyse...' : '🔍 Analyser'}
+        </button>
+
+        {statsA && (
+          <div style={{ marginTop:12, background:'rgba(59,130,246,.08)', border:'1px solid rgba(59,130,246,.2)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'rgba(255,255,255,.8)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>
+            {statsA}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ImageOptimizer({ products, supabase }) {
   const [results, setResults] = useState([])
   const [running, setRunning] = useState(false)
@@ -1032,7 +1234,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Smart <em>Luxy</em> — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['ai','🤖 IA'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -1434,6 +1636,9 @@ export default function AdminPanel({ onLogout, onToast }) {
           <ImageOptimizer products={products} supabase={supabase} />
         )}
 
+
+        {/* ── AI TAB ── */}
+        {tab === 'ai' && <AIAssistant products={products} orders={orders} />}
 
         {/* ── SETTINGS TAB ── */}
         {tab === 'settings' && (
