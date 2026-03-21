@@ -27,8 +27,6 @@ export default function ProductForm({ product, onClose, onSave }) {
     faq:           product?.faq ? (typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq) : [],
   })
   const [newSpec, setNewSpec] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiLang, setAiLang] = useState('fr')
   const [uploading, setUploading] = useState(false)
   const [newImgUrl, setNewImgUrl] = useState('')
   const [newImgLabel, setNewImgLabel] = useState('')
