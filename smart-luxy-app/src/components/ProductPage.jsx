@@ -80,9 +80,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         p.description?.replace(/<[^>]*>/g, '') || '',
         (specs || []).join(' | '),
         (faq || []).map(f => f.q + ' ' + f.r).join(' | '),
-      ].filter(Boolean).join('
----
-')
+        ].filter(Boolean).join(' --- ')
 
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
