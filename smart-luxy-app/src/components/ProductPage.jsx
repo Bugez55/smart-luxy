@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import ReviewSection from './ReviewSection'
 import CountdownTimer from './CountdownTimer'
 import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
 
@@ -29,6 +28,8 @@ const LIVRAISON = {
 
 export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique }) {
   const [openFaq, setOpenFaq] = useState(null)
+  const [viewers] = useState(() => Math.floor(Math.random() * 8) + 3)
+  const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('fr')
   const rtl = lang === 'ar'
   const [imgIdx, setImgIdx] = useState(0)
@@ -232,6 +233,21 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         </div>
 
         {isPromo && <CountdownTimer />}
+
+        {/* Viewers en temps réel */}
+        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+          <div style={{ display:'flex' }}>
+            {[...Array(Math.min(viewers,5))].map((_,i) => (
+              <div key={i} style={{ width:18, height:18, borderRadius:'50%', background:`hsl(${i*40},60%,55%)`, border:'2px solid #0a0a0a', marginLeft: i>0 ? -6 : 0, fontSize:9, display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:800 }}>
+                {['👤','👤','👤','👤','👤'][i]}
+              </div>
+            ))}
+          </div>
+          <span style={{ fontSize:11, color:'rgba(255,255,255,.4)', fontWeight:600 }}>
+            {viewers} {lang==='ar' ? 'أشخاص يتصفحون هذا المنتج الآن' : `personnes regardent ce produit`}
+          </span>
+          <span style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e', animation:'pulse 1.5s infinite', flexShrink:0 }} />
+        </div>
       </div>
 
       {/* ── Description ── */}
@@ -465,14 +481,41 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 : '🛒 Confirmer la commande'}
             </span>
           </button>
-          <div style={{ textAlign:'center', marginTop:8, fontSize:11, color:'rgba(255,255,255,.2)' }}>
-            ✅ Paiement à la livraison · 100% sécurisé
+          <div style={{ display:'flex', justifyContent:'center', gap:16, marginTop:12, flexWrap:'wrap' }}>
+            {[
+              { icon:'✅', label: lang==='ar' ? 'دفع عند الاستلام' : 'Paiement livraison' },
+              { icon:'🔄', label: lang==='ar' ? 'إرجاع مجاني' : 'Retour gratuit' },
+              { icon:'🚚', label: lang==='ar' ? 'توصيل لكل الولايات' : '69 wilayas' },
+            ].map(b => (
+              <div key={b.label} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+                <span style={{ fontSize:18 }}>{b.icon}</span>
+                <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', fontWeight:700, textAlign:'center' }}>{b.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ── Avis clients ── */}
-      <ReviewSection productId={p.id} />
+      {/* ── Partager le produit ── */}
+      <div style={{ padding:'0 16px 16px', display:'flex', gap:8, alignItems:'center' }}>
+        <div style={{ flex:1, height:1, background:'rgba(255,255,255,.07)' }} />
+        <span style={{ fontSize:11, color:'rgba(255,255,255,.25)', fontWeight:700 }}>PARTAGER</span>
+        <div style={{ flex:1, height:1, background:'rgba(255,255,255,.07)' }} />
+      </div>
+      <div style={{ display:'flex', gap:10, padding:'0 16px 20px' }}>
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent((lang==='ar'?'اطلع على هذا المنتج: ':'Découvrez ce produit: ') + p.nom + ' - ' + window.location.href)}`}
+          target="_blank" rel="noreferrer"
+          style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, background:'rgba(37,211,102,.12)', border:'1px solid rgba(37,211,102,.25)', borderRadius:12, padding:'11px', color:'#86efac', fontSize:12, fontWeight:800, textDecoration:'none' }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.553 4.116 1.522 5.847L.057 23.882a.5.5 0 00.61.61l6.098-1.474A11.927 11.927 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.793 9.793 0 01-4.994-1.367l-.357-.212-3.718.899.929-3.628-.232-.372A9.796 9.796 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+          {lang==='ar' ? 'مشاركة عبر واتساب' : 'Partager WhatsApp'}
+        </a>
+        <button
+          onClick={() => { navigator.clipboard?.writeText(window.location.href); }}
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, padding:'11px 16px', color:'rgba(255,255,255,.5)', fontSize:12, fontWeight:800, cursor:'pointer' }}
+        >🔗 {lang==='ar' ? 'نسخ الرابط' : 'Copier lien'}</button>
+      </div>
 
       {/* ── Liens utiles ── */}
       <div style={{ display:'flex', gap:16, justifyContent:'center', padding:'0 16px 16px', flexWrap:'wrap' }}>
