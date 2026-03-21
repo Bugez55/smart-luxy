@@ -32,8 +32,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('fr')
   const rtl = lang === 'ar'
-  const [translated, setTranslated] = useState(null)
-  const [translating, setTranslating] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
   const [lb, setLb] = useState(false)
   const imgRef2 = useRef()
@@ -70,48 +68,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const totalFinal = currentPrix + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
-
-  async function translateToArabic() {
-    if (translated) { setLang('ar'); return }
-    setTranslating(true)
-    try {
-      const textToTranslate = [
-        p.nom,
-        p.description?.replace(/<[^>]*>/g, '') || '',
-        (specs || []).join(' | '),
-        (faq || []).map(f => f.q + ' ' + f.r).join(' | '),
-        ].filter(Boolean).join(' --- ')
-
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gemini-1.5-flash',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: `Traduis en arabe algérien (darija) ce contenu de produit e-commerce. Réponds UNIQUEMENT en JSON avec ces clés exactes:
-{"nom":"...","description":"...","specs":["..."],"faq":[{"q":"...","r":"..."}]}
-
-Contenu à traduire:
-${textToTranslate}
-
-La description doit rester en HTML simple. Les specs et faq doivent suivre la même structure que l'original.`
-          }]
-        })
-      })
-      const data = await res.json()
-      const raw = data.content?.[0]?.text || '{}'
-      const clean = raw.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
-      setTranslated(parsed)
-      setLang('ar')
-    } catch(e) {
-      console.error('Traduction:', e)
-      setLang('ar') // fallback labels seulement
-    }
-    setTranslating(false)
-  }
 
   function setF(k, v) { setForm(f => ({ ...f, [k]:v, ...(k==='wilaya'?{commune:''}:{}) })) }
 
@@ -192,11 +148,8 @@ La description doit rester en HTML simple. Les specs et faq doivent suivre la m�
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
         <button onClick={onClose} style={{ background:'rgba(255,255,255,.07)', border:'none', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'white', fontSize:18, flexShrink:0 }}>✕</button>
         <span style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
-        <button
-          onClick={() => lang==='fr' ? translateToArabic() : setLang('fr')}
-          style={{ background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)', borderRadius:20, padding:'4px 10px', color:'#C9A84C', fontSize:11, fontWeight:800, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:4 }}
-        >
-          {translating ? '⏳' : lang==='fr' ? '🇩🇿 عربي' : '🇫🇷 FR'}
+        <button onClick={() => setLang(l => l==='fr'?'ar':'fr')} style={{ background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)', borderRadius:20, padding:'4px 10px', color:'#C9A84C', fontSize:11, fontWeight:800, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap' }}>
+          {lang==='fr' ? '🇩🇿 عربي' : '🇫🇷 FR'}
         </button>
         {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
       </div>
@@ -248,7 +201,7 @@ La description doit rester en HTML simple. Les specs et faq doivent suivre la m�
 
       {/* ── Infos produit ── */}
       <div style={{ padding:'16px 16px 0' }}>
-        <h1 style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'white', lineHeight:1.3 }}>{lang==='ar' && translated?.nom ? translated.nom : p.nom}</h1>
+        <h1 style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'white', lineHeight:1.3 }}>{p.nom}</h1>
 
         {/* Étoiles + commandes */}
         {(p.note_etoiles || p.nb_commandes > 0) && (
