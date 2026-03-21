@@ -546,11 +546,11 @@ function AIAssistant({ products, orders }) {
     setWaReply('')
     const productList = products.map(p => `${p.nom}: ${p.prix} DA`).join(', ')
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'gemini-1.5-flash',
           max_tokens: 1000,
           messages: [{
             role: 'user',
@@ -600,11 +600,11 @@ Réponds UNIQUEMENT avec le texte de la réponse WhatsApp, sans guillemets ni ex
     const caMois = thisMonth.filter(o=>o.statut!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0)
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'gemini-1.5-flash',
           max_tokens: 1000,
           messages: [{
             role: 'user',
