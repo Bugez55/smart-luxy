@@ -16,6 +16,7 @@ import CONFIG from './config'
 import { getSettings } from './utils/useSettings'
 import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
+import AIChatbot from './components/AIChatbot'
 import ProductGallery from './components/ProductGallery'
 
 // ── Facebook Pixel — Tracking événements ──
@@ -409,6 +410,7 @@ export default function App() {
 
       {/* Tracking */}
       {trackingOpen && <TrackingPage onClose={() => setTrackingOpen(false)} />}
+      <AIChatbot products={products} />
       <WAButton />
 
       {/* Toasts */}
