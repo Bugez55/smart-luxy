@@ -11,7 +11,7 @@ const CONFIG = {
 
   // ── Contact ──
   telephone:  '213556688810',   // Format international sans +
-  email:      'smartluxy@gmail.com',
+  email:      'smartluxydz@gmail.com',
   whatsapp:   '213556688810',   // Même numéro ou différent
 
   // ── Réseaux sociaux ──
