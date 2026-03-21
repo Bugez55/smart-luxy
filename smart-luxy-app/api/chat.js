@@ -1,9 +1,4 @@
-// ══════════════════════════════════════════════
-//  VERCEL API ROUTE — /api/chat
-//  Utilise Google Gemini (100% GRATUIT)
-//  Fichier à mettre dans : api/chat.js
-// ══════════════════════════════════════════════
-
+// api/chat.js — Proxy Gemini gratuit
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -12,32 +7,37 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' })
+  if (!apiKey) {
+    console.error('GEMINI_API_KEY manquante dans les variables Vercel')
+    return res.status(500).json({ error: 'Clé API manquante — ajoute GEMINI_API_KEY dans Vercel' })
+  }
 
   try {
     const { system, messages, max_tokens } = req.body
 
-    // Construire les messages pour Gemini
-    const contents = []
+    // Construire contents pour Gemini
+    const contents = (messages || []).map(msg => ({
+      role: msg.role === 'assistant' || msg.role === 'model' ? 'model' : 'user',
+      parts: [{ text: String(msg.content || msg.text || '') }]
+    }))
 
-    // Ajouter les messages de la conversation
-    for (const msg of messages) {
-      contents.push({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content || msg.text || '' }]
-      })
+    // Gemini exige que le premier message soit "user"
+    if (contents.length > 0 && contents[0].role === 'model') {
+      contents.unshift({ role: 'user', parts: [{ text: '.' }] })
     }
 
     const body = {
       contents,
-      systemInstruction: system ? { parts: [{ text: system }] } : undefined,
+      ...(system && {
+        systemInstruction: { parts: [{ text: system }] }
+      }),
       generationConfig: {
-        maxOutputTokens: max_tokens || 1000,
+        maxOutputTokens: max_tokens || 800,
         temperature: 0.7,
       }
     }
 
-    const response = await fetch(
+    const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
@@ -46,21 +46,21 @@ export default async function handler(req, res) {
       }
     )
 
-    const data = await response.json()
+    const data = await geminiRes.json()
 
-    if (!response.ok) {
-      console.error('Gemini error:', data)
-      return res.status(response.status).json({ error: data.error?.message || 'Gemini error' })
+    if (!geminiRes.ok) {
+      console.error('Gemini error:', JSON.stringify(data))
+      return res.status(geminiRes.status).json({
+        error: data.error?.message || 'Erreur Gemini',
+        details: data
+      })
     }
 
-    // Convertir la réponse Gemini au format Anthropic (pour pas changer le frontend)
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    return res.status(200).json({
-      content: [{ type: 'text', text }]
-    })
+    return res.status(200).json({ content: [{ type: 'text', text }] })
 
   } catch (error) {
-    console.error('API route error:', error)
+    console.error('Erreur proxy:', error)
     return res.status(500).json({ error: error.message })
   }
 }
