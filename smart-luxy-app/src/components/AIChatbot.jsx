@@ -50,11 +50,11 @@ export default function AIChatbot({ products }) {
     setLoading(true)
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'gemini-1.5-flash',
           max_tokens: 1000,
           system: `Tu es l'assistant vendeur de Smart Luxy, une boutique en ligne algérienne premium. Tu réponds en français ou en arabe selon la langue du client, de façon chaleureuse, courte et commerciale.
 
