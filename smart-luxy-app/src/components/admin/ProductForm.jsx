@@ -15,7 +15,8 @@ export default function ProductForm({ product, onClose, onSave }) {
     emoji:         product?.emoji || '📦',
     desc:          product?.description || '',
     specs:         product?.specs ? (typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs) : [],
-    images:        product?.images ? (typeof product.images === 'string' ? JSON.parse(product.images) : product.images) : [],
+    images:         product?.images ? (typeof product.images === 'string' ? JSON.parse(product.images) : product.images) : [],
+    images_gallery: product?.images_gallery ? (typeof product.images_gallery === 'string' ? JSON.parse(product.images_gallery) : product.images_gallery) : [],
     img:           product?.img || '',
     display_order: product?.display_order || 99,
     stock:         product?.stock !== undefined && product?.stock !== null ? String(product.stock) : '',
@@ -96,7 +97,8 @@ export default function ProductForm({ product, onClose, onSave }) {
       emoji:         form.emoji,
       description:   form.desc,
       specs:         form.specs,
-      images:        form.images,
+      images:         form.images,
+      images_gallery: form.images_gallery.length > 0 ? form.images_gallery : null,
       img:           form.img || form.images[0]?.url || null,
       display_order: Number(form.display_order) || 99,
       stock:         form.stock !== '' ? Number(form.stock) : null,
@@ -463,7 +465,144 @@ export default function ProductForm({ product, onClose, onSave }) {
             )}
           </div>
 
-          <div className="pf-section">
+          {/* ══════════════════════════════════════
+              SECTION 1 — CARROUSEL (swipe gauche/droite)
+          ══════════════════════════════════════ */}
+          <div className="pf-section" style={{ border:'2px solid rgba(201,168,76,.25)', borderRadius:14 }}>
+            <h3 style={{ display:'flex', alignItems:'center', gap:8 }}>
+              🎠 Photos carrousel
+              <span style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', marginLeft:4 }}>→ Swipe gauche/droite en haut du produit</span>
+            </h3>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:12, lineHeight:1.5 }}>
+              Mets ici les <strong style={{color:'#C9A84C'}}>3 à 5 meilleures photos</strong> — celles qui font vendre. Le client les swipe en haut de la page.
+            </p>
+
+            {/* Upload zone carrousel */}
+            <label className="upload-zone" style={{ borderColor:'rgba(201,168,76,.3)' }}
+              onDragOver={e => e.preventDefault()}
+              onDrop={async e => {
+                e.preventDefault()
+                const files = Array.from(e.dataTransfer.files)
+                for (const f of files) {
+                  const url = await uploadFile(f)
+                  if (url) {
+                    set('images', [...form.images, { url, label:'', type:'image' }])
+                    if (!form.img) set('img', url)
+                  }
+                }
+              }}
+            >
+              <input type="file" accept="image/*" multiple onChange={async e => {
+                const files = Array.from(e.target.files)
+                for (const f of files) {
+                  const url = await uploadFile(f)
+                  if (url) {
+                    set('images', [...form.images, { url, label:'', type:'image' }])
+                    if (!form.img) set('img', url)
+                  }
+                }
+                e.target.value = ''
+              }} />
+              <div style={{ fontSize:24, marginBottom:4 }}>🎠</div>
+              <div style={{ fontSize:13, color:'rgba(255,255,255,.5)' }}>
+                {uploading ? '⏳ Upload...' : 'Ajouter photos carrousel'}
+              </div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.25)', marginTop:3 }}>JPG, PNG, WebP</div>
+            </label>
+
+            {/* Liste photos carrousel */}
+            {form.images.length > 0 && (
+              <div style={{ marginTop:10 }}>
+                <div style={{ fontSize:11, color:'rgba(201,168,76,.6)', fontWeight:800, marginBottom:8, letterSpacing:'.04em' }}>
+                  {form.images.length} photo{form.images.length>1?'s':''} dans le carrousel
+                </div>
+                {form.images.map((img, i) => (
+                  <div key={`car-${i}`} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, background:'rgba(201,168,76,.05)', border:'1px solid rgba(201,168,76,.2)', borderRadius:10, padding:'8px 10px' }}>
+                    <div style={{ width:18, height:18, borderRadius:'50%', background:'#C9A84C', color:'#000', fontSize:10, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{i+1}</div>
+                    {img.url && <img src={img.url} alt="" style={{ width:50, height:50, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
+                    <div style={{ flex:1, fontSize:11, color:'rgba(255,255,255,.4)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {form.img === img.url && <span style={{ color:'#C9A84C', fontWeight:800 }}>⭐ Principale · </span>}
+                      {img.url?.split('/').pop()?.slice(-20)}
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                      <button onClick={() => { if(i===0) return; const arr=[...form.images]; [arr[i-1],arr[i]]=[arr[i],arr[i-1]]; set('images',arr); if(i===1||i-1===0)set('img',arr[0]?.url||'') }} disabled={i===0} style={{ background:i>0?'rgba(255,255,255,.1)':'transparent', border:'none', borderRadius:4, width:22, height:20, color:i>0?'white':'rgba(255,255,255,.15)', cursor:i>0?'pointer':'default', fontSize:10 }}>▲</button>
+                      <button onClick={() => { if(i===form.images.length-1) return; const arr=[...form.images]; [arr[i],arr[i+1]]=[arr[i+1],arr[i]]; set('images',arr); if(i===0)set('img',arr[0]?.url||'') }} disabled={i===form.images.length-1} style={{ background:i<form.images.length-1?'rgba(255,255,255,.1)':'transparent', border:'none', borderRadius:4, width:22, height:20, color:i<form.images.length-1?'white':'rgba(255,255,255,.15)', cursor:i<form.images.length-1?'pointer':'default', fontSize:10 }}>▼</button>
+                    </div>
+                    <button onClick={() => set('img', img.url)} style={{ background:'none', border:'none', color:form.img===img.url?'#C9A84C':'rgba(255,255,255,.2)', cursor:'pointer', fontSize:16 }}>★</button>
+                    <button onClick={() => { const arr=form.images.filter((_,j)=>j!==i); set('images',arr); if(form.img===img.url)set('img',arr[0]?.url||'') }} style={{ background:'rgba(239,68,68,.12)', border:'1px solid rgba(239,68,68,.25)', borderRadius:6, color:'#fca5a5', cursor:'pointer', fontSize:11, padding:'3px 8px', fontWeight:800 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {form.images.length === 0 && <div style={{ textAlign:'center', padding:12, color:'rgba(255,255,255,.2)', fontSize:12 }}>Aucune photo carrousel</div>}
+          </div>
+
+          {/* ══════════════════════════════════════
+              SECTION 2 — GALERIE VERTICALE (scroll bas)
+          ══════════════════════════════════════ */}
+          <div className="pf-section" style={{ border:'2px solid rgba(59,130,246,.25)', borderRadius:14 }}>
+            <h3 style={{ display:'flex', alignItems:'center', gap:8 }}>
+              📜 Photos galerie
+              <span style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', marginLeft:4 }}>→ Scroll vertical en bas du produit</span>
+            </h3>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:12, lineHeight:1.5 }}>
+              Mets ici les <strong style={{color:'#93c5fd'}}>photos détaillées</strong> — dimensions, emballage, utilisation, comparaisons. Le client les voit en scrollant.
+            </p>
+
+            {/* Upload zone galerie */}
+            <label className="upload-zone" style={{ borderColor:'rgba(59,130,246,.3)' }}
+              onDragOver={e => e.preventDefault()}
+              onDrop={async e => {
+                e.preventDefault()
+                const files = Array.from(e.dataTransfer.files)
+                for (const f of files) {
+                  const url = await uploadFile(f)
+                  if (url) set('images_gallery', [...form.images_gallery, { url, label:'', type:'image' }])
+                }
+              }}
+            >
+              <input type="file" accept="image/*" multiple onChange={async e => {
+                const files = Array.from(e.target.files)
+                for (const f of files) {
+                  const url = await uploadFile(f)
+                  if (url) set('images_gallery', [...form.images_gallery, { url, label:'', type:'image' }])
+                }
+                e.target.value = ''
+              }} />
+              <div style={{ fontSize:24, marginBottom:4 }}>📜</div>
+              <div style={{ fontSize:13, color:'rgba(255,255,255,.5)' }}>
+                {uploading ? '⏳ Upload...' : 'Ajouter photos galerie'}
+              </div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.25)', marginTop:3 }}>JPG, PNG, WebP</div>
+            </label>
+
+            {/* Liste photos galerie */}
+            {form.images_gallery.length > 0 && (
+              <div style={{ marginTop:10 }}>
+                <div style={{ fontSize:11, color:'rgba(59,130,246,.7)', fontWeight:800, marginBottom:8, letterSpacing:'.04em' }}>
+                  {form.images_gallery.length} photo{form.images_gallery.length>1?'s':''} dans la galerie
+                </div>
+                {form.images_gallery.map((img, i) => (
+                  <div key={`gal-${i}`} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, background:'rgba(59,130,246,.04)', border:'1px solid rgba(59,130,246,.2)', borderRadius:10, padding:'8px 10px' }}>
+                    <div style={{ width:18, height:18, borderRadius:'50%', background:'rgba(59,130,246,.5)', color:'white', fontSize:10, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{i+1}</div>
+                    {img.url && <img src={img.url} alt="" style={{ width:50, height:50, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
+                    <div style={{ flex:1, fontSize:11, color:'rgba(255,255,255,.4)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {img.url?.split('/').pop()?.slice(-20)}
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                      <button onClick={() => { if(i===0) return; const arr=[...form.images_gallery]; [arr[i-1],arr[i]]=[arr[i],arr[i-1]]; set('images_gallery',arr) }} disabled={i===0} style={{ background:i>0?'rgba(255,255,255,.1)':'transparent', border:'none', borderRadius:4, width:22, height:20, color:i>0?'white':'rgba(255,255,255,.15)', cursor:i>0?'pointer':'default', fontSize:10 }}>▲</button>
+                      <button onClick={() => { if(i===form.images_gallery.length-1) return; const arr=[...form.images_gallery]; [arr[i],arr[i+1]]=[arr[i+1],arr[i]]; set('images_gallery',arr) }} disabled={i===form.images_gallery.length-1} style={{ background:i<form.images_gallery.length-1?'rgba(255,255,255,.1)':'transparent', border:'none', borderRadius:4, width:22, height:20, color:i<form.images_gallery.length-1?'white':'rgba(255,255,255,.15)', cursor:i<form.images_gallery.length-1?'pointer':'default', fontSize:10 }}>▼</button>
+                    </div>
+                    <button onClick={() => set('images_gallery', form.images_gallery.filter((_,j)=>j!==i))} style={{ background:'rgba(239,68,68,.12)', border:'1px solid rgba(239,68,68,.25)', borderRadius:6, color:'#fca5a5', cursor:'pointer', fontSize:11, padding:'3px 8px', fontWeight:800 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {form.images_gallery.length === 0 && <div style={{ textAlign:'center', padding:12, color:'rgba(255,255,255,.2)', fontSize:12 }}>Aucune photo galerie</div>}
+          </div>
+
+          {/* ANCIEN SECTION — remplacé — placeholder pour compatibilité */}
+          <div className="pf-section" style={{ display:'none' }}>
             <h3>Photos & Médias</h3>
             <label
               className="upload-zone"
