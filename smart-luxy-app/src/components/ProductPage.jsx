@@ -73,18 +73,43 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   // Convertir URL vidéo en embed
   function getEmbedUrl(url) {
     if (!url) return null
-    if (url.includes('youtube.com/watch')) {
-      try { const id = new URL(url).searchParams.get('v'); return id ? `https://www.youtube.com/embed/${id}?autoplay=1&rel=0` : null } catch { return null }
+    url = url.trim()
+
+    // YouTube — toutes les variantes
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      let id = null
+      try {
+        if (url.includes('youtu.be/')) {
+          id = url.split('youtu.be/')[1]?.split(/[?&#]/)[0]
+        } else if (url.includes('youtube.com/shorts/')) {
+          id = url.split('youtube.com/shorts/')[1]?.split(/[?&#]/)[0]
+        } else {
+          id = new URL(url).searchParams.get('v')
+        }
+      } catch { id = null }
+      return id ? { type:'youtube', src:`https://www.youtube.com/embed/${id}?rel=0&modestbranding=1` } : null
     }
-    if (url.includes('youtu.be/')) {
-      const id = url.split('youtu.be/')[1]?.split('?')[0]
-      return id ? `https://www.youtube.com/embed/${id}?autoplay=1&rel=0` : null
+
+    // TikTok — variantes mobiles et desktop
+    if (url.includes('tiktok.com')) {
+      const id = url.match(/\/video\/([0-9]+)/)?.[1] || url.match(/([0-9]{15,})/)?.[1]
+      if (id) return { type:'tiktok', src:`https://www.tiktok.com/embed/v2/${id}` }
+      // Lien court vm.tiktok.com → bouton externe
+      return { type:'external', src: url }
     }
-    if (url.includes('tiktok.com') && url.includes('/video/')) {
-      const id = url.match(/video\/([0-9]+)/)?.[1]
-      return id ? `https://www.tiktok.com/embed/v2/${id}` : null
+
+    // Instagram Reels
+    if (url.includes('instagram.com/reel') || url.includes('instagram.com/p/')) {
+      const id = url.match(/\/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1]
+      if (id) return { type:'instagram', src:`https://www.instagram.com/p/${id}/embed/` }
     }
-    return null
+
+    // Facebook vidéo
+    if (url.includes('facebook.com') && url.includes('video')) {
+      return { type:'facebook', src:`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false` }
+    }
+
+    return { type:'external', src: url }
   }
 
   function setF(k, v) { setForm(f => ({ ...f, [k]:v, ...(k==='wilaya'?{commune:''}:{}) })) }
@@ -219,24 +244,32 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Vidéo produit si disponible ── */}
       {p.video_url && (() => {
-        const embedUrl = getEmbedUrl(p.video_url)
-        return embedUrl ? (
-          <div style={{ background:'#000', position:'relative', paddingBottom:'56.25%', flexShrink:0 }}>
-            <iframe
-              src={embedUrl}
-              style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        ) : (
-          <a href={p.video_url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'rgba(255,0,0,.08)', border:'1px solid rgba(255,0,0,.2)', margin:'0 12px', borderRadius:12, textDecoration:'none', flexShrink:0 }}>
-            <span style={{ fontSize:24 }}>▶️</span>
+        const embed = getEmbedUrl(p.video_url)
+        if (!embed) return null
+
+        if (embed.type === 'external') return (
+          <a href={embed.src} target="_blank" rel="noreferrer"
+            style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', background:'rgba(255,0,0,.08)', border:'1px solid rgba(255,0,0,.2)', margin:'0 12px', borderRadius:12, textDecoration:'none', flexShrink:0 }}>
+            <div style={{ width:44, height:44, borderRadius:10, background:'rgba(255,0,0,.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>▶️</div>
             <div>
-              <div style={{ fontSize:13, fontWeight:800, color:'white' }}>Voir la vidéo du produit</div>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>Ouvre dans TikTok / Reels</div>
+              <div style={{ fontSize:13, fontWeight:800, color:'white', marginBottom:2 }}>Voir la vidéo du produit</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>Appuie pour ouvrir</div>
             </div>
           </a>
+        )
+
+        return (
+          <div style={{ flexShrink:0 }}>
+            <div style={{ background:'#000', position:'relative', paddingBottom: embed.type==='tiktok' ? '177%' : '56.25%', overflow:'hidden' }}>
+              <iframe
+                src={embed.src}
+                style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          </div>
         )
       })()}
 
@@ -312,19 +345,57 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       )}
 
       {/* ── TOUTES LES PHOTOS défilantes verticalement ── */}
-      {imgs.length > 1 && (
-        <div style={{ margin:0, padding:0, lineHeight:0 }}>
-          {imgs.map((img, i) => (
-            <img
-              key={i}
-              src={img.url}
-              alt=""
-              style={{ width:'100%', display:'block', objectFit:'cover', lineHeight:0, margin:0, padding:0 }}
-              loading={i === 0 ? 'eager' : 'lazy'}
-            />
-          ))}
-        </div>
-      )}
+      {imgs.length > 1 && (() => {
+        const mode = p.display_mode || 'scroll'
+
+        // ── Mode SCROLL — photos empilées verticalement ──
+        if (mode === 'scroll') return (
+          <div style={{ margin:0, padding:0, lineHeight:0 }}>
+            {imgs.map((img, i) => (
+              <img key={i} src={img.url} alt="" loading={i===0?'eager':'lazy'}
+                style={{ width:'100%', display:'block', objectFit:'cover', margin:0, padding:0 }}
+                onClick={() => setLb(true)}
+              />
+            ))}
+          </div>
+        )
+
+        // ── Mode GRID — grille 2 colonnes ──
+        if (mode === 'grid') return (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:3, padding:'0 3px 3px' }}>
+            {imgs.map((img, i) => (
+              <div key={i} onClick={() => { setImgIdx(i); setLb(true) }} style={{ cursor:'zoom-in', overflow:'hidden', borderRadius: i===0?'8px 0 0 0':i===1?'0 8px 0 0':i===imgs.length-2?'0 0 0 8px':'0 0 8px 0', aspectRatio:'1', background:'#111' }}>
+                <img src={img.url} alt="" loading={i<2?'eager':'lazy'} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block', transition:'transform .3s' }}
+                  onMouseEnter={e=>e.target.style.transform='scale(1.05)'}
+                  onMouseLeave={e=>e.target.style.transform=''}
+                />
+              </div>
+            ))}
+          </div>
+        )
+
+        // ── Mode CINEMA — grande image + miniatures bas ──
+        if (mode === 'cinema') return (
+          <div style={{ lineHeight:0 }}>
+            <div onClick={() => setLb(true)} style={{ cursor:'zoom-in', position:'relative', overflow:'hidden', maxHeight:420 }}>
+              <img src={imgs[imgIdx]?.url} alt="" key={imgIdx}
+                style={{ width:'100%', display:'block', objectFit:'cover', animation:'imgIn .2s ease' }}
+              />
+              {imgs.length > 1 && <div style={{ position:'absolute', bottom:8, right:8, background:'rgba(0,0,0,.6)', color:'white', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20 }}>{imgIdx+1}/{imgs.length}</div>}
+            </div>
+            <div style={{ display:'flex', gap:4, padding:'4px', background:'#111', overflowX:'auto', scrollbarWidth:'none' }}>
+              {imgs.map((img, i) => (
+                <div key={i} onClick={() => setImgIdx(i)} style={{ width:72, height:72, borderRadius:8, overflow:'hidden', flexShrink:0, border:`2px solid ${imgIdx===i?'#C9A84C':'transparent'}`, cursor:'pointer', transition:'all .2s' }}>
+                  <img src={img.url} alt="" loading="lazy" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+
+        // ── Mode SLIDER (défaut) — déjà géré par le carrousel en haut ──
+        return null
+      })()}
 
       {/* ── FAQ ── */}
       {faq.length > 0 && (
