@@ -444,6 +444,25 @@ export default function ProductForm({ product, onClose, onSave }) {
           </div>
 
           {/* ── Images ── */}
+          {/* ── Vidéo produit ── */}
+          <div className="pf-section">
+            <h3>🎬 Vidéo produit (optionnel)</h3>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:10, lineHeight:1.5 }}>
+              Colle un lien YouTube ou TikTok. La vidéo s'affiche sur la page produit.
+            </p>
+            <input
+              placeholder="https://youtube.com/watch?v=... ou https://tiktok.com/..."
+              value={form.video_url}
+              onChange={e => set('video_url', e.target.value)}
+              style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:13, outline:'none', width:'100%', boxSizing:'border-box' }}
+            />
+            {form.video_url && (
+              <div style={{ marginTop:8, background:'rgba(201,168,76,.08)', border:'1px solid rgba(201,168,76,.2)', borderRadius:8, padding:'8px 12px', fontSize:12, color:'#C9A84C', display:'flex', alignItems:'center', gap:8 }}>
+                ✅ Lien vidéo enregistré — s'affichera sur la page produit
+              </div>
+            )}
+          </div>
+
           <div className="pf-section">
             <h3>Photos & Médias</h3>
             <label
