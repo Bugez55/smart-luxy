@@ -247,16 +247,25 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         const embed = getEmbedUrl(p.video_url)
         if (!embed) return null
 
-        if (embed.type === 'external') return (
-          <a href={embed.src} target="_blank" rel="noreferrer"
-            style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', background:'rgba(255,0,0,.08)', border:'1px solid rgba(255,0,0,.2)', margin:'0 12px', borderRadius:12, textDecoration:'none', flexShrink:0 }}>
-            <div style={{ width:44, height:44, borderRadius:10, background:'rgba(255,0,0,.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>▶️</div>
-            <div>
-              <div style={{ fontSize:13, fontWeight:800, color:'white', marginBottom:2 }}>Voir la vidéo du produit</div>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>Appuie pour ouvrir</div>
-            </div>
-          </a>
-        )
+        if (embed.type === 'external') {
+          const isTikTok = embed.src.includes('tiktok')
+          const isInsta  = embed.src.includes('instagram')
+          const icon = isTikTok ? '🎵' : isInsta ? '📸' : '▶️'
+          const platform = isTikTok ? 'TikTok' : isInsta ? 'Instagram' : 'Voir la vidéo'
+          const color = isTikTok ? 'rgba(0,0,0,.8)' : isInsta ? 'rgba(131,58,180,.3)' : 'rgba(255,0,0,.1)'
+          const borderColor = isTikTok ? 'rgba(255,255,255,.15)' : isInsta ? 'rgba(131,58,180,.4)' : 'rgba(255,0,0,.2)'
+          return (
+            <a href={embed.src} target="_blank" rel="noreferrer"
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'16px', background:color, border:`1px solid ${borderColor}`, margin:'0 12px', borderRadius:14, textDecoration:'none', flexShrink:0 }}>
+              <div style={{ width:52, height:52, borderRadius:12, background:'rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>{icon}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:14, fontWeight:900, color:'white', marginBottom:3 }}>Voir la vidéo {platform}</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.45)', lineHeight:1.4 }}>Appuie pour regarder la vidéo du produit sur {platform}</div>
+              </div>
+              <div style={{ fontSize:20, color:'rgba(255,255,255,.3)', flexShrink:0 }}>›</div>
+            </a>
+          )
+        }
 
         return (
           <div style={{ flexShrink:0 }}>
