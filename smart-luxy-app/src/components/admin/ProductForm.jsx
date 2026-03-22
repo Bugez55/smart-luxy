@@ -66,10 +66,21 @@ export default function ProductForm({ product, onClose, onSave }) {
     const ext = isGif ? 'gif' : 'jpg'
     const path = `products/${Date.now()}.${ext}`
     const { error } = await supabase.storage.from('product-images').upload(path, fileToUpload, {
-      contentType: isGif ? 'image/gif' : 'image/jpeg'
+      contentType: isGif ? 'image/gif' : 'image/jpeg',
+      upsert: true,
     })
     setUploading(false)
-    if (error) { alert('Erreur upload: ' + error.message); return null }
+    if (error) {
+      console.error('Upload error:', error)
+      // Essayer sans contentType forcé
+      const { error: err2 } = await supabase.storage.from('product-images').upload(path + '_2', file, { upsert: true })
+      if (err2) {
+        alert('Erreur upload: ' + (error.message || JSON.stringify(error)))
+        return null
+      }
+      const { data: { publicUrl: url2 } } = supabase.storage.from('product-images').getPublicUrl(path + '_2')
+      return url2
+    }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
     return publicUrl
   }
