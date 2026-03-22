@@ -126,6 +126,11 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
         }
 
         {p.badge && <div className="pcard-badge">{p.badge}</div>}
+        {p.video_url && (
+          <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,.7)', borderRadius:6, padding:'2px 7px', fontSize:10, fontWeight:800, color:'white', zIndex:2, display:'flex', alignItems:'center', gap:3 }}>
+            ▶️ Vidéo
+          </div>
+        )}
         {disc > 0 && (
           <div className="pcard-badge" style={{ left: 'auto', right: 10, background: '#ef4444' }}>
             -{disc}%
