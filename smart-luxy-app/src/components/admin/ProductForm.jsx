@@ -492,7 +492,7 @@ export default function ProductForm({ product, onClose, onSave }) {
                 {[
                   { val:'scroll', icon:'📜', label:'Défilement vertical', desc:'Photos empilées (MarketDZ)' },
                   { val:'slider', icon:'🎠', label:'Carrousel swipe', desc:'Une photo à la fois' },
-                  { val:'grid', icon:'⊞', label:'Grille 2 colonnes', desc:'Toutes visibles d'un coup' },
+                  { val:'grid', icon:'⊞', label:'Grille 2 colonnes', desc:"Toutes visibles d'un coup" },
                   { val:'cinema', icon:'🎬', label:'Grande + miniatures', desc:'Style boutique premium' },
                 ].map(m => (
                   <div key={m.val} onClick={() => set('display_mode', m.val)} style={{
