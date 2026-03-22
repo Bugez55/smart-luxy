@@ -47,6 +47,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const topRef = useRef()
 
   const imgs = (() => { try { return typeof p.images==='string' ? JSON.parse(p.images) : (p.images||[]) } catch { return [] } })()
+  const imgsGallery = (() => { try { return typeof p.images_gallery==='string' ? JSON.parse(p.images_gallery) : (p.images_gallery||[]) } catch { return [] } })()
   const specs = (() => { try { return typeof p.specs==='string' ? JSON.parse(p.specs) : (p.specs||[]) } catch { return [] } })()
   const bundles = (() => { try { return typeof p.bundles==='string' ? JSON.parse(p.bundles) : (p.bundles||[]) } catch { return [] } })()
   const faq = (() => { try { return typeof p.faq==='string' ? JSON.parse(p.faq) : (p.faq||[]) } catch { return [] } })()
