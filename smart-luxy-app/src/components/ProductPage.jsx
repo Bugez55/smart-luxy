@@ -69,6 +69,24 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
 
+
+  // Convertir URL vidéo en embed
+  function getEmbedUrl(url) {
+    if (!url) return null
+    if (url.includes('youtube.com/watch')) {
+      try { const id = new URL(url).searchParams.get('v'); return id ? `https://www.youtube.com/embed/${id}?autoplay=1&rel=0` : null } catch { return null }
+    }
+    if (url.includes('youtu.be/')) {
+      const id = url.split('youtu.be/')[1]?.split('?')[0]
+      return id ? `https://www.youtube.com/embed/${id}?autoplay=1&rel=0` : null
+    }
+    if (url.includes('tiktok.com') && url.includes('/video/')) {
+      const id = url.match(/video\/([0-9]+)/)?.[1]
+      return id ? `https://www.tiktok.com/embed/v2/${id}` : null
+    }
+    return null
+  }
+
   function setF(k, v) { setForm(f => ({ ...f, [k]:v, ...(k==='wilaya'?{commune:''}:{}) })) }
 
   // Lock body scroll
@@ -198,6 +216,29 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           ))}
         </div>
       )}
+
+      {/* ── Vidéo produit si disponible ── */}
+      {p.video_url && (() => {
+        const embedUrl = getEmbedUrl(p.video_url)
+        return embedUrl ? (
+          <div style={{ background:'#000', position:'relative', paddingBottom:'56.25%', flexShrink:0 }}>
+            <iframe
+              src={embedUrl}
+              style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        ) : (
+          <a href={p.video_url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'rgba(255,0,0,.08)', border:'1px solid rgba(255,0,0,.2)', margin:'0 12px', borderRadius:12, textDecoration:'none', flexShrink:0 }}>
+            <span style={{ fontSize:24 }}>▶️</span>
+            <div>
+              <div style={{ fontSize:13, fontWeight:800, color:'white' }}>Voir la vidéo du produit</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>Ouvre dans TikTok / Reels</div>
+            </div>
+          </a>
+        )
+      })()}
 
       {/* ── Infos produit ── */}
       <div style={{ padding:'16px 16px 0' }}>
