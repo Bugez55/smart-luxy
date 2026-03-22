@@ -20,6 +20,7 @@ export default function ProductForm({ product, onClose, onSave }) {
     display_order: product?.display_order || 99,
     stock:         product?.stock !== undefined && product?.stock !== null ? String(product.stock) : '',
     video_url:     product?.video_url || '',
+    display_mode:  product?.display_mode || 'scroll',
     card_color:    product?.card_color || '',
     ventes:        product?.ventes || 0,
     note_etoiles:  product?.note_etoiles !== undefined ? String(product.note_etoiles) : '5',
@@ -100,6 +101,7 @@ export default function ProductForm({ product, onClose, onSave }) {
       display_order: Number(form.display_order) || 99,
       stock:         form.stock !== '' ? Number(form.stock) : null,
       video_url:     form.video_url || null,
+      display_mode:  form.display_mode || 'scroll',
       card_color:    form.card_color || null,
       ventes:        Number(form.ventes) || 0,
       note_etoiles:  form.note_etoiles !== '' ? Number(form.note_etoiles) : null,
@@ -483,23 +485,120 @@ export default function ProductForm({ product, onClose, onSave }) {
               <button className="act-btn" onClick={addUrlImg}>+ URL</button>
             </div>
 
-            {form.images.map((img, i) => (
-              <div key={i} className="img-row">
-                {img.url && <img src={img.url} className="img-preview" alt="" onError={e => e.target.style.display='none'} />}
-                <input placeholder="Label" value={img.label} onChange={e => updateImg(i, 'label', e.target.value)} style={{ flex: 1 }} />
-                <select value={img.type} onChange={e => updateImg(i, 'type', e.target.value)}>
-                  <option value="image">🖼 Image</option>
-                  <option value="gif">🎬 GIF/Vidéo</option>
-                </select>
-                <button
-                  style={{ background: 'none', border: 'none', color: form.img === img.url ? 'var(--br)' : 'var(--g4)', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}
-                  title="Définir comme image principale"
-                  onClick={() => set('img', img.url)}
-                >★</button>
-                <button className="img-row del" onClick={() => removeImg(i)}>✕</button>
+            {/* Mode d'affichage */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:8 }}>Mode d'affichage des photos</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                {[
+                  { val:'scroll', icon:'📜', label:'Défilement vertical', desc:'Photos empilées (MarketDZ)' },
+                  { val:'slider', icon:'🎠', label:'Carrousel swipe', desc:'Une photo à la fois' },
+                  { val:'grid', icon:'⊞', label:'Grille 2 colonnes', desc:'Toutes visibles d'un coup' },
+                  { val:'cinema', icon:'🎬', label:'Grande + miniatures', desc:'Style boutique premium' },
+                ].map(m => (
+                  <div key={m.val} onClick={() => set('display_mode', m.val)} style={{
+                    background: form.display_mode===m.val ? 'rgba(201,168,76,.12)' : '#1a1a1a',
+                    border: `2px solid ${form.display_mode===m.val ? '#C9A84C' : 'rgba(255,255,255,.08)'}`,
+                    borderRadius:10, padding:'10px 12px', cursor:'pointer', transition:'all .2s',
+                  }}>
+                    <div style={{ fontSize:18, marginBottom:4 }}>{m.icon}</div>
+                    <div style={{ fontSize:11, fontWeight:800, color: form.display_mode===m.val ? '#C9A84C' : 'white', marginBottom:2 }}>{m.label}</div>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>{m.desc}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-            <p style={{ fontSize: 11, color: 'var(--g4)', marginTop: 6 }}>⭐ = image principale · 🎬 = GIF/animation</p>
+            </div>
+
+            {/* Liste images avec drag & drop */}
+            <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:8 }}>
+              Ordre des photos — {form.images.length} photo{form.images.length>1?'s':''}
+            </div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,.25)', marginBottom:10 }}>
+              ☰ Glisse pour réordonner · ⭐ Photo principale · ✕ Supprimer
+            </div>
+
+            {/* Légende zones */}
+            {form.images.length > 0 && (
+              <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, color:'rgba(255,255,255,.35)' }}>
+                  <div style={{ width:10, height:10, borderRadius:2, background:'#C9A84C', flexShrink:0 }} />
+                  Photos 1-3 → Carrousel en haut
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, color:'rgba(255,255,255,.35)' }}>
+                  <div style={{ width:10, height:10, borderRadius:2, background:'#3b82f6', flexShrink:0 }} />
+                  Photos 4+ → Galerie verticale en bas
+                </div>
+              </div>
+            )}
+
+            {form.images.map((img, i) => {
+              const isCarousel = i < 3
+              const isMain = form.img === img.url
+
+              function moveUp() {
+                if (i === 0) return
+                const arr = [...form.images]
+                ;[arr[i-1], arr[i]] = [arr[i], arr[i-1]]
+                set('images', arr)
+                if (i === 1 || i-1 === 0) set('img', arr[0]?.url || '')
+              }
+              function moveDown() {
+                if (i === form.images.length - 1) return
+                const arr = [...form.images]
+                ;[arr[i], arr[i+1]] = [arr[i+1], arr[i]]
+                set('images', arr)
+                if (i === 0) set('img', arr[0]?.url || '')
+              }
+
+              return (
+                <div key={`img-${i}`} style={{
+                  display:'flex', alignItems:'center', gap:8, marginBottom:6,
+                  background: isMain ? 'rgba(201,168,76,.08)' : '#1a1a1a',
+                  border: `2px solid ${isMain ? '#C9A84C' : isCarousel ? 'rgba(201,168,76,.2)' : 'rgba(59,130,246,.2)'}`,
+                  borderRadius:10, padding:'8px 10px', transition:'all .15s',
+                }}>
+                  {/* Tag zone */}
+                  <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:1 }}>
+                    <div style={{ fontSize:8, fontWeight:900, color: isCarousel ? '#C9A84C' : '#93c5fd', letterSpacing:'.04em' }}>
+                      {isCarousel ? '🎠' : '📜'}
+                    </div>
+                    <div style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,.3)' }}>#{i+1}</div>
+                  </div>
+
+                  {/* Aperçu */}
+                  {img.url && <img src={img.url} alt="" style={{ width:52, height:52, borderRadius:8, objectFit:'cover', flexShrink:0 }} onError={e => e.target.style.display='none'} />}
+
+                  {/* Infos */}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:11, color: isCarousel ? 'rgba(201,168,76,.7)' : 'rgba(59,130,246,.7)', fontWeight:700, marginBottom:2 }}>
+                      {isMain ? '⭐ Photo principale' : isCarousel ? `Carrousel — position ${i+1}` : `Galerie verticale — position ${i+1}`}
+                    </div>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {img.url?.split('/').pop()?.slice(-25) || 'image'}
+                    </div>
+                  </div>
+
+                  {/* Boutons réordonnement mobile ▲▼ */}
+                  <div style={{ display:'flex', flexDirection:'column', gap:2, flexShrink:0 }}>
+                    <button
+                      onClick={moveUp}
+                      disabled={i === 0}
+                      style={{ background: i>0 ? 'rgba(255,255,255,.08)' : 'transparent', border:'none', borderRadius:5, width:24, height:22, color: i>0 ? 'white' : 'rgba(255,255,255,.15)', cursor: i>0 ? 'pointer' : 'default', fontSize:11, display:'flex', alignItems:'center', justifyContent:'center' }}
+                    >▲</button>
+                    <button
+                      onClick={moveDown}
+                      disabled={i === form.images.length - 1}
+                      style={{ background: i<form.images.length-1 ? 'rgba(255,255,255,.08)' : 'transparent', border:'none', borderRadius:5, width:24, height:22, color: i<form.images.length-1 ? 'white' : 'rgba(255,255,255,.15)', cursor: i<form.images.length-1 ? 'pointer' : 'default', fontSize:11, display:'flex', alignItems:'center', justifyContent:'center' }}
+                    >▼</button>
+                  </div>
+
+                  {/* Étoile principale */}
+                  <button title="Définir comme principale" onClick={() => set('img', img.url)} style={{ background:'none', border:'none', color:isMain?'#C9A84C':'rgba(255,255,255,.2)', cursor:'pointer', fontSize:18, padding:'2px 4px', flexShrink:0 }}>★</button>
+                  {/* Supprimer */}
+                  <button onClick={() => removeImg(i)} style={{ background:'rgba(239,68,68,.12)', border:'1px solid rgba(239,68,68,.25)', borderRadius:6, color:'#fca5a5', cursor:'pointer', fontSize:11, padding:'4px 8px', flexShrink:0, fontWeight:800 }}>✕</button>
+                </div>
+              )
+            })}
+            {form.images.length === 0 && <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,.2)', fontSize:12 }}>Aucune photo — ajoutes-en ci-dessus</div>}
           </div>
         </div>
 
