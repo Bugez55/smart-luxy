@@ -489,7 +489,7 @@ function AdminSettings({ onLogout, onToast }) {
             onClick={toggleMaintenance}
             style={{
               flexShrink: 0, marginLeft: 12,
-              padding: '8px 16px', border: 'none', borderRadius: 10,
+              padding: '8px 16px', borderRadius: 10,
               background: maintenance ? 'rgba(239,68,68,.2)' : 'rgba(34,197,94,.15)',
               color: maintenance ? '#fca5a5' : '#86efac',
               fontSize: 12, fontWeight: 800, cursor: 'pointer',
