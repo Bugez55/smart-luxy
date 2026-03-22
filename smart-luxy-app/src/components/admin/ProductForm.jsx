@@ -39,15 +39,20 @@ export default function ProductForm({ product, onClose, onSave }) {
 
   async function uploadFile(file) {
     setUploading(true)
-    const isGif = file.type.includes('gif')
-    let fileToUpload = file
 
-    // Compresser seulement les images fixes (pas les GIFs — ça casse l'animation)
+    // Détecter GIF par extension ET par type MIME (certains mobiles ne remplissent pas le type)
+    const fileName = file.name || ''
+    const isGif = file.type === 'image/gif' || fileName.toLowerCase().endsWith('.gif')
+
+    let fileToUpload = file
+    let ext = fileName.split('.').pop()?.toLowerCase() || 'jpg'
+
+    // Compresser SEULEMENT les images fixes non-GIF
     if (!isGif && file.size > 300 * 1024) {
       try {
         fileToUpload = await new Promise(resolve => {
           const img = new Image()
-          const url = URL.createObjectURL(file)
+          const objUrl = URL.createObjectURL(file)
           img.onload = () => {
             const MAX = 1200
             let { width, height } = img
@@ -55,32 +60,29 @@ export default function ProductForm({ product, onClose, onSave }) {
             const canvas = document.createElement('canvas')
             canvas.width = width; canvas.height = height
             canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-            canvas.toBlob(blob => { URL.revokeObjectURL(url); resolve(blob || file) }, 'image/jpeg', 0.82)
+            canvas.toBlob(blob => {
+              URL.revokeObjectURL(objUrl)
+              resolve(blob && blob.size < file.size ? blob : file)
+            }, 'image/jpeg', 0.82)
           }
-          img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
-          img.src = url
+          img.onerror = () => { URL.revokeObjectURL(objUrl); resolve(file) }
+          img.src = objUrl
         })
+        ext = 'jpg'
       } catch { fileToUpload = file }
     }
 
-    const ext = isGif ? 'gif' : 'jpg'
     const path = `products/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('product-images').upload(path, fileToUpload, {
-      contentType: isGif ? 'image/gif' : 'image/jpeg',
-      upsert: true,
-    })
+    const opts = isGif ? { contentType: 'image/gif', upsert: true } : { upsert: true }
+
+    const { error } = await supabase.storage.from('product-images').upload(path, fileToUpload, opts)
     setUploading(false)
+
     if (error) {
-      console.error('Upload error:', error)
-      // Essayer sans contentType forcé
-      const { error: err2 } = await supabase.storage.from('product-images').upload(path + '_2', file, { upsert: true })
-      if (err2) {
-        alert('Erreur upload: ' + (error.message || JSON.stringify(error)))
-        return null
-      }
-      const { data: { publicUrl: url2 } } = supabase.storage.from('product-images').getPublicUrl(path + '_2')
-      return url2
+      alert('Erreur upload: ' + error.message)
+      return null
     }
+
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
     return publicUrl
   }
