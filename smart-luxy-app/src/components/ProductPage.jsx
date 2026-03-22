@@ -407,6 +407,27 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         return null
       })()}
 
+      {/* ── GALERIE VERTICALE — photos séparées du carrousel ── */}
+      {imgsGallery.length > 0 && (
+        <div style={{ lineHeight:0, margin:0, padding:0 }}>
+          {imgsGallery.map((img, i) => (
+            <img
+              key={i}
+              src={img.url}
+              alt=""
+              loading="lazy"
+              style={{
+                width:'100%',
+                display:'block',
+                objectFit: img.type === 'gif' ? 'contain' : 'cover',
+                margin:0, padding:0, lineHeight:0,
+                background: img.type === 'gif' ? '#000' : 'transparent',
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* ── FAQ ── */}
       {faq.length > 0 && (
         <div style={{ padding:'0 16px 16px' }}>
