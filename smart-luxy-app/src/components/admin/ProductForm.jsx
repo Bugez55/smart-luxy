@@ -39,9 +39,35 @@ export default function ProductForm({ product, onClose, onSave }) {
 
   async function uploadFile(file) {
     setUploading(true)
-    const ext = file.name.split('.').pop()
+    const isGif = file.type.includes('gif')
+    let fileToUpload = file
+
+    // Compresser seulement les images fixes (pas les GIFs — ça casse l'animation)
+    if (!isGif && file.size > 300 * 1024) {
+      try {
+        fileToUpload = await new Promise(resolve => {
+          const img = new Image()
+          const url = URL.createObjectURL(file)
+          img.onload = () => {
+            const MAX = 1200
+            let { width, height } = img
+            if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
+            const canvas = document.createElement('canvas')
+            canvas.width = width; canvas.height = height
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+            canvas.toBlob(blob => { URL.revokeObjectURL(url); resolve(blob || file) }, 'image/jpeg', 0.82)
+          }
+          img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+          img.src = url
+        })
+      } catch { fileToUpload = file }
+    }
+
+    const ext = isGif ? 'gif' : 'jpg'
     const path = `products/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('product-images').upload(path, file)
+    const { error } = await supabase.storage.from('product-images').upload(path, fileToUpload, {
+      contentType: isGif ? 'image/gif' : 'image/jpeg'
+    })
     setUploading(false)
     if (error) { alert('Erreur upload: ' + error.message); return null }
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
@@ -492,12 +518,13 @@ export default function ProductForm({ product, onClose, onSave }) {
                 }
               }}
             >
-              <input type="file" accept="image/*" multiple onChange={async e => {
+              <input type="file" accept="image/*,.gif,.webp" multiple onChange={async e => {
                 const files = Array.from(e.target.files)
                 for (const f of files) {
                   const url = await uploadFile(f)
                   if (url) {
-                    set('images', [...form.images, { url, label:'', type:'image' }])
+                    const type = f.type.includes('gif') ? 'gif' : 'image'
+                    set('images', [...form.images, { url, label:'', type }])
                     if (!form.img) set('img', url)
                   }
                 }
@@ -561,11 +588,14 @@ export default function ProductForm({ product, onClose, onSave }) {
                 }
               }}
             >
-              <input type="file" accept="image/*" multiple onChange={async e => {
+              <input type="file" accept="image/*,.gif,.webp" multiple onChange={async e => {
                 const files = Array.from(e.target.files)
                 for (const f of files) {
                   const url = await uploadFile(f)
-                  if (url) set('images_gallery', [...form.images_gallery, { url, label:'', type:'image' }])
+                  if (url) {
+                    const type = f.type.includes('gif') ? 'gif' : 'image'
+                    set('images_gallery', [...form.images_gallery, { url, label:'', type }])
+                  }
                 }
                 e.target.value = ''
               }} />
