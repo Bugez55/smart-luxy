@@ -354,59 +354,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         </div>
       )}
 
-      {/* ── TOUTES LES PHOTOS défilantes verticalement ── */}
-      {imgs.length > 1 && (() => {
-        const mode = p.display_mode || 'scroll'
-
-        // ── Mode SCROLL — photos empilées verticalement ──
-        if (mode === 'scroll') return (
-          <div style={{ margin:0, padding:0, lineHeight:0 }}>
-            {imgs.map((img, i) => (
-              <img key={i} src={img.url} alt="" loading={i===0?'eager':'lazy'}
-                style={{ width:'100%', display:'block', objectFit:'cover', margin:0, padding:0 }}
-                onClick={() => setLb(true)}
-              />
-            ))}
-          </div>
-        )
-
-        // ── Mode GRID — grille 2 colonnes ──
-        if (mode === 'grid') return (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:3, padding:'0 3px 3px' }}>
-            {imgs.map((img, i) => (
-              <div key={i} onClick={() => { setImgIdx(i); setLb(true) }} style={{ cursor:'zoom-in', overflow:'hidden', borderRadius: i===0?'8px 0 0 0':i===1?'0 8px 0 0':i===imgs.length-2?'0 0 0 8px':'0 0 8px 0', aspectRatio:'1', background:'#111' }}>
-                <img src={img.url} alt="" loading={i<2?'eager':'lazy'} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block', transition:'transform .3s' }}
-                  onMouseEnter={e=>e.target.style.transform='scale(1.05)'}
-                  onMouseLeave={e=>e.target.style.transform=''}
-                />
-              </div>
-            ))}
-          </div>
-        )
-
-        // ── Mode CINEMA — grande image + miniatures bas ──
-        if (mode === 'cinema') return (
-          <div style={{ lineHeight:0 }}>
-            <div onClick={() => setLb(true)} style={{ cursor:'zoom-in', position:'relative', overflow:'hidden', maxHeight:420 }}>
-              <img src={imgs[imgIdx]?.url} alt="" key={imgIdx}
-                style={{ width:'100%', display:'block', objectFit:'cover', animation:'imgIn .2s ease' }}
-              />
-              {imgs.length > 1 && <div style={{ position:'absolute', bottom:8, right:8, background:'rgba(0,0,0,.6)', color:'white', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20 }}>{imgIdx+1}/{imgs.length}</div>}
-            </div>
-            <div style={{ display:'flex', gap:4, padding:'4px', background:'#111', overflowX:'auto', scrollbarWidth:'none' }}>
-              {imgs.map((img, i) => (
-                <div key={i} onClick={() => setImgIdx(i)} style={{ width:72, height:72, borderRadius:8, overflow:'hidden', flexShrink:0, border:`2px solid ${imgIdx===i?'#C9A84C':'transparent'}`, cursor:'pointer', transition:'all .2s' }}>
-                  <img src={img.url} alt="" loading="lazy" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-
-        // ── Mode SLIDER (défaut) — déjà géré par le carrousel en haut ──
-        return null
-      })()}
-
       {/* ── GALERIE VERTICALE — photos séparées du carrousel ── */}
       {imgsGallery.length > 0 && (
         <div style={{ lineHeight:0, margin:0, padding:0 }}>
