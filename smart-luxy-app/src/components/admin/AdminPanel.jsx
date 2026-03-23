@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
+import { THEMES, applyTheme } from '../../utils/useTheme'
 import { alertStockBas, resumeQuotidien } from '../../utils/notify'
 import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
@@ -518,6 +519,350 @@ function AdminSettings({ onLogout, onToast }) {
 }
 
 
+
+// ═══════════════════════════════════════════════════
+//  THEME EDITOR — Personnalisation couleurs boutique
+// ═══════════════════════════════════════════════════
+function ThemeEditor() {
+  const [theme, setTheme] = useState({
+    theme_bg:       '#0a0a0a',
+    theme_card:     '#141414',
+    theme_text:     '#ffffff',
+    theme_accent:   '#C9A84C',
+    theme_accent2:  '#E9C46A',
+    theme_btn_text: '#000000',
+  })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.from('settings').select('key,value')
+      .in('key', ['theme_bg','theme_card','theme_text','theme_accent','theme_accent2','theme_btn_text'])
+      .then(({ data }) => {
+        if (!data) return
+        const t = {}
+        data.forEach(({ key, value }) => { t[key] = value })
+        setTheme(prev => ({ ...prev, ...t }))
+      })
+  }, [])
+
+  function setColor(key, val) {
+    const next = { ...theme, [key]: val }
+    setTheme(next)
+    // Prévisualiser en temps réel
+    applyTheme(next)
+  }
+
+  async function save() {
+    setSaving(true)
+    const rows = Object.entries(theme).map(([key, value]) => ({
+      key, value, updated_at: new Date().toISOString()
+    }))
+    for (const row of rows) {
+      await supabase.from('settings')
+        .update({ value: row.value, updated_at: row.updated_at })
+        .eq('key', row.key)
+    }
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const sec = {
+    background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)',
+    borderRadius:14, padding:'16px', marginBottom:12,
+  }
+  const colorRow = (label, key, hint) => (
+    <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
+      <div style={{ flex:1 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:'white', marginBottom:2 }}>{label}</div>
+        {hint && <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>{hint}</div>}
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <input
+          type="color"
+          value={theme[key]}
+          onChange={e => setColor(key, e.target.value)}
+          style={{ width:40, height:36, borderRadius:8, border:'1px solid #333', background:'none', cursor:'pointer', padding:2 }}
+        />
+        <input
+          value={theme[key]}
+          onChange={e => setColor(key, e.target.value)}
+          style={{ width:90, background:'#111', border:'1px solid #333', borderRadius:8, padding:'6px 10px', color:'white', fontSize:12, outline:'none', fontFamily:'monospace' }}
+        />
+      </div>
+    </div>
+  )
+
+  return (
+    <div>
+      <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:4 }}>🎨 Thème de la boutique</h3>
+      <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:20, lineHeight:1.5 }}>
+        Change les couleurs de toute la boutique en temps réel. Ton client verra le nouveau thème immédiatement après avoir sauvegardé.
+      </p>
+
+      {/* Thèmes prédéfinis */}
+      <div style={sec}>
+        <div style={{ fontSize:13, fontWeight:800, color:'white', marginBottom:12 }}>✨ Thèmes prédéfinis</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          {THEMES.map(t => (
+            <button key={t.name} onClick={() => {
+              const next = {
+                theme_bg: t.bg, theme_card: t.card, theme_text: t.text,
+                theme_accent: t.accent, theme_accent2: t.accent2, theme_btn_text: t.btnText
+              }
+              setTheme(next)
+              applyTheme(next)
+            }} style={{
+              background: t.bg,
+              border: `2px solid ${theme.theme_bg === t.bg ? t.accent : 'rgba(255,255,255,.1)'}`,
+              borderRadius:10, padding:'10px 12px', cursor:'pointer',
+              display:'flex', flexDirection:'column', gap:6, transition:'all .2s',
+            }}>
+              {/* Aperçu couleurs */}
+              <div style={{ display:'flex', gap:4 }}>
+                <div style={{ width:14, height:14, borderRadius:3, background:t.bg, border:'1px solid rgba(255,255,255,.2)' }} />
+                <div style={{ width:14, height:14, borderRadius:3, background:t.card }} />
+                <div style={{ width:14, height:14, borderRadius:3, background:t.accent }} />
+                <div style={{ width:14, height:14, borderRadius:3, background:t.text }} />
+              </div>
+              <div style={{ fontSize:11, fontWeight:800, color:t.text, textAlign:'left' }}>{t.name}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Couleurs personnalisées */}
+      <div style={sec}>
+        <div style={{ fontSize:13, fontWeight:800, color:'white', marginBottom:14 }}>🎛️ Couleurs personnalisées</div>
+        {colorRow('🖤 Fond de la boutique', 'theme_bg', 'Couleur de fond principale de toutes les pages')}
+        {colorRow('🃏 Fond des cartes produits', 'theme_card', 'Fond des cartes et éléments')}
+        {colorRow('✍️ Couleur du texte', 'theme_text', 'Textes, titres, descriptions')}
+        {colorRow('⭐ Couleur principale', 'theme_accent', 'Boutons, prix, bordures actives')}
+        {colorRow('⭐ Couleur secondaire', 'theme_accent2', 'Dégradé des boutons principaux')}
+        {colorRow('🖊️ Texte sur boutons', 'theme_btn_text', 'Noir sur fond clair, blanc sur fond foncé')}
+      </div>
+
+      {/* Aperçu */}
+      <div style={{ ...sec, background: theme.theme_bg, border:`2px solid ${theme.theme_accent}` }}>
+        <div style={{ fontSize:13, fontWeight:800, color:theme.theme_text, marginBottom:10 }}>👁️ Aperçu en direct</div>
+        <div style={{ background:theme.theme_card, borderRadius:12, padding:14, border:`1px solid rgba(255,255,255,.1)` }}>
+          <div style={{ fontSize:14, fontWeight:800, color:theme.theme_text, marginBottom:4 }}>Produit exemple</div>
+          <div style={{ fontSize:20, fontWeight:900, color:theme.theme_accent, marginBottom:8 }}>2 990 DA</div>
+          <div style={{ display:'flex', gap:8 }}>
+            <div style={{ flex:1, padding:'10px', background:'rgba(255,255,255,.06)', borderRadius:8, textAlign:'center', fontSize:12, color:theme.theme_text, fontWeight:700, border:'1px solid rgba(255,255,255,.1)' }}>🛒 Panier</div>
+            <div style={{ flex:2, padding:'10px', background:`linear-gradient(135deg,${theme.theme_accent},${theme.theme_accent2})`, borderRadius:8, textAlign:'center', fontSize:12, color:theme.theme_btn_text, fontWeight:900 }}>⚡ Commander</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bouton sauvegarder */}
+      <button
+        onClick={save}
+        disabled={saving}
+        style={{
+          width:'100%', padding:'14px',
+          background:`linear-gradient(135deg,${theme.theme_accent},${theme.theme_accent2})`,
+          border:'none', borderRadius:12,
+          color: theme.theme_btn_text,
+          fontSize:15, fontWeight:900, cursor:'pointer',
+        }}
+      >
+        {saving ? '⏳ Sauvegarde...' : saved ? '✅ Thème sauvegardé !' : '💾 Appliquer ce thème'}
+      </button>
+      <p style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:8, textAlign:'center', lineHeight:1.5 }}>
+        Le thème sera appliqué sur toute la boutique pour tous les visiteurs
+      </p>
+    </div>
+  )
+}
+
+
+// ═══════════════════════════════════════════════════
+//  THEME EDITOR — Personnalisation complète du site
+// ═══════════════════════════════════════════════════
+function ThemeEditor({ onToast }) {
+  const [theme, setTheme] = useState({
+    theme_bg:       '#0a0a0a',
+    theme_card:     '#141414',
+    theme_accent:   '#C9A84C',
+    theme_text:     '#e0e0e0',
+    theme_text_sub: '#888888',
+  })
+  const [saving, setSaving] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  // Charger les valeurs actuelles
+  useEffect(() => {
+    getSettings().then(s => {
+      setTheme({
+        theme_bg:       s.theme_bg       || '#0a0a0a',
+        theme_card:     s.theme_card     || '#141414',
+        theme_accent:   s.theme_accent   || '#C9A84C',
+        theme_text:     s.theme_text     || '#e0e0e0',
+        theme_text_sub: s.theme_text_sub || '#888888',
+      })
+      setLoaded(true)
+    })
+  }, [])
+
+  // Aperçu live — appliquer en temps réel sur le document
+  function applyLive(key, val) {
+    const t = { ...theme, [key]: val }
+    setTheme(t)
+    const root = document.documentElement
+    if (t.theme_bg)       { root.style.setProperty('--bk', t.theme_bg); root.style.setProperty('--bk2', t.theme_bg); document.body.style.background = t.theme_bg }
+    if (t.theme_card)     { root.style.setProperty('--card', t.theme_card); root.style.setProperty('--card2', t.theme_card) }
+    if (t.theme_accent)   { root.style.setProperty('--br', t.theme_accent); root.style.setProperty('--br2', t.theme_accent); root.style.setProperty('--br3', t.theme_accent) }
+    if (t.theme_text)     root.style.setProperty('--g3', t.theme_text)
+    if (t.theme_text_sub) root.style.setProperty('--g4', t.theme_text_sub)
+  }
+
+  async function saveTheme() {
+    setSaving(true)
+    for (const [key, val] of Object.entries(theme)) {
+      await saveSetting(key, val)
+    }
+    setSaving(false)
+    onToast && onToast('✅ Thème sauvegardé ! Le site est mis à jour.', 'default')
+  }
+
+  function resetDefault() {
+    const defaults = {
+      theme_bg: '#0a0a0a', theme_card: '#141414', theme_accent: '#C9A84C',
+      theme_text: '#e0e0e0', theme_text_sub: '#888888',
+    }
+    Object.entries(defaults).forEach(([k,v]) => applyLive(k, v))
+  }
+
+  const PRESETS = [
+    { name:'🌑 Noir doré', desc:'Défaut premium', colors:{ theme_bg:'#0a0a0a', theme_card:'#141414', theme_accent:'#C9A84C', theme_text:'#e0e0e0', theme_text_sub:'#888888' }},
+    { name:'🤍 Blanc élégant', desc:'Boutique lumineuse', colors:{ theme_bg:'#f8f8f6', theme_card:'#ffffff', theme_accent:'#C9A84C', theme_text:'#1a1a1a', theme_text_sub:'#666666' }},
+    { name:'🌿 Vert naturel', desc:'Éco premium', colors:{ theme_bg:'#0a1209', theme_card:'#111d0f', theme_accent:'#4caf50', theme_text:'#e8f5e9', theme_text_sub:'#81c784' }},
+    { name:'💙 Bleu nuit', desc:'Tech moderne', colors:{ theme_bg:'#050d1a', theme_card:'#0d1b2e', theme_accent:'#3b82f6', theme_text:'#e0eaff', theme_text_sub:'#94b3d4' }},
+    { name:'🌹 Rose luxe', desc:'Beauté féminin', colors:{ theme_bg:'#120a0f', theme_card:'#1e0f18', theme_accent:'#e91e8c', theme_text:'#ffe0f0', theme_text_sub:'#c084a8' }},
+    { name:'🔴 Rouge passion', desc:'Énergie vente', colors:{ theme_bg:'#0f0505', theme_card:'#1a0a0a', theme_accent:'#ef4444', theme_text:'#ffe8e8', theme_text_sub:'#c49090' }},
+    { name:'🟣 Violet royal', desc:'Luxe mystérieux', colors:{ theme_bg:'#08050f', theme_card:'#120c1e', theme_accent:'#9333ea', theme_text:'#f0e8ff', theme_text_sub:'#a890c8' }},
+    { name:'🟠 Orange dynamique', desc:'Énergie conviviale', colors:{ theme_bg:'#0f0800', theme_card:'#1a1000', theme_accent:'#f97316', theme_text:'#fff3e0', theme_text_sub:'#c8a070' }},
+  ]
+
+  const row = { marginBottom:12 }
+  const lbl = { fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
+  const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:'16px', marginBottom:12 }
+
+  return (
+    <div>
+      <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:6 }}>🎨 Thème de la boutique</h3>
+      <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:20, lineHeight:1.5 }}>
+        Personnalise les couleurs de tout le site. L'aperçu est en temps réel — tu vois les changements immédiatement.
+      </p>
+
+      {/* ── Palettes rapides ── */}
+      <div style={sec}>
+        <div style={lbl}>Palettes prêtes à l'emploi</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          {PRESETS.map(p => (
+            <button key={p.name} onClick={() => Object.entries(p.colors).forEach(([k,v]) => applyLive(k,v))} style={{
+              background: p.colors.theme_card,
+              border: `2px solid ${p.colors.theme_accent}`,
+              borderRadius:12, padding:'12px 10px', cursor:'pointer',
+              textAlign:'left', transition:'transform .2s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.transform='scale(1.02)'}
+              onMouseLeave={e => e.currentTarget.style.transform=''}
+            >
+              <div style={{ fontSize:13, fontWeight:800, color: p.colors.theme_text, marginBottom:2 }}>{p.name}</div>
+              <div style={{ fontSize:10, color: p.colors.theme_text_sub }}>{p.desc}</div>
+              {/* Mini aperçu couleurs */}
+              <div style={{ display:'flex', gap:4, marginTop:8 }}>
+                {[p.colors.theme_bg, p.colors.theme_card, p.colors.theme_accent, p.colors.theme_text].map((col,i) => (
+                  <div key={i} style={{ width:16, height:16, borderRadius:4, background:col, border:'1px solid rgba(255,255,255,.2)' }} />
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Couleurs personnalisées ── */}
+      <div style={sec}>
+        <div style={lbl}>Personnaliser manuellement</div>
+
+        {[
+          { key:'theme_bg',       icon:'🎨', label:'Couleur de fond', desc:'Fond principal du site' },
+          { key:'theme_card',     icon:'📦', label:'Couleur des cartes', desc:'Fond des produits et sections' },
+          { key:'theme_accent',   icon:'✨', label:'Couleur accent', desc:'Boutons, prix, éléments dorés' },
+          { key:'theme_text',     icon:'📝', label:'Couleur du texte', desc:'Texte principal' },
+          { key:'theme_text_sub', icon:'💬', label:'Texte secondaire', desc:'Sous-titres et descriptions' },
+        ].map(item => (
+          <div key={item.key} style={{ ...row, display:'flex', alignItems:'center', gap:12, background:'rgba(255,255,255,.03)', borderRadius:10, padding:'12px' }}>
+            <div style={{ fontSize:20, flexShrink:0 }}>{item.icon}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'white', marginBottom:1 }}>{item.label}</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>{item.desc}</div>
+            </div>
+            <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
+              <input
+                type="color"
+                value={theme[item.key].startsWith('#') ? theme[item.key] : '#888888'}
+                onChange={e => applyLive(item.key, e.target.value)}
+                style={{ width:40, height:36, borderRadius:8, border:'2px solid rgba(255,255,255,.2)', background:'none', cursor:'pointer', padding:2 }}
+              />
+              <input
+                value={theme[item.key]}
+                onChange={e => applyLive(item.key, e.target.value)}
+                style={{ width:110, background:'#111', border:'1px solid #333', borderRadius:8, padding:'6px 10px', color:'white', fontSize:12, outline:'none', fontFamily:'monospace' }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Aperçu miniature ── */}
+      <div style={sec}>
+        <div style={lbl}>Aperçu</div>
+        <div style={{ background: theme.theme_bg, borderRadius:12, padding:16, border:'1px solid rgba(255,255,255,.1)' }}>
+          {/* Header mini */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <div style={{ fontFamily:'serif', fontWeight:900, color:theme.theme_accent, fontSize:16 }}>Smart Luxy</div>
+            <div style={{ background:theme.theme_accent, color:theme.theme_bg, borderRadius:20, padding:'4px 12px', fontSize:11, fontWeight:800 }}>Panier</div>
+          </div>
+          {/* Carte produit mini */}
+          <div style={{ background:theme.theme_card, borderRadius:10, overflow:'hidden', border:`1px solid ${theme.theme_accent}30` }}>
+            <div style={{ height:60, background:`linear-gradient(135deg, ${theme.theme_card}, ${theme.theme_accent}20)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28 }}>📦</div>
+            <div style={{ padding:'8px 10px' }}>
+              <div style={{ fontSize:12, fontWeight:700, color:theme.theme_text, marginBottom:3 }}>Nom du produit</div>
+              <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+                {[1,2,3,4,5].map(i => <span key={i} style={{ fontSize:10, color:theme.theme_accent }}>★</span>)}
+                <span style={{ fontSize:9, color:theme.theme_text_sub }}>4.8 (127)</span>
+              </div>
+              <div style={{ fontSize:14, fontWeight:900, color:theme.theme_accent, margin:'4px 0' }}>2990 DA</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
+                <div style={{ background:`${theme.theme_accent}15`, border:`1px solid ${theme.theme_accent}40`, borderRadius:6, padding:'5px', textAlign:'center', fontSize:10, fontWeight:700, color:theme.theme_accent }}>🛒 Panier</div>
+                <div style={{ background:theme.theme_accent, borderRadius:6, padding:'5px', textAlign:'center', fontSize:10, fontWeight:900, color:theme.theme_bg }}>⚡ Acheter</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign:'center', marginTop:8, fontSize:10, color:theme.theme_text_sub }}>Boutique en ligne · Algérie 🇩🇿</div>
+        </div>
+      </div>
+
+      {/* Boutons */}
+      <div style={{ display:'flex', gap:8 }}>
+        <button onClick={resetDefault} style={{ flex:1, padding:'11px', background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, color:'rgba(255,255,255,.5)', fontSize:13, fontWeight:800, cursor:'pointer' }}>
+          ↺ Réinitialiser
+        </button>
+        <button onClick={saveTheme} disabled={saving} style={{ flex:2, padding:'11px', background:saving?'#222':'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:12, color:saving?'#444':'#000', fontSize:13, fontWeight:900, cursor:saving?'default':'pointer' }}>
+          {saving ? '⏳ Sauvegarde...' : '💾 Sauvegarder le thème'}
+        </button>
+      </div>
+      <p style={{ fontSize:11, color:'rgba(255,255,255,.25)', textAlign:'center', marginTop:8, lineHeight:1.5 }}>
+        Le thème s'applique immédiatement pour toi. Les clients le verront après rechargement.
+      </p>
+    </div>
+  )
+}
+
 function ImageOptimizer({ products, supabase }) {
   const [results, setResults] = useState([])
   const [running, setRunning] = useState(false)
@@ -1033,7 +1378,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Smart <em>Luxy</em> — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -1435,6 +1780,12 @@ export default function AdminPanel({ onLogout, onToast }) {
           <ImageOptimizer products={products} supabase={supabase} />
         )}
 
+
+        {/* ── THEME TAB ── */}
+        {tab === 'theme' && <ThemeEditor />}
+
+        {/* ── THEME TAB ── */}
+        {tab === 'theme' && <ThemeEditor onToast={onToast} />}
 
         {/* ── SETTINGS TAB ── */}
         {tab === 'settings' && (
