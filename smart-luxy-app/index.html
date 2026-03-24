@@ -12,6 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Smart Luxy">
   <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Cormorant+Garamond:ital,wght@1,300&family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -80,6 +81,23 @@
   <script type="module" src="/src/main.jsx"></script>
 
   <script>
+    // ── Thème instantané depuis localStorage (avant React) ──
+    ;(function() {
+      try {
+        const bg      = localStorage.getItem('sl_theme_bg')
+        const card    = localStorage.getItem('sl_theme_card')
+        const accent  = localStorage.getItem('sl_theme_accent')
+        const text    = localStorage.getItem('sl_theme_text')
+        const textSub = localStorage.getItem('sl_theme_text_sub')
+        const r = document.documentElement
+        if (bg)      { r.style.setProperty('--bk', bg);  r.style.setProperty('--bk2', bg);  document.body.style.background = bg }
+        if (card)    { r.style.setProperty('--card', card); r.style.setProperty('--card2', card) }
+        if (accent)  { r.style.setProperty('--br', accent); r.style.setProperty('--br2', accent); r.style.setProperty('--br3', accent) }
+        if (text)    r.style.setProperty('--g3', text)
+        if (textSub) r.style.setProperty('--g4', textSub)
+      } catch(e) {}
+    })()
+
     // ── Service Worker PWA ──
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
