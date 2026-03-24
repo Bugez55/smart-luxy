@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
-import { THEMES, applyTheme } from '../../utils/useTheme'
 import { alertStockBas, resumeQuotidien } from '../../utils/notify'
 import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
@@ -550,8 +549,7 @@ function ThemeEditor() {
     const next = { ...theme, [key]: val }
     setTheme(next)
     // Prévisualiser en temps réel
-    applyTheme(next)
-  }
+    }
 
   async function save() {
     setSaving(true)
@@ -605,15 +603,14 @@ function ThemeEditor() {
       <div style={sec}>
         <div style={{ fontSize:13, fontWeight:800, color:'white', marginBottom:12 }}>✨ Thèmes prédéfinis</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-          {THEMES.map(t => (
+          {'#C9A84C' => (
             <button key={t.name} onClick={() => {
               const next = {
                 theme_bg: t.bg, theme_card: t.card, theme_text: t.text,
                 theme_accent: t.accent, theme_accent2: t.accent2, theme_btn_text: t.btnText
               }
               setTheme(next)
-              applyTheme(next)
-            }} style={{
+              }} style={{
               background: t.bg,
               border: `2px solid ${theme.theme_bg === t.bg ? t.accent : 'rgba(255,255,255,.1)'}`,
               borderRadius:10, padding:'10px 12px', cursor:'pointer',
