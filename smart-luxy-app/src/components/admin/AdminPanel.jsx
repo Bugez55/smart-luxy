@@ -519,165 +519,157 @@ function AdminSettings({ onLogout, onToast }) {
 
 
 
+
+
 // ═══════════════════════════════════════════════════
-//  THEME EDITOR — Personnalisation couleurs boutique
+//  THEME EDITOR
 // ═══════════════════════════════════════════════════
-function ThemeEditor() {
+function ThemeEditor({ onToast }) {
   const [theme, setTheme] = useState({
-    theme_bg:       '#0a0a0a',
-    theme_card:     '#141414',
-    theme_text:     '#ffffff',
-    theme_accent:   '#C9A84C',
-    theme_accent2:  '#E9C46A',
-    theme_btn_text: '#000000',
+    theme_bg: '#0a0a0a', theme_card: '#141414',
+    theme_accent: '#C9A84C', theme_text: '#e0e0e0', theme_text_sub: '#888888',
   })
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    supabase.from('settings').select('key,value')
-      .in('key', ['theme_bg','theme_card','theme_text','theme_accent','theme_accent2','theme_btn_text'])
-      .then(({ data }) => {
-        if (!data) return
-        const t = {}
-        data.forEach(({ key, value }) => { t[key] = value })
-        setTheme(prev => ({ ...prev, ...t }))
-      })
+    getSettings().then(s => {
+      setTheme(t => ({
+        ...t,
+        theme_bg:       s.theme_bg       || t.theme_bg,
+        theme_card:     s.theme_card     || t.theme_card,
+        theme_accent:   s.theme_accent   || t.theme_accent,
+        theme_text:     s.theme_text     || t.theme_text,
+        theme_text_sub: s.theme_text_sub || t.theme_text_sub,
+      }))
+    })
   }, [])
 
-  function setColor(key, val) {
-    const next = { ...theme, [key]: val }
-    setTheme(next)
-    // Prévisualiser en temps réel
-    }
+  function apply(key, val) {
+    const t = { ...theme, [key]: val }
+    setTheme(t)
+    const r = document.documentElement
+    r.style.setProperty('--bk', t.theme_bg)
+    r.style.setProperty('--bk2', t.theme_bg)
+    r.style.setProperty('--card', t.theme_card)
+    r.style.setProperty('--card2', t.theme_card)
+    r.style.setProperty('--br', t.theme_accent)
+    r.style.setProperty('--br2', t.theme_accent)
+    r.style.setProperty('--br3', t.theme_accent)
+    r.style.setProperty('--g3', t.theme_text)
+    r.style.setProperty('--g4', t.theme_text_sub)
+    document.body.style.background = t.theme_bg
+  }
 
   async function save() {
     setSaving(true)
-    const rows = Object.entries(theme).map(([key, value]) => ({
-      key, value, updated_at: new Date().toISOString()
-    }))
-    for (const row of rows) {
-      await supabase.from('settings')
-        .update({ value: row.value, updated_at: row.updated_at })
-        .eq('key', row.key)
-    }
+    for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
     setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    onToast && onToast('✅ Thème sauvegardé !', 'default')
   }
 
-  const sec = {
-    background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)',
-    borderRadius:14, padding:'16px', marginBottom:12,
-  }
-  const colorRow = (label, key, hint) => (
-    <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
-      <div style={{ flex:1 }}>
-        <div style={{ fontSize:13, fontWeight:700, color:'white', marginBottom:2 }}>{label}</div>
-        {hint && <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>{hint}</div>}
-      </div>
-      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-        <input
-          type="color"
-          value={theme[key]}
-          onChange={e => setColor(key, e.target.value)}
-          style={{ width:40, height:36, borderRadius:8, border:'1px solid #333', background:'none', cursor:'pointer', padding:2 }}
-        />
-        <input
-          value={theme[key]}
-          onChange={e => setColor(key, e.target.value)}
-          style={{ width:90, background:'#111', border:'1px solid #333', borderRadius:8, padding:'6px 10px', color:'white', fontSize:12, outline:'none', fontFamily:'monospace' }}
-        />
-      </div>
-    </div>
-  )
+  const PRESETS = [
+    { name:'🌑 Noir doré',      bg:'#0a0a0a', card:'#141414', accent:'#C9A84C', text:'#e0e0e0', sub:'#888888' },
+    { name:'🤍 Blanc élégant',  bg:'#f5f5f0', card:'#ffffff', accent:'#C9A84C', text:'#1a1a1a', sub:'#666666' },
+    { name:'🌿 Vert naturel',   bg:'#071009', card:'#0f1c0c', accent:'#4caf50', text:'#e0f0e0', sub:'#80b080' },
+    { name:'💙 Bleu nuit',      bg:'#050d1a', card:'#0d1b2e', accent:'#3b82f6', text:'#e0eaff', sub:'#7090b0' },
+    { name:'🌹 Rose luxe',      bg:'#120a0f', card:'#1e0f18', accent:'#e91e8c', text:'#ffe0f0', sub:'#b070a0' },
+    { name:'🔴 Rouge passion',  bg:'#0f0505', card:'#1a0a0a', accent:'#ef4444', text:'#ffe8e8', sub:'#c08080' },
+    { name:'🟣 Violet royal',   bg:'#08050f', card:'#120c1e', accent:'#9333ea', text:'#f0e8ff', sub:'#a080c0' },
+    { name:'🟠 Orange chaud',   bg:'#0f0800', card:'#1a1000', accent:'#f97316', text:'#fff3e0', sub:'#c09060' },
+  ]
+
+  const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
+  const lbl = { fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:8, display:'block' }
 
   return (
     <div>
-      <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:4 }}>🎨 Thème de la boutique</h3>
-      <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:20, lineHeight:1.5 }}>
-        Change les couleurs de toute la boutique en temps réel. Ton client verra le nouveau thème immédiatement après avoir sauvegardé.
+      <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:6 }}>🎨 Thème de la boutique</h3>
+      <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:18, lineHeight:1.5 }}>
+        Personnalise les couleurs de tout le site. L'aperçu est en temps réel.
       </p>
 
-      {/* Thèmes prédéfinis */}
+      {/* Palettes */}
       <div style={sec}>
-        <div style={{ fontSize:13, fontWeight:800, color:'white', marginBottom:12 }}>✨ Thèmes prédéfinis</div>
+        <span style={lbl}>Palettes prêtes à l'emploi</span>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-          {'#C9A84C' => (
-            <button key={t.name} onClick={() => {
-              const next = {
-                theme_bg: t.bg, theme_card: t.card, theme_text: t.text,
-                theme_accent: t.accent, theme_accent2: t.accent2, theme_btn_text: t.btnText
-              }
-              setTheme(next)
-              }} style={{
-              background: t.bg,
-              border: `2px solid ${theme.theme_bg === t.bg ? t.accent : 'rgba(255,255,255,.1)'}`,
-              borderRadius:10, padding:'10px 12px', cursor:'pointer',
-              display:'flex', flexDirection:'column', gap:6, transition:'all .2s',
+          {PRESETS.map(p => (
+            <button key={p.name} onClick={() => {
+              apply('theme_bg', p.bg)
+              apply('theme_card', p.card)
+              apply('theme_accent', p.accent)
+              apply('theme_text', p.text)
+              apply('theme_text_sub', p.sub)
+            }} style={{
+              background: p.card, border: `2px solid ${p.accent}`, borderRadius:12,
+              padding:'12px 10px', cursor:'pointer', textAlign:'left', transition:'transform .15s',
             }}>
-              {/* Aperçu couleurs */}
-              <div style={{ display:'flex', gap:4 }}>
-                <div style={{ width:14, height:14, borderRadius:3, background:t.bg, border:'1px solid rgba(255,255,255,.2)' }} />
-                <div style={{ width:14, height:14, borderRadius:3, background:t.card }} />
-                <div style={{ width:14, height:14, borderRadius:3, background:t.accent }} />
-                <div style={{ width:14, height:14, borderRadius:3, background:t.text }} />
+              <div style={{ display:'flex', gap:4, marginBottom:6 }}>
+                {[p.bg, p.card, p.accent, p.text].map((col, i) => (
+                  <div key={i} style={{ width:14, height:14, borderRadius:3, background:col, border:'1px solid rgba(255,255,255,.15)' }} />
+                ))}
               </div>
-              <div style={{ fontSize:11, fontWeight:800, color:t.text, textAlign:'left' }}>{t.name}</div>
+              <div style={{ fontSize:12, fontWeight:800, color: p.text }}>{p.name}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Couleurs personnalisées */}
+      {/* Couleurs manuelles */}
       <div style={sec}>
-        <div style={{ fontSize:13, fontWeight:800, color:'white', marginBottom:14 }}>🎛️ Couleurs personnalisées</div>
-        {colorRow('🖤 Fond de la boutique', 'theme_bg', 'Couleur de fond principale de toutes les pages')}
-        {colorRow('🃏 Fond des cartes produits', 'theme_card', 'Fond des cartes et éléments')}
-        {colorRow('✍️ Couleur du texte', 'theme_text', 'Textes, titres, descriptions')}
-        {colorRow('⭐ Couleur principale', 'theme_accent', 'Boutons, prix, bordures actives')}
-        {colorRow('⭐ Couleur secondaire', 'theme_accent2', 'Dégradé des boutons principaux')}
-        {colorRow('🖊️ Texte sur boutons', 'theme_btn_text', 'Noir sur fond clair, blanc sur fond foncé')}
+        <span style={lbl}>Personnaliser</span>
+        {[
+          { key:'theme_bg',       label:'🎨 Fond du site' },
+          { key:'theme_card',     label:'📦 Fond des cartes' },
+          { key:'theme_accent',   label:'✨ Couleur accent (boutons, prix)' },
+          { key:'theme_text',     label:'📝 Texte principal' },
+          { key:'theme_text_sub', label:'💬 Texte secondaire' },
+        ].map(item => (
+          <div key={item.key} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10, background:'rgba(255,255,255,.03)', borderRadius:10, padding:10 }}>
+            <div style={{ flex:1, fontSize:13, fontWeight:600, color:'white' }}>{item.label}</div>
+            <input type="color"
+              value={theme[item.key].startsWith('#') ? theme[item.key] : '#888888'}
+              onChange={e => apply(item.key, e.target.value)}
+              style={{ width:38, height:34, borderRadius:8, border:'2px solid rgba(255,255,255,.2)', background:'none', cursor:'pointer', padding:2 }}
+            />
+            <input value={theme[item.key]} onChange={e => apply(item.key, e.target.value)}
+              style={{ width:100, background:'#111', border:'1px solid #333', borderRadius:8, padding:'6px 8px', color:'white', fontSize:11, outline:'none', fontFamily:'monospace' }}
+            />
+          </div>
+        ))}
       </div>
 
       {/* Aperçu */}
-      <div style={{ ...sec, background: theme.theme_bg, border:`2px solid ${theme.theme_accent}` }}>
-        <div style={{ fontSize:13, fontWeight:800, color:theme.theme_text, marginBottom:10 }}>👁️ Aperçu en direct</div>
-        <div style={{ background:theme.theme_card, borderRadius:12, padding:14, border:`1px solid rgba(255,255,255,.1)` }}>
-          <div style={{ fontSize:14, fontWeight:800, color:theme.theme_text, marginBottom:4 }}>Produit exemple</div>
-          <div style={{ fontSize:20, fontWeight:900, color:theme.theme_accent, marginBottom:8 }}>2 990 DA</div>
-          <div style={{ display:'flex', gap:8 }}>
-            <div style={{ flex:1, padding:'10px', background:'rgba(255,255,255,.06)', borderRadius:8, textAlign:'center', fontSize:12, color:theme.theme_text, fontWeight:700, border:'1px solid rgba(255,255,255,.1)' }}>🛒 Panier</div>
-            <div style={{ flex:2, padding:'10px', background:`linear-gradient(135deg,${theme.theme_accent},${theme.theme_accent2})`, borderRadius:8, textAlign:'center', fontSize:12, color:theme.theme_btn_text, fontWeight:900 }}>⚡ Commander</div>
+      <div style={{ ...sec, background: theme.theme_bg }}>
+        <span style={{ ...lbl, color: theme.theme_text_sub }}>Aperçu</span>
+        <div style={{ background: theme.theme_card, borderRadius:10, overflow:'hidden', border:`1px solid ${theme.theme_accent}40` }}>
+          <div style={{ height:50, background:`${theme.theme_accent}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28 }}>📦</div>
+          <div style={{ padding:'10px 12px' }}>
+            <div style={{ fontSize:13, fontWeight:700, color: theme.theme_text, marginBottom:4 }}>Nom du produit</div>
+            <div style={{ fontSize:15, fontWeight:900, color: theme.theme_accent, marginBottom:8 }}>2990 DA</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+              <div style={{ background:`${theme.theme_accent}15`, border:`1px solid ${theme.theme_accent}40`, borderRadius:8, padding:'6px', textAlign:'center', fontSize:11, fontWeight:700, color: theme.theme_accent }}>🛒 Panier</div>
+              <div style={{ background: theme.theme_accent, borderRadius:8, padding:'6px', textAlign:'center', fontSize:11, fontWeight:900, color: theme.theme_bg }}>⚡ Acheter</div>
+            </div>
           </div>
         </div>
+        <div style={{ textAlign:'center', marginTop:8, fontSize:11, color: theme.theme_text_sub }}>Boutique · Algérie 🇩🇿</div>
       </div>
 
-      {/* Bouton sauvegarder */}
-      <button
-        onClick={save}
-        disabled={saving}
-        style={{
-          width:'100%', padding:'14px',
-          background:`linear-gradient(135deg,${theme.theme_accent},${theme.theme_accent2})`,
-          border:'none', borderRadius:12,
-          color: theme.theme_btn_text,
-          fontSize:15, fontWeight:900, cursor:'pointer',
-        }}
-      >
-        {saving ? '⏳ Sauvegarde...' : saved ? '✅ Thème sauvegardé !' : '💾 Appliquer ce thème'}
-      </button>
-      <p style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:8, textAlign:'center', lineHeight:1.5 }}>
-        Le thème sera appliqué sur toute la boutique pour tous les visiteurs
-      </p>
+      {/* Boutons */}
+      <div style={{ display:'flex', gap:8 }}>
+        <button onClick={() => { apply('theme_bg','#0a0a0a'); apply('theme_card','#141414'); apply('theme_accent','#C9A84C'); apply('theme_text','#e0e0e0'); apply('theme_text_sub','#888888') }}
+          style={{ flex:1, padding:'11px', background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, color:'rgba(255,255,255,.5)', fontSize:12, fontWeight:800, cursor:'pointer' }}>
+          ↺ Réinitialiser
+        </button>
+        <button onClick={save} disabled={saving}
+          style={{ flex:2, padding:'11px', background:saving?'#222':'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:12, color:saving?'#444':'#000', fontSize:13, fontWeight:900, cursor:saving?'default':'pointer' }}>
+          {saving ? '⏳...' : '💾 Sauvegarder le thème'}
+        </button>
+      </div>
     </div>
   )
 }
 
-
-// ═══════════════════════════════════════════════════
-//  THEME EDITOR — Personnalisation complète du site
-// ═══════════════════════════════════════════════════
 
 function ImageOptimizer({ products, supabase }) {
   const [results, setResults] = useState([])
