@@ -80,6 +80,18 @@ export default function App() {
     init()
   }, [loadProducts])
 
+  // ── Appliquer le thème depuis Supabase + cache localStorage ──
+  useEffect(() => {
+    getSettings().then(s => {
+      const r = document.documentElement
+      if (s.theme_bg)       { r.style.setProperty('--bk', s.theme_bg); r.style.setProperty('--bk2', s.theme_bg); document.body.style.background = s.theme_bg; localStorage.setItem('sl_theme_bg', s.theme_bg) }
+      if (s.theme_card)     { r.style.setProperty('--card', s.theme_card); r.style.setProperty('--card2', s.theme_card); localStorage.setItem('sl_theme_card', s.theme_card) }
+      if (s.theme_accent)   { r.style.setProperty('--br', s.theme_accent); r.style.setProperty('--br2', s.theme_accent); r.style.setProperty('--br3', s.theme_accent); localStorage.setItem('sl_theme_accent', s.theme_accent) }
+      if (s.theme_text)     { r.style.setProperty('--g3', s.theme_text);     localStorage.setItem('sl_theme_text', s.theme_text) }
+      if (s.theme_text_sub) { r.style.setProperty('--g4', s.theme_text_sub); localStorage.setItem('sl_theme_text_sub', s.theme_text_sub) }
+    })
+  }, [])
+
   function toast(msg, type = 'default') {
     const id = Date.now()
     setToasts(t => [...t, { id, msg, type }])
