@@ -13,7 +13,6 @@ import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
 import { notifyTelegram, genId, alertStockBas, resumeQuotidien } from './utils/notify'
 import CONFIG from './config'
-import { useTheme } from './utils/useTheme'
 import { getSettings, saveSetting } from './utils/useSettings'
 import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
@@ -25,7 +24,6 @@ function fbq(...args) {
 }
 
 export default function App() {
-  useTheme() // Applique le thème depuis Supabase
 
   const [isNotFound] = useState(() => {
     const path = window.location.pathname
