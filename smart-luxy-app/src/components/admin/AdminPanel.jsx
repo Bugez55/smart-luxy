@@ -560,7 +560,7 @@ function LivraisonManager({ orders, onToast }) {
   // ── Envoyer vers Yalidine via API ──
   async function sendToYalidine(order) {
     if (!apiKeys.yalidine_id || !apiKeys.yalidine_token) {
-      onToast && onToast('❌ Configure ta clé Yalidine d'abord', 'error')
+      onToast && onToast("❌ Configure ta clé Yalidine d\'abord", 'error')
       return
     }
     setSending(p => ({ ...p, [order.id]: true }))
@@ -1268,7 +1268,7 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   function printSelected() {
     const toPrint = orders.filter(o => selectedOrders.has(o.id))
-    if (toPrint.length === 0) { onToast && onToast("Sélectionne des commandes d'abord", "error"); return }
+    if (toPrint.length === 0) { onToast && onToast("Sélectionne des commandes d\'abord", "error"); return }
     const html = toPrint.map(order => {
       const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
       return `
