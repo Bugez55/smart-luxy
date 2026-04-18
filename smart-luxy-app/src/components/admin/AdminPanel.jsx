@@ -524,6 +524,339 @@ function AdminSettings({ onLogout, onToast }) {
 // ═══════════════════════════════════════════════════
 //  THEME EDITOR
 // ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  LIVRAISON MANAGER — Yalidine + Noest + World Express
+// ═══════════════════════════════════════════════════
+function LivraisonManager({ orders, onToast }) {
+  const [apiKeys, setApiKeys] = useState({
+    yalidine_id:     localStorage.getItem('sl_yalidine_id')     || '',
+    yalidine_token:  localStorage.getItem('sl_yalidine_token')  || '',
+    noest_token:     localStorage.getItem('sl_noest_token')     || '',
+    worldex_token:   localStorage.getItem('sl_worldex_token')   || '',
+  })
+  const [savingKeys, setSavingKeys] = useState(false)
+  const [selectedCompany, setSelectedCompany] = useState('yalidine')
+  const [sending, setSending] = useState({})
+  const [search, setSearch] = useState('')
+
+  // Commandes confirmées non livrées
+  const pendingOrders = orders.filter(o =>
+    o.statut === 'confirmed' || o.statut === 'new'
+  ).filter(o =>
+    !search || o.nom_client?.toLowerCase().includes(search.toLowerCase()) ||
+    o.telephone?.includes(search) || o.wilaya?.toLowerCase().includes(search.toLowerCase())
+  )
+
+  function saveApiKeys() {
+    setSavingKeys(true)
+    Object.entries(apiKeys).forEach(([k, v]) => localStorage.setItem(`sl_${k}`, v))
+    setTimeout(() => {
+      setSavingKeys(false)
+      onToast && onToast('✅ Clés API sauvegardées', 'default')
+    }, 500)
+  }
+
+  // ── Envoyer vers Yalidine via API ──
+  async function sendToYalidine(order) {
+    if (!apiKeys.yalidine_id || !apiKeys.yalidine_token) {
+      onToast && onToast('❌ Configure ta clé Yalidine d'abord', 'error')
+      return
+    }
+    setSending(p => ({ ...p, [order.id]: true }))
+
+    const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
+    const description = items.map(i => `${i.nom} x${i.qty}`).join(', ')
+
+    try {
+      const res = await fetch('https://api.yalidine.app/v1/parcels/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-ID': apiKeys.yalidine_id,
+          'X-API-TOKEN': apiKeys.yalidine_token,
+        },
+        body: JSON.stringify({
+          order_id:        order.id,
+          firstname:       order.nom_client?.split(' ')[0] || order.nom_client,
+          familyname:      order.nom_client?.split(' ').slice(1).join(' ') || '',
+          contact_phone:   order.telephone?.replace(/^0/, '213'),
+          address:         order.adresse || order.commune || '',
+          to_wilaya_id:    getWilayaId(order.wilaya),
+          to_commune_id:   0, // Auto-détecté
+          product_list:    description,
+          price:           order.total,
+          do_insurance:    0,
+          declared_value:  0,
+          length:          0,
+          width:           0,
+          height:          0,
+          weight:          0,
+          freeshipping:    order.frais_livraison === 0 ? 1 : 0,
+          is_stopdesk:     order.mode_livraison === 'bureau' ? 1 : 0,
+          has_exchange:    0,
+        })
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.tracking) {
+        // Sauvegarder le tracking dans Supabase
+        await supabase.from('orders').update({
+          statut: 'shipped',
+          tracking_code: data.tracking,
+          livraison_company: 'yalidine'
+        }).eq('id', order.id)
+
+        onToast && onToast(`✅ Colis créé ! Tracking: ${data.tracking}`, 'default')
+
+        // Ouvrir le bordereau PDF
+        if (data.label_url) window.open(data.label_url, '_blank')
+        else window.open(`https://yalidine.app/app/particulier/bordereau.php?tracking=${data.tracking}`, '_blank')
+      } else {
+        const errMsg = data?.message || data?.detail || JSON.stringify(data)
+        onToast && onToast('❌ Erreur Yalidine: ' + errMsg, 'error')
+      }
+    } catch(e) {
+      onToast && onToast('❌ Erreur réseau: ' + e.message, 'error')
+    }
+    setSending(p => ({ ...p, [order.id]: false }))
+  }
+
+  // ── Ouvrir Noest DZ avec données pré-remplies ──
+  function sendToNoest(order) {
+    const url = `https://noest-dz.com/expediteur/ajouter-colis?` +
+      `nom=${encodeURIComponent(order.nom_client)}&` +
+      `telephone=${encodeURIComponent(order.telephone)}&` +
+      `wilaya=${encodeURIComponent(order.wilaya || '')}&` +
+      `commune=${encodeURIComponent(order.commune || '')}&` +
+      `adresse=${encodeURIComponent(order.adresse || '')}&` +
+      `montant=${order.total}&` +
+      `reference=${order.id}`
+    window.open(url, '_blank')
+    onToast && onToast('✅ Noest DZ ouvert avec les données', 'default')
+  }
+
+  // ── Ouvrir Yalidine web avec données pré-remplies ──
+  function openYalidineWeb(order) {
+    const url = `https://yalidine.app/app/particulier/ajouter-particulier.php?` +
+      `firstname=${encodeURIComponent(order.nom_client?.split(' ')[0] || '')}&` +
+      `familyname=${encodeURIComponent(order.nom_client?.split(' ').slice(1).join(' ') || '')}&` +
+      `phone=${encodeURIComponent(order.telephone || '')}&` +
+      `wilaya=${encodeURIComponent(getWilayaId(order.wilaya) || '')}&` +
+      `address=${encodeURIComponent(order.adresse || order.commune || '')}&` +
+      `price=${order.total}&` +
+      `ref=${order.id}`
+    window.open(url, '_blank')
+  }
+
+  // ── Télécharger bordereau PDF maison ──
+  function printBordereau(order) {
+    const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
+    const win = window.open('', '_blank')
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bordereau ${order.id}</title>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; }
+      .box { border: 2px solid #000; border-radius: 6px; padding: 14px; margin-bottom: 14px; }
+      .title { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 4px; }
+      .sub { text-align:center; color:#555; font-size:11px; margin-bottom:14px; }
+      .row { display:flex; justify-content:space-between; margin-bottom:6px; }
+      .label { font-weight:700; color:#333; }
+      .val { color:#000; }
+      table { width:100%; border-collapse:collapse; margin-top:8px; }
+      th { background:#111; color:white; padding:7px 10px; text-align:left; font-size:12px; }
+      td { padding:7px 10px; border-bottom:1px solid #eee; }
+      .total { font-size:18px; font-weight:900; text-align:right; margin-top:10px; }
+      .barcode { text-align:center; font-size:28px; letter-spacing:4px; padding:10px; background:#f5f5f5; border-radius:6px; margin-top:8px; font-family:monospace; }
+      .company { font-size:11px; color:#888; text-align:center; margin-top:4px; }
+      @media print { @page{margin:10mm} button{display:none!important} }
+    </style>
+    </head><body>
+    <button onclick="window.print()" style="background:#000;color:white;border:none;padding:10px 28px;border-radius:8px;font-size:14px;cursor:pointer;margin-bottom:16px;display:block;width:100%">🖨️ Imprimer le bordereau</button>
+    <div class="title">Smart Luxy</div>
+    <div class="sub">Bordereau de livraison · Algérie 🇩🇿</div>
+    <div class="box">
+      <div class="row"><span class="label">N° Commande:</span><span class="val" style="font-weight:900;font-size:15px">${order.id}</span></div>
+      <div class="row"><span class="label">Date:</span><span class="val">${new Date(order.created_at).toLocaleDateString('fr-DZ')}</span></div>
+      <div class="row"><span class="label">Mode:</span><span class="val">${order.mode_livraison === 'bureau' ? '📦 Retrait bureau' : '🏠 Livraison à domicile'}</span></div>
+    </div>
+    <div class="box">
+      <div class="label" style="margin-bottom:8px;font-size:14px">📍 Destinataire</div>
+      <div class="row"><span class="label">Nom:</span><span class="val">${order.nom_client}</span></div>
+      <div class="row"><span class="label">Téléphone:</span><span class="val">${order.telephone}</span></div>
+      <div class="row"><span class="label">Wilaya:</span><span class="val">${order.wilaya}</span></div>
+      <div class="row"><span class="label">Commune:</span><span class="val">${order.commune}</span></div>
+      ${order.adresse ? `<div class="row"><span class="label">Adresse:</span><span class="val">${order.adresse}</span></div>` : ''}
+    </div>
+    <div class="box">
+      <div class="label" style="margin-bottom:8px;font-size:14px">🛍️ Articles</div>
+      <table><thead><tr><th>Produit</th><th>Qté</th><th>Prix</th></tr></thead><tbody>
+      ${items.map(it => `<tr><td>${it.nom}</td><td>${it.qty}</td><td>${(it.prix*it.qty).toLocaleString()} DA</td></tr>`).join('')}
+      </tbody></table>
+      <div class="total">Total à percevoir: ${Number(order.total).toLocaleString()} DA</div>
+    </div>
+    <div class="barcode">${order.id}</div>
+    <div class="company">Société de livraison: ${selectedCompany === 'yalidine' ? 'Yalidine' : selectedCompany === 'noest' ? 'Noest DZ' : 'World Express'}</div>
+    </body></html>`)
+    win.document.close()
+  }
+
+  // Mapper wilaya → ID Yalidine (simplifié)
+  function getWilayaId(wilayaStr) {
+    if (!wilayaStr) return 1
+    const num = wilayaStr.match(/^(\d+)/)?.[1]
+    return num ? parseInt(num) : 1
+  }
+
+  const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
+  const inp = { background:'#111', border:'1px solid #333', borderRadius:8, padding:'9px 12px', color:'white', fontSize:13, outline:'none', width:'100%', boxSizing:'border-box', fontFamily:'inherit' }
+
+  const COMPANIES = [
+    { id:'yalidine', name:'Yalidine', icon:'🟡', color:'#f59e0b', hasApi: true },
+    { id:'noest',    name:'Noest DZ', icon:'🔵', color:'#3b82f6', hasApi: false },
+    { id:'worldex',  name:'World Express', icon:'🟢', color:'#22c55e', hasApi: false },
+  ]
+
+  return (
+    <div>
+      <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:6 }}>🚚 Gestion des livraisons</h3>
+      <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:20, lineHeight:1.5 }}>
+        Envoie tes commandes vers ta société de livraison et génère les bordereaux.
+      </p>
+
+      {/* ── Choix société ── */}
+      <div style={sec}>
+        <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em', marginBottom:10 }}>SOCIÉTÉ DE LIVRAISON</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+          {COMPANIES.map(co => (
+            <button key={co.id} onClick={() => setSelectedCompany(co.id)} style={{
+              background: selectedCompany===co.id ? `${co.color}15` : '#111',
+              border: `2px solid ${selectedCompany===co.id ? co.color : 'rgba(255,255,255,.08)'}`,
+              borderRadius:12, padding:'12px 8px', cursor:'pointer', textAlign:'center', transition:'all .2s',
+            }}>
+              <div style={{ fontSize:24, marginBottom:4 }}>{co.icon}</div>
+              <div style={{ fontSize:11, fontWeight:800, color:selectedCompany===co.id ? co.color : 'rgba(255,255,255,.5)' }}>{co.name}</div>
+              {co.hasApi && <div style={{ fontSize:9, color:'rgba(255,255,255,.3)', marginTop:2 }}>API disponible</div>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Clés API Yalidine ── */}
+      {selectedCompany === 'yalidine' && (
+        <div style={sec}>
+          <div style={{ fontSize:12, fontWeight:800, color:'#f59e0b', marginBottom:10 }}>🔑 Clés API Yalidine</div>
+          <p style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginBottom:10, lineHeight:1.5 }}>
+            Va sur <strong style={{color:'#f59e0b'}}>yalidine.app → Paramètres → API</strong> pour obtenir ton ID et token.
+          </p>
+          <div style={{ marginBottom:8 }}>
+            <label style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:800, display:'block', marginBottom:4 }}>API ID</label>
+            <input value={apiKeys.yalidine_id} onChange={e => setApiKeys(p => ({...p, yalidine_id:e.target.value}))} placeholder="Ton ID Yalidine" style={inp} />
+          </div>
+          <div style={{ marginBottom:10 }}>
+            <label style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:800, display:'block', marginBottom:4 }}>API TOKEN</label>
+            <input type="password" value={apiKeys.yalidine_token} onChange={e => setApiKeys(p => ({...p, yalidine_token:e.target.value}))} placeholder="Ton token Yalidine" style={inp} />
+          </div>
+          <button onClick={saveApiKeys} style={{ background:'rgba(245,158,11,.15)', border:'1px solid rgba(245,158,11,.3)', borderRadius:10, padding:'9px 18px', color:'#f59e0b', fontSize:12, fontWeight:800, cursor:'pointer' }}>
+            {savingKeys ? '⏳...' : '💾 Sauvegarder les clés'}
+          </button>
+          {!apiKeys.yalidine_id && (
+            <div style={{ marginTop:10, background:'rgba(245,158,11,.08)', border:'1px solid rgba(245,158,11,.2)', borderRadius:8, padding:'8px 12px', fontSize:11, color:'rgba(245,158,11,.7)', lineHeight:1.5 }}>
+              💡 Sans clé API, tu peux quand même utiliser <strong>Yalidine Web</strong> — le site s'ouvre avec les données pré-remplies.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Liste commandes ── */}
+      <div style={sec}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+          <div style={{ fontSize:12, fontWeight:800, color:'white' }}>Commandes à expédier ({pendingOrders.length})</div>
+        </div>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Rechercher (nom, tél, wilaya...)"
+          style={{ ...inp, marginBottom:10 }}
+        />
+
+        {pendingOrders.length === 0 ? (
+          <div style={{ textAlign:'center', padding:20, color:'rgba(255,255,255,.2)', fontSize:12 }}>Aucune commande en attente</div>
+        ) : pendingOrders.map(order => {
+          const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
+          const isSending = sending[order.id]
+          const co = COMPANIES.find(c => c.id === selectedCompany)
+
+          return (
+            <div key={order.id} style={{ background:'#111', border:'1px solid rgba(255,255,255,.06)', borderRadius:12, padding:'12px 14px', marginBottom:8 }}>
+              {/* Infos commande */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:900, color:'white' }}>{order.nom_client}</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>📞 {order.telephone} · 📍 {order.wilaya}</div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>#{order.id?.slice(0,8).toUpperCase()}</div>
+                </div>
+                <div style={{ textAlign:'right', flexShrink:0 }}>
+                  <div style={{ fontSize:14, fontWeight:900, color:'#C9A84C' }}>{Number(order.total).toLocaleString()} DA</div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>{items.length} article{items.length>1?'s':''}</div>
+                </div>
+              </div>
+
+              {/* Boutons actions */}
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {/* Bouton principal selon la société */}
+                {selectedCompany === 'yalidine' && (
+                  apiKeys.yalidine_id ? (
+                    <button onClick={() => sendToYalidine(order)} disabled={isSending} style={{
+                      flex:1, background:isSending?'#222':'rgba(245,158,11,.15)', border:'1px solid rgba(245,158,11,.3)',
+                      borderRadius:8, padding:'8px 12px', color:'#f59e0b', fontSize:11, fontWeight:800, cursor:isSending?'default':'pointer',
+                    }}>
+                      {isSending ? '⏳ Envoi...' : '🟡 Créer colis Yalidine'}
+                    </button>
+                  ) : (
+                    <button onClick={() => openYalidineWeb(order)} style={{
+                      flex:1, background:'rgba(245,158,11,.12)', border:'1px solid rgba(245,158,11,.25)',
+                      borderRadius:8, padding:'8px 12px', color:'#f59e0b', fontSize:11, fontWeight:800, cursor:'pointer',
+                    }}>🌐 Ouvrir Yalidine Web</button>
+                  )
+                )}
+
+                {selectedCompany === 'noest' && (
+                  <button onClick={() => sendToNoest(order)} style={{
+                    flex:1, background:'rgba(59,130,246,.12)', border:'1px solid rgba(59,130,246,.25)',
+                    borderRadius:8, padding:'8px 12px', color:'#93c5fd', fontSize:11, fontWeight:800, cursor:'pointer',
+                  }}>🔵 Ouvrir Noest DZ</button>
+                )}
+
+                {selectedCompany === 'worldex' && (
+                  <button onClick={() => window.open('https://www.world-express.dz', '_blank')} style={{
+                    flex:1, background:'rgba(34,197,94,.1)', border:'1px solid rgba(34,197,94,.25)',
+                    borderRadius:8, padding:'8px 12px', color:'#86efac', fontSize:11, fontWeight:800, cursor:'pointer',
+                  }}>🟢 Ouvrir World Express</button>
+                )}
+
+                {/* Bordereau PDF */}
+                <button onClick={() => printBordereau(order)} style={{
+                  background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)',
+                  borderRadius:8, padding:'8px 12px', color:'rgba(255,255,255,.6)', fontSize:11, fontWeight:800, cursor:'pointer', whiteSpace:'nowrap',
+                }}>🖨️ Bordereau</button>
+              </div>
+
+              {/* Tracking si disponible */}
+              {order.tracking_code && (
+                <div style={{ marginTop:6, background:'rgba(34,197,94,.08)', border:'1px solid rgba(34,197,94,.2)', borderRadius:6, padding:'5px 10px', fontSize:11, color:'#86efac' }}>
+                  📦 Tracking: <strong>{order.tracking_code}</strong>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function ThemeEditor({ onToast }) {
   const [theme, setTheme] = useState({
     theme_bg: '#0a0a0a', theme_card: '#141414',
@@ -1186,7 +1519,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Smart <em>Luxy</em> — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -1589,8 +1922,14 @@ export default function AdminPanel({ onLogout, onToast }) {
         )}
 
 
+        {/* ── LIVRAISON TAB ── */}
+        {tab === 'livraison' && <LivraisonManager orders={orders} onToast={onToast} />}
+
         {/* ── THEME TAB ── */}
         {tab === 'theme' && <ThemeEditor />}
+
+        {/* ── LIVRAISON TAB ── */}
+        {tab === 'livraison' && <LivraisonManager orders={orders} onToast={onToast} />}
 
         {/* ── THEME TAB ── */}
         {tab === 'theme' && <ThemeEditor onToast={onToast} />}
