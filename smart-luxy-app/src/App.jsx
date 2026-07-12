@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase'
 import AnnouncementBar from './components/AnnouncementBar'
 import Header from './components/Header'
+import Hero from './components/Hero'
+import TrustMarquee from './components/TrustMarquee'
 import ProductGrid from './components/ProductGrid'
 import ProductPage from './components/ProductPage'
 import TrackingPage from './components/TrackingPage'
@@ -223,12 +225,16 @@ export default function App() {
       />
 
       <main>
-        {/* ── Hero ── */}
-        <section className="hero">
-          <h1>Smart <em>Luxy</em></h1>
-          <p>Boutique en ligne · Livraison partout en Algérie 🇩🇿</p>
+        {/* ── Hero plein écran ── */}
+        <Hero
+          heroImage={products[0]?.img}
+          onScrollToCollection={() => document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' })}
+        />
 
-          {/* ✅ Badges 69 wilayas */}
+        <TrustMarquee />
+
+        {/* ── Recherche + badges (juste au-dessus des produits) ── */}
+        <section id="collection" className="hero" style={{ minHeight:'auto', padding:'48px 20px 24px' }}>
           <div className="hero-badges">
             <div className="hero-badge">🚚 Livraison <span>69 wilayas</span></div>
             <div className="hero-badge">💳 Paiement <span>à la livraison</span></div>
