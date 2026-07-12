@@ -230,8 +230,26 @@ function AdminSettings({ onLogout, onToast }) {
       })
       setFreeShip(s.free_ship || '')
       setMaintenance(s.maintenance === 'true')
+      setPaiement({
+        ccp_numero:       s.ccp_numero       || '',
+        ccp_nom:          s.ccp_nom          || '',
+        baridimob_numero: s.baridimob_numero || '',
+        ccp_actif:        s.ccp_actif === 'true',
+        baridimob_actif:  s.baridimob_actif === 'true',
+      })
     })
   }, [])
+
+  async function savePaiement() {
+    setPaiementSaving(true)
+    await saveSetting('ccp_numero', paiement.ccp_numero)
+    await saveSetting('ccp_nom', paiement.ccp_nom)
+    await saveSetting('baridimob_numero', paiement.baridimob_numero)
+    await saveSetting('ccp_actif', String(paiement.ccp_actif))
+    await saveSetting('baridimob_actif', String(paiement.baridimob_actif))
+    setPaiementSaving(false)
+    onToast && onToast('✅ Moyens de paiement sauvegardés', 'default')
+  }
   const [shopSaving, setShopSaving] = useState(false)
 
   // ── Mode maintenance ──
@@ -243,6 +261,13 @@ function AdminSettings({ onLogout, onToast }) {
   const [freeShip, setFreeShip] = useState(
     localStorage.getItem('sl_free_ship') || ''
   )
+
+  // ── Paiement CCP / BaridiMob ──
+  const [paiement, setPaiement] = useState({
+    ccp_numero: '', ccp_nom: '', baridimob_numero: '',
+    ccp_actif: false, baridimob_actif: false,
+  })
+  const [paiementSaving, setPaiementSaving] = useState(false)
 
   // ── Changer mot de passe ──
   async function changePw() {
@@ -474,6 +499,89 @@ function AdminSettings({ onLogout, onToast }) {
             color: '#86efac', fontSize: 13, fontWeight: 800, cursor: 'pointer',
           }}>✅</button>
         </div>
+      </div>
+
+      {/* ── PAIEMENT CCP / BARIDIMOB ── */}
+      <div style={section}>
+        <div style={sectionTitle}>💳 Moyens de paiement</div>
+        <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:16, lineHeight:1.5 }}>
+          Active BaridiMob et/ou CCP en plus du paiement à la livraison. Les clients pourront choisir sur la page produit.
+        </p>
+
+        {/* BaridiMob */}
+        <div style={{
+          background: paiement.baridimob_actif ? 'rgba(59,130,246,.06)' : '#1a1a1a',
+          border: `1px solid ${paiement.baridimob_actif ? 'rgba(59,130,246,.25)' : '#2a2a2a'}`,
+          borderRadius:12, padding:14, marginBottom:12,
+        }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:18 }}>📱</span>
+              <span style={{ fontSize:13, fontWeight:800, color:'white' }}>BaridiMob</span>
+            </div>
+            <button
+              onClick={() => setPaiement(p => ({ ...p, baridimob_actif: !p.baridimob_actif }))}
+              style={{
+                padding:'5px 14px', border:'none', borderRadius:20,
+                background: paiement.baridimob_actif ? 'rgba(34,197,94,.2)' : 'rgba(255,255,255,.08)',
+                color: paiement.baridimob_actif ? '#86efac' : 'rgba(255,255,255,.4)',
+                fontSize:11, fontWeight:800, cursor:'pointer',
+              }}
+            >{paiement.baridimob_actif ? '🟢 Activé' : '⚪ Désactivé'}</button>
+          </div>
+          <label style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:800, display:'block', marginBottom:4 }}>Numéro de compte BaridiMob</label>
+          <input
+            value={paiement.baridimob_numero}
+            onChange={e => setPaiement(p => ({ ...p, baridimob_numero: e.target.value }))}
+            placeholder="00799999002583676007"
+            style={{ ...inp, fontFamily:'monospace' }}
+          />
+        </div>
+
+        {/* CCP */}
+        <div style={{
+          background: paiement.ccp_actif ? 'rgba(201,168,76,.06)' : '#1a1a1a',
+          border: `1px solid ${paiement.ccp_actif ? 'rgba(201,168,76,.25)' : '#2a2a2a'}`,
+          borderRadius:12, padding:14, marginBottom:14,
+        }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:18 }}>🏦</span>
+              <span style={{ fontSize:13, fontWeight:800, color:'white' }}>CCP (Virement)</span>
+            </div>
+            <button
+              onClick={() => setPaiement(p => ({ ...p, ccp_actif: !p.ccp_actif }))}
+              style={{
+                padding:'5px 14px', border:'none', borderRadius:20,
+                background: paiement.ccp_actif ? 'rgba(34,197,94,.2)' : 'rgba(255,255,255,.08)',
+                color: paiement.ccp_actif ? '#86efac' : 'rgba(255,255,255,.4)',
+                fontSize:11, fontWeight:800, cursor:'pointer',
+              }}
+            >{paiement.ccp_actif ? '🟢 Activé' : '⚪ Désactivé'}</button>
+          </div>
+          <label style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:800, display:'block', marginBottom:4 }}>Numéro CCP</label>
+          <input
+            value={paiement.ccp_numero}
+            onChange={e => setPaiement(p => ({ ...p, ccp_numero: e.target.value }))}
+            placeholder="0012345678 clé 90"
+            style={{ ...inp, fontFamily:'monospace', marginBottom:8 }}
+          />
+          <label style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:800, display:'block', marginBottom:4 }}>Nom du titulaire</label>
+          <input
+            value={paiement.ccp_nom}
+            onChange={e => setPaiement(p => ({ ...p, ccp_nom: e.target.value }))}
+            placeholder="Nom complet"
+            style={inp}
+          />
+        </div>
+
+        <button onClick={savePaiement} disabled={paiementSaving} style={{
+          width:'100%', padding:'11px',
+          background: paiementSaving ? '#222' : 'linear-gradient(135deg,#C9A84C,#E9C46A)',
+          border:'none', borderRadius:10,
+          color: paiementSaving ? '#444' : '#000',
+          fontSize:13, fontWeight:800, cursor: paiementSaving ? 'default' : 'pointer',
+        }}>{paiementSaving ? '⏳ Sauvegarde...' : '💾 Sauvegarder les paiements'}</button>
       </div>
 
       {/* ── MODE MAINTENANCE ── */}
