@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import CountdownTimer from './CountdownTimer'
 import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
+import { getSettings } from '../utils/useSettings'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
@@ -39,12 +40,27 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [qty, setQty] = useState(1)
   const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'' })
   const [modeLiv, setModeLiv] = useState('domicile')
+  const [modePaiement, setModePaiement] = useState('livraison')
+  const [paiementInfo, setPaiementInfo] = useState({ ccp:'', ccp_nom:'', baridimob:'', ccp_actif:false, baridimob_actif:false })
+  const [preuvePaiement, setPreuvePaiement] = useState('')
   const [ordering, setOrdering] = useState(false)
   const [wilayaOpen, setWilayaOpen] = useState(false)
   const [communeOpen, setCommuneOpen] = useState(false)
   const [stickyVisible, setStickyVisible] = useState(false)
   const formRef = useRef()
   const topRef = useRef()
+
+  useEffect(() => {
+    getSettings().then(s => {
+      setPaiementInfo({
+        ccp:             s.ccp_numero       || '',
+        ccp_nom:         s.ccp_nom          || '',
+        baridimob:       s.baridimob_numero || '',
+        ccp_actif:       s.ccp_actif === 'true',
+        baridimob_actif: s.baridimob_actif === 'true',
+      })
+    }).catch(() => {})
+  }, [])
 
   const imgs = (() => { try { return typeof p.images==='string' ? JSON.parse(p.images) : (p.images||[]) } catch { return [] } })()
   const imgsGallery = (() => { try { return typeof p.images_gallery==='string' ? JSON.parse(p.images_gallery) : (p.images_gallery||[]) } catch { return [] } })()
@@ -168,6 +184,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       ...form,
       items: [{ ...p, qty: currentQty, prix: prixUnit }],
       mode_livraison: modeLiv,
+      mode_paiement:  modePaiement,
+      preuve_paiement: preuvePaiement || null,
       frais_livraison: fraisLiv || 0,
       total: totalFinal,
     })
@@ -523,6 +541,114 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
 
           {/* Adresse */}
+          {/* ── Mode de paiement ── */}
+          {(paiementInfo.ccp_actif || paiementInfo.baridimob_actif) && (
+            <div style={{ marginBottom:14 }}>
+              <label style={lbl}>{lang==='ar' ? 'طريقة الدفع' : 'Mode de paiement'}</label>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+
+                {/* Paiement à la livraison — toujours dispo */}
+                <div onClick={() => setModePaiement('livraison')} style={{
+                  display:'flex', alignItems:'center', gap:12,
+                  background: modePaiement==='livraison' ? 'rgba(34,197,94,.08)' : '#1a1a1a',
+                  border:`2px solid ${modePaiement==='livraison' ? '#22c55e' : '#2a2a2a'}`,
+                  borderRadius:10, padding:'11px 14px', cursor:'pointer', transition:'all .2s',
+                }}>
+                  <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='livraison'?'#22c55e':'rgba(255,255,255,.2)'}`, background:modePaiement==='livraison'?'#22c55e':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    {modePaiement==='livraison' && <span style={{ fontSize:11, color:'#000', fontWeight:900 }}>✓</span>}
+                  </div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'white' }}>💵 {lang==='ar' ? 'الدفع عند الاستلام' : 'Paiement à la livraison'}</div>
+                    <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{lang==='ar' ? 'تدفع عند استلام الطرد' : 'Tu paies quand tu reçois le colis'}</div>
+                  </div>
+                </div>
+
+                {/* BaridiMob */}
+                {paiementInfo.baridimob_actif && paiementInfo.baridimob && (
+                  <div onClick={() => setModePaiement('baridimob')} style={{
+                    display:'flex', alignItems:'center', gap:12,
+                    background: modePaiement==='baridimob' ? 'rgba(59,130,246,.08)' : '#1a1a1a',
+                    border:`2px solid ${modePaiement==='baridimob' ? '#3b82f6' : '#2a2a2a'}`,
+                    borderRadius:10, padding:'11px 14px', cursor:'pointer', transition:'all .2s',
+                  }}>
+                    <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='baridimob'?'#3b82f6':'rgba(255,255,255,.2)'}`, background:modePaiement==='baridimob'?'#3b82f6':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      {modePaiement==='baridimob' && <span style={{ fontSize:11, color:'#fff', fontWeight:900 }}>✓</span>}
+                    </div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'white' }}>📱 BaridiMob</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{lang==='ar' ? 'دفع فوري عبر التطبيق' : 'Paiement instantané via l\'appli'}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* CCP */}
+                {paiementInfo.ccp_actif && paiementInfo.ccp && (
+                  <div onClick={() => setModePaiement('ccp')} style={{
+                    display:'flex', alignItems:'center', gap:12,
+                    background: modePaiement==='ccp' ? 'rgba(201,168,76,.08)' : '#1a1a1a',
+                    border:`2px solid ${modePaiement==='ccp' ? '#C9A84C' : '#2a2a2a'}`,
+                    borderRadius:10, padding:'11px 14px', cursor:'pointer', transition:'all .2s',
+                  }}>
+                    <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='ccp'?'#C9A84C':'rgba(255,255,255,.2)'}`, background:modePaiement==='ccp'?'#C9A84C':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      {modePaiement==='ccp' && <span style={{ fontSize:11, color:'#000', fontWeight:900 }}>✓</span>}
+                    </div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'white' }}>🏦 {lang==='ar' ? 'تحويل CCP' : 'Virement CCP'}</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{lang==='ar' ? 'بريد الجزائر' : 'Algeria Post'}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Instructions BaridiMob */}
+                {modePaiement === 'baridimob' && (
+                  <div style={{ background:'rgba(59,130,246,.08)', border:'1px solid rgba(59,130,246,.2)', borderRadius:10, padding:'12px 14px' }}>
+                    <div style={{ fontSize:12, fontWeight:800, color:'#93c5fd', marginBottom:8 }}>
+                      📱 {lang==='ar' ? 'كيفية الدفع عبر بريدي موب' : 'Comment payer avec BaridiMob'}
+                    </div>
+                    <div style={{ fontSize:13, color:'white', marginBottom:6 }}>
+                      <strong>{lang==='ar' ? 'رقم الحساب:' : 'Numéro de compte:'}</strong><br/>
+                      <span style={{ fontFamily:'monospace', fontSize:16, color:'#93c5fd', fontWeight:900, letterSpacing:'.02em' }}>{paiementInfo.baridimob}</span>
+                    </div>
+                    <ol style={{ fontSize:11, color:'rgba(255,255,255,.5)', marginBottom:10, paddingLeft:16, lineHeight:1.8 }}>
+                      <li>{lang==='ar' ? 'افتح تطبيق بريدي موب' : 'Ouvre l\'application BaridiMob'}</li>
+                      <li>{lang==='ar' ? `أرسل ${fmt(totalFinal)} إلى الرقم أعلاه` : `Envoie ${fmt(totalFinal)} au numéro ci-dessus`}</li>
+                      <li>{lang==='ar' ? 'أرسل لقطة شاشة الإيصال عبر واتساب' : 'Envoie la capture du reçu sur WhatsApp'}</li>
+                    </ol>
+                    <input
+                      placeholder={lang==='ar' ? 'رقم العملية (اختياري)' : 'Numéro de transaction (optionnel)'}
+                      value={preuvePaiement}
+                      onChange={e => setPreuvePaiement(e.target.value)}
+                      style={{ ...inp, fontSize:13 }}
+                    />
+                  </div>
+                )}
+
+                {/* Instructions CCP */}
+                {modePaiement === 'ccp' && (
+                  <div style={{ background:'rgba(201,168,76,.08)', border:'1px solid rgba(201,168,76,.2)', borderRadius:10, padding:'12px 14px' }}>
+                    <div style={{ fontSize:12, fontWeight:800, color:'#C9A84C', marginBottom:6 }}>
+                      🏦 {lang==='ar' ? 'معلومات التحويل' : 'Informations pour le virement'}
+                    </div>
+                    <div style={{ fontSize:13, color:'white', marginBottom:4 }}>
+                      <strong>{lang==='ar' ? 'رقم CCP:' : 'Numéro CCP:'}</strong> <span style={{ fontFamily:'monospace', fontSize:15, color:'#C9A84C', fontWeight:900 }}>{paiementInfo.ccp}</span>
+                    </div>
+                    {paiementInfo.ccp_nom && (
+                      <div style={{ fontSize:12, color:'rgba(255,255,255,.6)', marginBottom:8 }}>
+                        <strong>{lang==='ar' ? 'الاسم:' : 'Au nom de:'}</strong> {paiementInfo.ccp_nom}
+                      </div>
+                    )}
+                    <input
+                      placeholder={lang==='ar' ? 'رقم الإيصال (اختياري)' : 'Numéro du reçu (optionnel)'}
+                      value={preuvePaiement}
+                      onChange={e => setPreuvePaiement(e.target.value)}
+                      style={{ ...inp, fontSize:13 }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {modeLiv==='domicile' && (
             <div style={{ marginBottom:10 }}>
               <label style={lbl}>{lang==='ar' ? 'العنوان' : 'Adresse' }</label>
