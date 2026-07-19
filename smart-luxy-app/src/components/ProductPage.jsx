@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import DOMPurify from 'dompurify'
 import CountdownTimer from './CountdownTimer'
 import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
 import { getSettings } from '../utils/useSettings'
@@ -38,7 +39,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const imgRef2 = useRef()
   const [selectedBundle, setSelectedBundle] = useState(null)
   const [qty, setQty] = useState(1)
-  const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'' })
+  const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'', website:'' })
   const [modeLiv, setModeLiv] = useState('domicile')
   const [modePaiement, setModePaiement] = useState('livraison')
   const [paiementInfo, setPaiementInfo] = useState({ ccp:'', ccp_nom:'', baridimob:'', ccp_actif:false, baridimob_actif:false })
@@ -177,6 +178,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
   async function handleOrder() {
     if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
+    // Anti-bot honeypot — si ce champ caché est rempli, c'est un robot
+    if (form.website) { console.warn('Bot détecté'); return }
     if (hasBundles && selectedBundle === null) return
     setOrdering(true)
     const prixUnit = activeBundle ? Math.round(activeBundle.prix / activeBundle.qty) : p.prix
@@ -356,7 +359,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {p.description && (
         <div style={{ padding:'0 16px 16px' }}>
           <div style={{ fontSize:14, color:'rgba(255,255,255,.7)', lineHeight:1.8 }}
-            dangerouslySetInnerHTML={{ __html: p.description }} />
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description || '') }} />
         </div>
       )}
 
@@ -672,6 +675,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
               </div>
             </div>
           )}
+
+          {/* Anti-bot — invisible pour les humains */}
+          <input
+            type="text" name="website" value={form.website}
+            onChange={e => setF('website', e.target.value)}
+            style={{ position:'absolute', left:'-9999px', width:1, height:1, opacity:0 }}
+            tabIndex={-1} autoComplete="off"
+          />
 
           {/* ── Bouton confirmer ── */}
           <button
