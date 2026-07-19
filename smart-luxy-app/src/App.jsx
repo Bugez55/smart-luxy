@@ -178,19 +178,27 @@ export default function App() {
   }
 
   async function handleLogin(pw) {
-    // 1. Vérifier d'abord le mot de passe dans Supabase (settings)
-    const settings = await getSettings()
-    const pwSupabase = settings.admin_password || null
+    // Vérification sécurisée côté serveur — le mot de passe réel
+    // n'est jamais renvoyé au navigateur, seulement vrai/faux
+    try {
+      const { data: validSupabase } = await supabase.rpc('verify_admin_password', { input_password: pw })
+      const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
 
-    // 2. Vérifier le mot de passe Vercel (fallback)
-    const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
-
-    // 3. Accepter si correspond à l'un ou l'autre
-    if (pw === pwSupabase || pw === pwVercel) {
-      localStorage.setItem('sl_admin', '1')
-      setAdminAuth(true)
-    } else {
-      toast('❌ Mot de passe incorrect', 'error')
+      if (validSupabase || pw === pwVercel) {
+        localStorage.setItem('sl_admin', '1')
+        setAdminAuth(true)
+      } else {
+        toast('❌ Mot de passe incorrect', 'error')
+      }
+    } catch (e) {
+      // Fallback si la fonction RPC n'existe pas encore (avant migration SQL)
+      const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
+      if (pw === pwVercel) {
+        localStorage.setItem('sl_admin', '1')
+        setAdminAuth(true)
+      } else {
+        toast('❌ Mot de passe incorrect', 'error')
+      }
     }
   }
 
