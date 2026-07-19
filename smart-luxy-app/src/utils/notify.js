@@ -1,10 +1,19 @@
 import CONFIG from '../config'
 
-const TG_TOKEN  = import.meta.env.VITE_TELEGRAM_TOKEN
-const TG_CHAT   = import.meta.env.VITE_TELEGRAM_CHAT_ID
+// Telegram géré via proxy serveur sécurisé — plus de token exposé côté client
+// Fonction sécurisée qui passe par le proxy serveur — le token ne quitte jamais Vercel
+async function sendTelegram(text) {
+  try {
+    await fetch('/api/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    })
+  } catch (e) { console.warn('Telegram proxy:', e) }
+}
+
 
 export async function notifyTelegram(order) {
-  if (!TG_TOKEN || !TG_CHAT) return
   const items = (order.items || []).map(i =>
     `  • ${i.nom} ×${i.qty} = ${(i.prix * i.qty).toLocaleString()} DA`
   ).join('\n')
@@ -27,13 +36,7 @@ ${items}
 💰 *TOTAL : ${order.total?.toLocaleString()} DA*
 `.trim()
 
-  try {
-    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_CHAT, text: msg, parse_mode: 'Markdown' })
-    })
-  } catch (e) { console.warn('Telegram failed:', e) }
+  await sendTelegram(msg)
 }
 
 export function buildWAMessage(order) {
@@ -71,7 +74,6 @@ export function genId() {
 
 // ── Alerte stock bas (< seuil) ──
 export async function alertStockBas(produit, stock, seuil = 5) {
-  if (!TG_TOKEN || !TG_CHAT) return
   const emoji = stock === 0 ? '🚫' : '⚠️'
   const msg = `${emoji} *STOCK BAS — Smart Luxy*
 
@@ -82,18 +84,11 @@ export async function alertStockBas(produit, stock, seuil = 5) {
 ` +
     `${stock === 0 ? '❌ ÉPUISÉ — le produit est désactivé sur le site' : `⚡ Plus que ${stock} — pense à réapprovisionner !`}`
 
-  try {
-    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_CHAT, text: msg, parse_mode: 'Markdown' })
-    })
-  } catch(e) { console.warn('TG alert stock:', e) }
+  await sendTelegram(msg)
 }
 
 // ── Résumé quotidien (à appeler à 20h) ──
 export async function resumeQuotidien(orders, products) {
-  if (!TG_TOKEN || !TG_CHAT) return
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -143,11 +138,5 @@ export async function resumeQuotidien(orders, products) {
 ` +
     `📈 Total historique : ${orders.length} commandes`
 
-  try {
-    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_CHAT, text: msg, parse_mode: 'Markdown' })
-    })
-  } catch(e) { console.warn('TG résumé:', e) }
+  await sendTelegram(msg)
 }
