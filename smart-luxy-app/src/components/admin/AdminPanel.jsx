@@ -280,14 +280,15 @@ function AdminSettings({ onLogout, onToast }) {
 
     setPwSaving(true)
     try {
-      // Récupérer le mot de passe actuel depuis Supabase
-      const settings = await getSettings()
-      const pwEnVercel   = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
-      const pwEnSupabase = settings.admin_password || ''
+      // Vérification sécurisée — le mot de passe stocké n'est jamais lu directement
+      const pwEnVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
+      let validSupabase = false
+      try {
+        const res = await supabase.rpc('verify_admin_password', { input_password: pwForm.current })
+        validSupabase = res.data === true
+      } catch(e) { /* fonction pas encore migrée */ }
 
-      // Accepter si correspond à l'un ou l'autre
-      const pwOk = pwForm.current === pwEnVercel ||
-                   (pwEnSupabase && pwForm.current === pwEnSupabase)
+      const pwOk = pwForm.current === pwEnVercel || validSupabase
 
       if (!pwOk) {
         onToast && onToast('❌ Mot de passe actuel incorrect', 'error')
