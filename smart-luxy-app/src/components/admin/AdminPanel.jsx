@@ -973,6 +973,11 @@ function ThemeEditor({ onToast }) {
   })
   const [saving, setSaving] = useState(false)
   const [activePreset, setActivePreset] = useState(null)
+  const [customThemes, setCustomThemes] = useState([])
+  const [newThemeName, setNewThemeName] = useState('')
+  const [savingCustom, setSavingCustom] = useState(false)
+
+  const DEFAULT_THEME = { theme_bg:'#0a0a0a', theme_card:'#141414', theme_accent:'#C9A84C', theme_text:'#e0e0e0', theme_text_sub:'#888888' }
 
   useEffect(() => {
     getSettings().then(s => {
@@ -984,6 +989,10 @@ function ThemeEditor({ onToast }) {
         theme_text:     s.theme_text     || t.theme_text,
         theme_text_sub: s.theme_text_sub || t.theme_text_sub,
       }))
+      try {
+        const parsed = JSON.parse(s.custom_themes || '[]')
+        setCustomThemes(Array.isArray(parsed) ? parsed : [])
+      } catch { setCustomThemes([]) }
     })
   }, [])
 
@@ -1028,6 +1037,38 @@ function ThemeEditor({ onToast }) {
     for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
     setSaving(false)
     onToast && onToast('✅ Thème sauvegardé ! Visible pour tous les clients.', 'default')
+  }
+
+  // Sauvegarder la combinaison actuelle comme thème personnalisé réutilisable
+  async function saveCustomTheme() {
+    if (!newThemeName.trim()) { onToast && onToast('Donne un nom à ton thème', 'error'); return }
+    setSavingCustom(true)
+    const newCustom = {
+      name: newThemeName.trim(),
+      bg: theme.theme_bg, card: theme.theme_card, accent: theme.theme_accent,
+      text: theme.theme_text, sub: theme.theme_text_sub,
+      id: Date.now(),
+    }
+    const updated = [...customThemes, newCustom]
+    await saveSetting('custom_themes', JSON.stringify(updated))
+    setCustomThemes(updated)
+    setNewThemeName('')
+    setSavingCustom(false)
+    onToast && onToast(`✅ Thème "${newCustom.name}" enregistré ! Tu peux le réutiliser à tout moment.`, 'default')
+  }
+
+  async function deleteCustomTheme(id) {
+    const updated = customThemes.filter(t => t.id !== id)
+    await saveSetting('custom_themes', JSON.stringify(updated))
+    setCustomThemes(updated)
+    onToast && onToast('🗑️ Thème supprimé', 'default')
+  }
+
+  function restoreDefault() {
+    setTheme(DEFAULT_THEME)
+    applyToDOM(DEFAULT_THEME)
+    setActivePreset(0)
+    onToast && onToast('↺ Thème par défaut restauré (pas encore sauvegardé — clique "Sauvegarder" pour confirmer)', 'default')
   }
 
   const PRESETS = [
@@ -1086,6 +1127,58 @@ function ThemeEditor({ onToast }) {
         </div>
       </div>
 
+      {/* ── Mes thèmes personnalisés sauvegardés ── */}
+      {customThemes.length > 0 && (
+        <div style={sec}>
+          <span style={lbl}>⭐ Mes thèmes enregistrés</span>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            {customThemes.map(ct => (
+              <div key={ct.id} style={{ position:'relative' }}>
+                <button onClick={() => {
+                  const t = { theme_bg:ct.bg, theme_card:ct.card, theme_accent:ct.accent, theme_text:ct.text, theme_text_sub:ct.sub }
+                  setTheme(t); applyToDOM(t); setActivePreset(null)
+                }} style={{
+                  width:'100%', background: ct.card, border:`2px solid ${ct.accent}80`, borderRadius:12,
+                  padding:'12px 10px', cursor:'pointer', textAlign:'left',
+                }}>
+                  <div style={{ display:'flex', gap:4, marginBottom:6 }}>
+                    {[ct.bg, ct.card, ct.accent, ct.text].map((col, i) => (
+                      <div key={i} style={{ width:14, height:14, borderRadius:3, background:col, border:'1px solid rgba(255,255,255,.15)' }} />
+                    ))}
+                  </div>
+                  <div style={{ fontSize:12, fontWeight:800, color: ct.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ct.name}</div>
+                </button>
+                <button onClick={() => deleteCustomTheme(ct.id)} style={{
+                  position:'absolute', top:-6, right:-6, width:22, height:22, borderRadius:'50%',
+                  background:'#ef4444', border:'2px solid #1a1a1a', color:'white', fontSize:11, fontWeight:900,
+                  cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                }}>✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Sauvegarder la combinaison actuelle comme thème perso ── */}
+      <div style={sec}>
+        <span style={lbl}>💾 Enregistrer la combinaison actuelle</span>
+        <p style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginBottom:10, lineHeight:1.5 }}>
+          Donne un nom à tes couleurs actuelles pour les retrouver et les réappliquer n'importe quand.
+        </p>
+        <div style={{ display:'flex', gap:8 }}>
+          <input
+            value={newThemeName}
+            onChange={e => setNewThemeName(e.target.value)}
+            placeholder="Ex: Ma palette d'été"
+            style={{ flex:1, background:'#111', border:'1px solid #333', borderRadius:8, padding:'9px 12px', color:'white', fontSize:13, outline:'none' }}
+          />
+          <button onClick={saveCustomTheme} disabled={savingCustom} style={{
+            background:'rgba(201,168,76,.15)', border:'1px solid rgba(201,168,76,.3)', borderRadius:8,
+            padding:'9px 16px', color:'#C9A84C', fontSize:12, fontWeight:800, cursor:'pointer', whiteSpace:'nowrap',
+          }}>{savingCustom ? '⏳' : '💾 Enregistrer'}</button>
+        </div>
+      </div>
+
       {/* Couleurs manuelles */}
       <div style={sec}>
         <span style={lbl}>Personnaliser</span>
@@ -1129,9 +1222,9 @@ function ThemeEditor({ onToast }) {
 
       {/* Boutons */}
       <div style={{ display:'flex', gap:8 }}>
-        <button onClick={() => applyPreset(PRESETS[0], 0)}
+        <button onClick={restoreDefault}
           style={{ flex:1, padding:'11px', background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, color:'rgba(255,255,255,.5)', fontSize:12, fontWeight:800, cursor:'pointer' }}>
-          ↺ Réinitialiser
+          ↺ Thème par défaut
         </button>
         <button onClick={save} disabled={saving}
           style={{ flex:2, padding:'11px', background:saving?'#222':'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:12, color:saving?'#444':'#000', fontSize:13, fontWeight:900, cursor:saving?'default':'pointer' }}>
