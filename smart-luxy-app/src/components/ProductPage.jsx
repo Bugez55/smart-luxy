@@ -196,23 +196,23 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   }
 
   const inp = {
-    background:'#1a1a1a', border:'1px solid #2a2a2a', borderRadius:10,
-    padding:'12px 14px', color:'white', fontSize:'16px', width:'100%',
+    background:'var(--card2)', border:'1px solid #2a2a2a', borderRadius:10,
+    padding:'12px 14px', color:'var(--g3)', fontSize:'16px', width:'100%',
     outline:'none', boxSizing:'border-box', fontFamily:'inherit',
     WebkitTextSizeAdjust:'100%', touchAction:'manipulation',
     direction: rtl ? 'rtl' : 'ltr',
   }
-  const lbl = { fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
+  const lbl = { fontSize:11, fontWeight:800, color:'var(--g3)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
 
   const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null)
 
   return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background: p.card_color || '#0a0a0a', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background: p.card_color || 'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
 
       {/* ── Header sticky ── */}
-      <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
-        <button onClick={onClose} style={{ background:'rgba(255,255,255,.07)', border:'none', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'white', fontSize:18, flexShrink:0 }}>✕</button>
-        <span style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
+      <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid var(--g3)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
+        <button onClick={onClose} style={{ background:'var(--g3)', border:'none', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
+        <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
         <button onClick={() => setLang(l => l==='fr'?'ar':'fr')} style={{ background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)', borderRadius:20, padding:'4px 10px', color:'#C9A84C', fontSize:11, fontWeight:800, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap' }}>
           {lang==='fr' ? '🇩🇿 عربي' : '🇫🇷 FR'}
         </button>
@@ -221,7 +221,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Carrousel images en haut — swipe gauche/droite ── */}
       {imgs.length > 0 ? (
-        <div ref={topRef} data-img-swipe style={{ position:'relative', background:'#111', lineHeight:0 }}>
+        <div ref={topRef} data-img-swipe style={{ position:'relative', background:'var(--card)', lineHeight:0 }}>
           {/* Image affichée */}
           <img
             key={imgIdx}
@@ -233,31 +233,31 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {/* Flèches */}
           {imgs.length > 1 && <>
             <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i-1+imgs.length)%imgs.length) }}
-              style={{ position:'absolute', left:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'white', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>‹</button>
+              style={{ position:'absolute', left:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>‹</button>
             <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i+1)%imgs.length) }}
-              style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'white', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>›</button>
+              style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>›</button>
             {/* Points */}
             <div style={{ position:'absolute', bottom:10, left:'50%', transform:'translateX(-50%)', display:'flex', gap:5, zIndex:3 }}>
               {imgs.map((_,i) => (
-                <div key={i} onClick={() => setImgIdx(i)} style={{ width:i===imgIdx?18:6, height:6, borderRadius:3, background:i===imgIdx?'#C9A84C':'rgba(255,255,255,.4)', transition:'all .25s', cursor:'pointer' }} />
+                <div key={i} onClick={() => setImgIdx(i)} style={{ width:i===imgIdx?18:6, height:6, borderRadius:3, background:i===imgIdx?'#C9A84C':'var(--g3)', transition:'all .25s', cursor:'pointer' }} />
               ))}
             </div>
           </>}
           {outOfStock && <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fca5a5' }}>ÉPUISÉ</div>}
-          {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:32, left:10, background:'rgba(239,68,68,.92)', color:'white', fontSize:11, fontWeight:800, padding:'3px 8px', borderRadius:6 }}>🔥 Plus que {p.stock}</div>}
-          {imgs.length > 1 && <div style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.55)', color:'rgba(255,255,255,.7)', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20, zIndex:3 }}>{imgIdx+1}/{imgs.length}</div>}
+          {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:32, left:10, background:'rgba(239,68,68,.92)', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'3px 8px', borderRadius:6 }}>🔥 Plus que {p.stock}</div>}
+          {imgs.length > 1 && <div style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.55)', color:'var(--g3)', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20, zIndex:3 }}>{imgIdx+1}/{imgs.length}</div>}
         </div>
       ) : (
-        <div ref={topRef} style={{ height:280, background:'#111', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div ref={topRef} style={{ height:280, background:'var(--card)', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <span style={{ fontSize:80 }}>{p.emoji||'📦'}</span>
         </div>
       )}
 
       {/* Miniatures scrollables */}
       {imgs.length > 1 && (
-        <div style={{ display:'flex', gap:6, padding:'8px 12px', overflowX:'auto', scrollbarWidth:'none', background:'#0f0f0f' }}>
+        <div style={{ display:'flex', gap:6, padding:'8px 12px', overflowX:'auto', scrollbarWidth:'none', background:'var(--card)' }}>
           {imgs.map((img, i) => (
-            <div key={i} onClick={() => setImgIdx(i)} style={{ width:60, height:60, borderRadius:8, overflow:'hidden', border:`2px solid ${imgIdx===i?'#C9A84C':'rgba(255,255,255,.1)'}`, cursor:'pointer', flexShrink:0, transition:'all .2s', transform:imgIdx===i?'scale(1.06)':'scale(1)' }}>
+            <div key={i} onClick={() => setImgIdx(i)} style={{ width:60, height:60, borderRadius:8, overflow:'hidden', border:`2px solid ${imgIdx===i?'#C9A84C':'var(--g3)'}`, cursor:'pointer', flexShrink:0, transition:'all .2s', transform:imgIdx===i?'scale(1.06)':'scale(1)' }}>
               <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
             </div>
           ))}
@@ -275,23 +275,23 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           const icon = isTikTok ? '🎵' : isInsta ? '📸' : '▶️'
           const platform = isTikTok ? 'TikTok' : isInsta ? 'Instagram' : 'Voir la vidéo'
           const color = isTikTok ? 'rgba(0,0,0,.8)' : isInsta ? 'rgba(131,58,180,.3)' : 'rgba(255,0,0,.1)'
-          const borderColor = isTikTok ? 'rgba(255,255,255,.15)' : isInsta ? 'rgba(131,58,180,.4)' : 'rgba(255,0,0,.2)'
+          const borderColor = isTikTok ? 'var(--g3)' : isInsta ? 'rgba(131,58,180,.4)' : 'rgba(255,0,0,.2)'
           return (
             <a href={embed.src} target="_blank" rel="noreferrer"
               style={{ display:'flex', alignItems:'center', gap:12, padding:'16px', background:color, border:`1px solid ${borderColor}`, margin:'0 12px', borderRadius:14, textDecoration:'none', flexShrink:0 }}>
-              <div style={{ width:52, height:52, borderRadius:12, background:'rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>{icon}</div>
+              <div style={{ width:52, height:52, borderRadius:12, background:'var(--g3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>{icon}</div>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:14, fontWeight:900, color:'white', marginBottom:3 }}>Voir la vidéo {platform}</div>
-                <div style={{ fontSize:11, color:'rgba(255,255,255,.45)', lineHeight:1.4 }}>Appuie pour regarder la vidéo du produit sur {platform}</div>
+                <div style={{ fontSize:14, fontWeight:900, color:'var(--g3)', marginBottom:3 }}>Voir la vidéo {platform}</div>
+                <div style={{ fontSize:11, color:'var(--g3)', lineHeight:1.4 }}>Appuie pour regarder la vidéo du produit sur {platform}</div>
               </div>
-              <div style={{ fontSize:20, color:'rgba(255,255,255,.3)', flexShrink:0 }}>›</div>
+              <div style={{ fontSize:20, color:'var(--g3)', flexShrink:0 }}>›</div>
             </a>
           )
         }
 
         return (
           <div style={{ flexShrink:0 }}>
-            <div style={{ background:'#000', position:'relative', paddingBottom: embed.type==='tiktok' ? '177%' : '56.25%', overflow:'hidden' }}>
+            <div style={{ background:'var(--bk)', position:'relative', paddingBottom: embed.type==='tiktok' ? '177%' : '56.25%', overflow:'hidden' }}>
               <iframe
                 src={embed.src}
                 style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
@@ -306,7 +306,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Infos produit ── */}
       <div style={{ padding:'16px 16px 0' }}>
-        <h1 style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'white', lineHeight:1.3 }}>{p.nom}</h1>
+        <h1 style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'var(--g3)', lineHeight:1.3 }}>{p.nom}</h1>
 
         {/* Étoiles + commandes */}
         {(p.note_etoiles || p.nb_commandes > 0) && (
@@ -314,7 +314,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             {p.note_etoiles && (
               <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                 {[1,2,3,4,5].map(i => (
-                  <span key={i} style={{ fontSize:16, color: i <= Math.round(p.note_etoiles) ? '#F9A825' : 'rgba(255,255,255,.15)' }}>★</span>
+                  <span key={i} style={{ fontSize:16, color: i <= Math.round(p.note_etoiles) ? '#F9A825' : 'var(--g3)' }}>★</span>
                 ))}
                 <span style={{ fontSize:13, fontWeight:800, color:'#F9A825', marginLeft:3 }}>{Number(p.note_etoiles).toFixed(1)}</span>
               </div>
@@ -322,7 +322,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             {p.nb_commandes > 0 && (
               <div style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(201,168,76,.08)', border:'1px solid rgba(201,168,76,.2)', borderRadius:20, padding:'3px 10px' }}>
                 <span style={{ fontSize:13 }}>📦</span>
-                <span style={{ fontSize:12, fontWeight:800, color:'rgba(255,255,255,.7)' }}>{p.nb_commandes.toLocaleString()} commandes</span>
+                <span style={{ fontSize:12, fontWeight:800, color:'var(--g3)' }}>{p.nb_commandes.toLocaleString()} commandes</span>
               </div>
             )}
           </div>
@@ -333,7 +333,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           <span style={{ fontSize:30, fontWeight:900, color:'#C9A84C' }}>{fmt(p.prix)}</span>
           {p.prix_old && <>
             <span style={{ fontSize:15, color:'#555', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
-            <span style={{ background:'#ef4444', color:'white', fontSize:11, fontWeight:800, padding:'2px 8px', borderRadius:6 }}>-{disc}%</span>
+            <span style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'2px 8px', borderRadius:6 }}>-{disc}%</span>
           </>}
         </div>
 
@@ -343,12 +343,12 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
           <div style={{ display:'flex' }}>
             {[...Array(Math.min(viewers,5))].map((_,i) => (
-              <div key={i} style={{ width:18, height:18, borderRadius:'50%', background:`hsl(${i*40},60%,55%)`, border:'2px solid #0a0a0a', marginLeft: i>0 ? -6 : 0, fontSize:9, display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:800 }}>
+              <div key={i} style={{ width:18, height:18, borderRadius:'50%', background:`hsl(${i*40},60%,55%)`, border:'2px solid #0a0a0a', marginLeft: i>0 ? -6 : 0, fontSize:9, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--g3)', fontWeight:800 }}>
                 {['👤','👤','👤','👤','👤'][i]}
               </div>
             ))}
           </div>
-          <span style={{ fontSize:11, color:'rgba(255,255,255,.4)', fontWeight:600 }}>
+          <span style={{ fontSize:11, color:'var(--g3)', fontWeight:600 }}>
             {viewers} {lang==='ar' ? 'أشخاص يتصفحون هذا المنتج الآن' : `personnes regardent ce produit`}
           </span>
           <span style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e', animation:'pulse 1.5s infinite', flexShrink:0 }} />
@@ -358,7 +358,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {/* ── Description ── */}
       {p.description && (
         <div style={{ padding:'0 16px 16px' }}>
-          <div style={{ fontSize:14, color:'rgba(255,255,255,.7)', lineHeight:1.8 }}
+          <div style={{ fontSize:14, color:'var(--g3)', lineHeight:1.8 }}
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description || '') }} />
         </div>
       )}
@@ -369,7 +369,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {specs.map((s,i) => (
             <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
               <span style={{ color:'#C9A84C', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
-              <span style={{ color:'rgba(255,255,255,.75)', fontSize:14, lineHeight:1.5 }}>{s}</span>
+              <span style={{ color:'var(--g3)', fontSize:14, lineHeight:1.5 }}>{s}</span>
             </div>
           ))}
         </div>
@@ -399,15 +399,15 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {/* ── FAQ ── */}
       {faq.length > 0 && (
         <div style={{ padding:'0 16px 16px' }}>
-          <h3 style={{ fontSize:16, fontWeight:900, color:'white', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
+          <h3 style={{ fontSize:16, fontWeight:900, color:'var(--g3)', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
           {faq.map((item,i) => (
-            <div key={i} style={{ marginBottom:6, borderRadius:12, overflow:'hidden', border:'1px solid rgba(255,255,255,.08)' }}>
-              <button onClick={() => setOpenFaq(openFaq===i?null:i)} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background:openFaq===i?'rgba(201,168,76,.1)':'#141414', border:'none', padding:'13px 14px', color:'white', fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'left', gap:8 }}>
+            <div key={i} style={{ marginBottom:6, borderRadius:12, overflow:'hidden', border:'1px solid var(--g3)' }}>
+              <button onClick={() => setOpenFaq(openFaq===i?null:i)} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background:openFaq===i?'rgba(201,168,76,.1)':'var(--card)', border:'none', padding:'13px 14px', color:'var(--g3)', fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'left', gap:8 }}>
                 <span style={{ flex:1 }}>{item.q}</span>
                 <span style={{ color:'#C9A84C', fontSize:18, flexShrink:0, fontWeight:900 }}>{openFaq===i?'−':'+'}</span>
               </button>
               {openFaq===i && (
-                <div style={{ background:'#111', padding:'12px 14px', fontSize:13, color:'rgba(255,255,255,.65)', lineHeight:1.7, borderTop:'1px solid rgba(255,255,255,.05)' }}>
+                <div style={{ background:'var(--card)', padding:'12px 14px', fontSize:13, color:'var(--g3)', lineHeight:1.7, borderTop:'1px solid var(--g3)' }}>
                   {item.r}
                 </div>
               )}
@@ -419,12 +419,12 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {/* ══════════════════════════════════════════
           FORMULAIRE DE COMMANDE — style MarketDZ
       ══════════════════════════════════════════ */}
-      <div ref={formRef} style={{ margin:'0 12px 16px', background:'#141414', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, direction: rtl ? 'rtl' : 'ltr' }}>
+      <div ref={formRef} style={{ margin:'0 12px 16px', background:'var(--card)', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, direction: rtl ? 'rtl' : 'ltr' }}>
 
         {/* En-tête formulaire */}
         <div style={{ background:'linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05))', borderBottom:'1px solid rgba(201,168,76,.2)', padding:'16px', textAlign:'center' }}>
-          <div style={{ fontSize:17, fontWeight:900, color:'white', marginBottom:3 }}>🛒 Passer commande</div>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>Paiement à la livraison ✅ Partout en Algérie 🇩🇿</div>
+          <div style={{ fontSize:17, fontWeight:900, color:'var(--g3)', marginBottom:3 }}>🛒 Passer commande</div>
+          <div style={{ fontSize:12, color:'var(--g3)' }}>Paiement à la livraison ✅ Partout en Algérie 🇩🇿</div>
         </div>
 
         <div style={{ padding:16 }}>
@@ -440,24 +440,24 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                   return (
                     <div key={i} onClick={() => setSelectedBundle(isSelected ? null : i)} style={{
                       display:'flex', alignItems:'center', gap:12,
-                      background: isSelected ? 'rgba(201,168,76,.12)' : '#1a1a1a',
-                      border:`2px solid ${isSelected ? '#C9A84C' : 'rgba(255,255,255,.08)'}`,
+                      background: isSelected ? 'rgba(201,168,76,.12)' : 'var(--card2)',
+                      border:`2px solid ${isSelected ? '#C9A84C' : 'var(--g3)'}`,
                       borderRadius:12, padding:'12px 14px', cursor:'pointer', transition:'all .2s',
                     }}>
                       {/* Radio */}
-                      <div style={{ width:22, height:22, borderRadius:'50%', border:`2px solid ${isSelected?'#C9A84C':'rgba(255,255,255,.2)'}`, background:isSelected?'#C9A84C':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .2s' }}>
+                      <div style={{ width:22, height:22, borderRadius:'50%', border:`2px solid ${isSelected?'#C9A84C':'var(--g3)'}`, background:isSelected?'#C9A84C':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .2s' }}>
                         {isSelected && <span style={{ fontSize:12, color:'#000', fontWeight:900 }}>✓</span>}
                       </div>
                       {/* Image si disponible */}
                       {mainImg && <img src={mainImg} alt="" style={{ width:44, height:44, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
                       {/* Label */}
                       <div style={{ flex:1 }}>
-                        <div style={{ fontSize:14, fontWeight:700, color:'white' }}>{b.label}</div>
-                        {prixParUnit && <div style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginTop:1 }}>{fmt(prixParUnit)} / unité</div>}
+                        <div style={{ fontSize:14, fontWeight:700, color:'var(--g3)' }}>{b.label}</div>
+                        {prixParUnit && <div style={{ fontSize:11, color:'var(--g3)', marginTop:1 }}>{fmt(prixParUnit)} / unité</div>}
                       </div>
                       {/* Prix */}
                       <div style={{ textAlign:'right', flexShrink:0 }}>
-                        <div style={{ fontSize:16, fontWeight:900, color:isSelected?'#C9A84C':'white' }}>{fmt(b.prix)}</div>
+                        <div style={{ fontSize:16, fontWeight:900, color:isSelected?'#C9A84C':'var(--g3)' }}>{fmt(b.prix)}</div>
                       </div>
                     </div>
                   )
@@ -471,9 +471,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             <div style={{ marginBottom:14 }}>
               <label style={lbl}>{lang==='ar' ? 'الكمية' : 'Quantité' }</label>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'white', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
-                <span style={{ color:'white', fontWeight:900, fontSize:20, minWidth:32, textAlign:'center' }}>{qty}</span>
-                <button onClick={() => setQty(q => q+1)} style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'#C9A84C', fontSize:20, cursor:'pointer', fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+                <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ background:'var(--card2)', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+                <span style={{ color:'var(--g3)', fontWeight:900, fontSize:20, minWidth:32, textAlign:'center' }}>{qty}</span>
+                <button onClick={() => setQty(q => q+1)} style={{ background:'var(--card2)', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'#C9A84C', fontSize:20, cursor:'pointer', fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
               </div>
             </div>
           )}
@@ -483,7 +483,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             <label style={lbl}>{lang==='ar' ? 'طريقة التوصيل' : 'Mode de livraison' }</label>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {['domicile','bureau'].map(mode => (
-                <button key={mode} onClick={() => setModeLiv(mode)} style={{ padding:'11px 8px', background:modeLiv===mode?'rgba(201,168,76,.12)':'#1a1a1a', border:`2px solid ${modeLiv===mode?'#C9A84C':'#2a2a2a'}`, borderRadius:10, color:modeLiv===mode?'#C9A84C':'#666', fontSize:12, fontWeight:800, cursor:'pointer', textAlign:'center', lineHeight:1.4, transition:'all .2s' }}>
+                <button key={mode} onClick={() => setModeLiv(mode)} style={{ padding:'11px 8px', background:modeLiv===mode?'rgba(201,168,76,.12)':'var(--card2)', border:`2px solid ${modeLiv===mode?'#C9A84C':'#2a2a2a'}`, borderRadius:10, color:modeLiv===mode?'#C9A84C':'#666', fontSize:12, fontWeight:800, cursor:'pointer', textAlign:'center', lineHeight:1.4, transition:'all .2s' }}>
                   {mode==='domicile'?lang==='ar' ? '🏠 توصيل للمنزل' : '🏠 À domicile':lang==='ar' ? '📦 استلام من المكتب' : '📦 Retrait bureau'}
                   <div style={{ fontSize:9, marginTop:3, color:modeLiv===mode?'rgba(201,168,76,.6)':'#444' }}>{mode==='domicile'?lang==='ar' ? '2–5 أيام' : '2–5 jours':lang==='ar' ? '1–3 أيام' : '1–3 jours'}</div>
                 </button>
@@ -495,14 +495,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           <div style={{ marginBottom:10 }}>
             <label style={lbl}>{lang==='ar' ? 'الولاية *' : 'Wilaya *' }</label>
             <div style={{ position:'relative' }}>
-              <div onClick={() => { setWilayaOpen(o=>!o); setCommuneOpen(false) }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', color:form.wilaya?'white':'#444' }}>
+              <div onClick={() => { setWilayaOpen(o=>!o); setCommuneOpen(false) }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', color:form.wilaya?'var(--g3)':'var(--g4)' }}>
                 <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{form.wilaya || (lang==='ar' ? 'اختر الولاية' : 'Choisir une wilaya')}</span>
                 <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{wilayaOpen?'▲':'▼'}</span>
               </div>
               {wilayaOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'#1a1a1a', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'var(--card2)', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
                   {wilayasOptions.map(opt => (
-                    <div key={opt} onClick={() => { setF('wilaya',opt); setWilayaOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.wilaya?'#C9A84C':'rgba(255,255,255,.85)', background:opt===form.wilaya?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid rgba(255,255,255,.04)', touchAction:'manipulation' }}>
+                    <div key={opt} onClick={() => { setF('wilaya',opt); setWilayaOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.wilaya?'#C9A84C':'var(--g3)', background:opt===form.wilaya?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid var(--g3)', touchAction:'manipulation' }}>
                       {opt}
                     </div>
                   ))}
@@ -515,14 +515,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           <div style={{ marginBottom:10 }}>
             <label style={lbl}>{lang==='ar' ? 'البلدية' : 'Commune'} {communes.length>0&&`(${communes.length})`} *</label>
             <div style={{ position:'relative' }}>
-              <div onClick={() => { if(form.wilaya){setCommuneOpen(o=>!o); setWilayaOpen(false)} }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:form.wilaya?'pointer':'not-allowed', opacity:form.wilaya?1:.5, color:form.commune?'white':'#444' }}>
+              <div onClick={() => { if(form.wilaya){setCommuneOpen(o=>!o); setWilayaOpen(false)} }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:form.wilaya?'pointer':'not-allowed', opacity:form.wilaya?1:.5, color:form.commune?'var(--g3)':'var(--g4)' }}>
                 <span>{form.commune||(form.wilaya?lang==='ar' ? 'اختر البلدية' : 'Choisir une commune':lang==='ar' ? 'اختر الولاية أولاً' : "Choisir d'abord une wilaya")}</span>
                 <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{communeOpen?'▲':'▼'}</span>
               </div>
               {communeOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'#1a1a1a', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'var(--card2)', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
                   {communes.map(opt => (
-                    <div key={opt} onClick={() => { setF('commune',opt); setCommuneOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.commune?'#C9A84C':'rgba(255,255,255,.85)', background:opt===form.commune?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid rgba(255,255,255,.04)', touchAction:'manipulation' }}>
+                    <div key={opt} onClick={() => { setF('commune',opt); setCommuneOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.commune?'#C9A84C':'var(--g3)', background:opt===form.commune?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid var(--g3)', touchAction:'manipulation' }}>
                       {opt}
                     </div>
                   ))}
@@ -553,16 +553,16 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 {/* Paiement à la livraison — toujours dispo */}
                 <div onClick={() => setModePaiement('livraison')} style={{
                   display:'flex', alignItems:'center', gap:12,
-                  background: modePaiement==='livraison' ? 'rgba(34,197,94,.08)' : '#1a1a1a',
+                  background: modePaiement==='livraison' ? 'rgba(34,197,94,.08)' : 'var(--card2)',
                   border:`2px solid ${modePaiement==='livraison' ? '#22c55e' : '#2a2a2a'}`,
                   borderRadius:10, padding:'11px 14px', cursor:'pointer', transition:'all .2s',
                 }}>
-                  <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='livraison'?'#22c55e':'rgba(255,255,255,.2)'}`, background:modePaiement==='livraison'?'#22c55e':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='livraison'?'#22c55e':'var(--g3)'}`, background:modePaiement==='livraison'?'#22c55e':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     {modePaiement==='livraison' && <span style={{ fontSize:11, color:'#000', fontWeight:900 }}>✓</span>}
                   </div>
                   <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:'white' }}>💵 {lang==='ar' ? 'الدفع عند الاستلام' : 'Paiement à la livraison'}</div>
-                    <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{lang==='ar' ? 'تدفع عند استلام الطرد' : 'Tu paies quand tu reçois le colis'}</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'var(--g3)' }}>💵 {lang==='ar' ? 'الدفع عند الاستلام' : 'Paiement à la livraison'}</div>
+                    <div style={{ fontSize:11, color:'var(--g3)' }}>{lang==='ar' ? 'تدفع عند استلام الطرد' : 'Tu paies quand tu reçois le colis'}</div>
                   </div>
                 </div>
 
@@ -570,16 +570,16 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 {paiementInfo.baridimob_actif && paiementInfo.baridimob && (
                   <div onClick={() => setModePaiement('baridimob')} style={{
                     display:'flex', alignItems:'center', gap:12,
-                    background: modePaiement==='baridimob' ? 'rgba(59,130,246,.08)' : '#1a1a1a',
+                    background: modePaiement==='baridimob' ? 'rgba(59,130,246,.08)' : 'var(--card2)',
                     border:`2px solid ${modePaiement==='baridimob' ? '#3b82f6' : '#2a2a2a'}`,
                     borderRadius:10, padding:'11px 14px', cursor:'pointer', transition:'all .2s',
                   }}>
-                    <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='baridimob'?'#3b82f6':'rgba(255,255,255,.2)'}`, background:modePaiement==='baridimob'?'#3b82f6':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='baridimob'?'#3b82f6':'var(--g3)'}`, background:modePaiement==='baridimob'?'#3b82f6':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       {modePaiement==='baridimob' && <span style={{ fontSize:11, color:'#fff', fontWeight:900 }}>✓</span>}
                     </div>
                     <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:'white' }}>📱 BaridiMob</div>
-                      <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{lang==='ar' ? 'دفع فوري عبر التطبيق' : 'Paiement instantané via l\'appli'}</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'var(--g3)' }}>📱 BaridiMob</div>
+                      <div style={{ fontSize:11, color:'var(--g3)' }}>{lang==='ar' ? 'دفع فوري عبر التطبيق' : 'Paiement instantané via l\'appli'}</div>
                     </div>
                   </div>
                 )}
@@ -588,16 +588,16 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 {paiementInfo.ccp_actif && paiementInfo.ccp && (
                   <div onClick={() => setModePaiement('ccp')} style={{
                     display:'flex', alignItems:'center', gap:12,
-                    background: modePaiement==='ccp' ? 'rgba(201,168,76,.08)' : '#1a1a1a',
+                    background: modePaiement==='ccp' ? 'rgba(201,168,76,.08)' : 'var(--card2)',
                     border:`2px solid ${modePaiement==='ccp' ? '#C9A84C' : '#2a2a2a'}`,
                     borderRadius:10, padding:'11px 14px', cursor:'pointer', transition:'all .2s',
                   }}>
-                    <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='ccp'?'#C9A84C':'rgba(255,255,255,.2)'}`, background:modePaiement==='ccp'?'#C9A84C':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${modePaiement==='ccp'?'#C9A84C':'var(--g3)'}`, background:modePaiement==='ccp'?'#C9A84C':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       {modePaiement==='ccp' && <span style={{ fontSize:11, color:'#000', fontWeight:900 }}>✓</span>}
                     </div>
                     <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:'white' }}>🏦 {lang==='ar' ? 'تحويل CCP' : 'Virement CCP'}</div>
-                      <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{lang==='ar' ? 'بريد الجزائر' : 'Algeria Post'}</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'var(--g3)' }}>🏦 {lang==='ar' ? 'تحويل CCP' : 'Virement CCP'}</div>
+                      <div style={{ fontSize:11, color:'var(--g3)' }}>{lang==='ar' ? 'بريد الجزائر' : 'Algeria Post'}</div>
                     </div>
                   </div>
                 )}
@@ -608,11 +608,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     <div style={{ fontSize:12, fontWeight:800, color:'#93c5fd', marginBottom:8 }}>
                       📱 {lang==='ar' ? 'كيفية الدفع عبر بريدي موب' : 'Comment payer avec BaridiMob'}
                     </div>
-                    <div style={{ fontSize:13, color:'white', marginBottom:6 }}>
+                    <div style={{ fontSize:13, color:'var(--g3)', marginBottom:6 }}>
                       <strong>{lang==='ar' ? 'رقم الحساب:' : 'Numéro de compte:'}</strong><br/>
                       <span style={{ fontFamily:'monospace', fontSize:16, color:'#93c5fd', fontWeight:900, letterSpacing:'.02em' }}>{paiementInfo.baridimob}</span>
                     </div>
-                    <ol style={{ fontSize:11, color:'rgba(255,255,255,.5)', marginBottom:10, paddingLeft:16, lineHeight:1.8 }}>
+                    <ol style={{ fontSize:11, color:'var(--g3)', marginBottom:10, paddingLeft:16, lineHeight:1.8 }}>
                       <li>{lang==='ar' ? 'افتح تطبيق بريدي موب' : 'Ouvre l\'application BaridiMob'}</li>
                       <li>{lang==='ar' ? `أرسل ${fmt(totalFinal)} إلى الرقم أعلاه` : `Envoie ${fmt(totalFinal)} au numéro ci-dessus`}</li>
                       <li>{lang==='ar' ? 'أرسل لقطة شاشة الإيصال عبر واتساب' : 'Envoie la capture du reçu sur WhatsApp'}</li>
@@ -632,11 +632,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     <div style={{ fontSize:12, fontWeight:800, color:'#C9A84C', marginBottom:6 }}>
                       🏦 {lang==='ar' ? 'معلومات التحويل' : 'Informations pour le virement'}
                     </div>
-                    <div style={{ fontSize:13, color:'white', marginBottom:4 }}>
+                    <div style={{ fontSize:13, color:'var(--g3)', marginBottom:4 }}>
                       <strong>{lang==='ar' ? 'رقم CCP:' : 'Numéro CCP:'}</strong> <span style={{ fontFamily:'monospace', fontSize:15, color:'#C9A84C', fontWeight:900 }}>{paiementInfo.ccp}</span>
                     </div>
                     {paiementInfo.ccp_nom && (
-                      <div style={{ fontSize:12, color:'rgba(255,255,255,.6)', marginBottom:8 }}>
+                      <div style={{ fontSize:12, color:'var(--g3)', marginBottom:8 }}>
                         <strong>{lang==='ar' ? 'الاسم:' : 'Au nom de:'}</strong> {paiementInfo.ccp_nom}
                       </div>
                     )}
@@ -661,15 +661,15 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           {/* ── Récap prix ── */}
           {form.wilaya && (
-            <div style={{ background:'rgba(255,255,255,.04)', borderRadius:12, padding:'12px 14px', marginBottom:16, border:'1px solid rgba(255,255,255,.06)' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'rgba(255,255,255,.5)', marginBottom:6 }}>
+            <div style={{ background:'var(--g3)', borderRadius:12, padding:'12px 14px', marginBottom:16, border:'1px solid var(--g3)' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:6 }}>
                 <span>🛍️ Prix produit</span><span>{fmt(currentPrix)}</span>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'rgba(255,255,255,.5)', marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:8 }}>
                 <span>🚚 Frais livraison</span>
                 <span style={{ color:fraisLiv===0?'#22c55e':undefined }}>{fraisLiv===null?'—':fraisLiv===0?lang==='ar' ? 'مجاناً' : 'Gratuit':fmt(fraisLiv)}</span>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, borderTop:'1px solid rgba(255,255,255,.08)', fontSize:17, fontWeight:900, color:'white' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, borderTop:'1px solid var(--g3)', fontSize:17, fontWeight:900, color:'var(--g3)' }}>
                 <span>💰 Total à payer</span>
                 <span style={{ color:'#C9A84C' }}>{fmt(totalFinal)}</span>
               </div>
@@ -699,7 +699,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             }}
           >
             {canOrder && !ordering && (
-              <div style={{ position:'absolute', inset:0, background:'linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent)', animation:'shimmer 2s infinite', backgroundSize:'200% 100%' }} />
+              <div style={{ position:'absolute', inset:0, background:'linear-gradient(90deg,transparent,var(--g3),transparent)', animation:'shimmer 2s infinite', backgroundSize:'200% 100%' }} />
             )}
             <span style={{ position:'relative', zIndex:1 }}>
               {ordering ? '⏳ Envoi en cours…'
@@ -716,7 +716,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             ].map(b => (
               <div key={b.label} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
                 <span style={{ fontSize:18 }}>{b.icon}</span>
-                <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', fontWeight:700, textAlign:'center' }}>{b.label}</span>
+                <span style={{ fontSize:9, color:'var(--g3)', fontWeight:700, textAlign:'center' }}>{b.label}</span>
               </div>
             ))}
           </div>
@@ -725,9 +725,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Partager le produit ── */}
       <div style={{ padding:'0 16px 16px', display:'flex', gap:8, alignItems:'center' }}>
-        <div style={{ flex:1, height:1, background:'rgba(255,255,255,.07)' }} />
-        <span style={{ fontSize:11, color:'rgba(255,255,255,.25)', fontWeight:700 }}>PARTAGER</span>
-        <div style={{ flex:1, height:1, background:'rgba(255,255,255,.07)' }} />
+        <div style={{ flex:1, height:1, background:'var(--g3)' }} />
+        <span style={{ fontSize:11, color:'var(--g3)', fontWeight:700 }}>PARTAGER</span>
+        <div style={{ flex:1, height:1, background:'var(--g3)' }} />
       </div>
       <div style={{ display:'flex', gap:10, padding:'0 16px 20px' }}>
         <a
@@ -740,7 +740,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         </a>
         <button
           onClick={() => { navigator.clipboard?.writeText(window.location.href); }}
-          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, padding:'11px 16px', color:'rgba(255,255,255,.5)', fontSize:12, fontWeight:800, cursor:'pointer' }}
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:'var(--g3)', border:'1px solid var(--g3)', borderRadius:12, padding:'11px 16px', color:'var(--g3)', fontSize:12, fontWeight:800, cursor:'pointer' }}
         >🔗 {lang==='ar' ? 'نسخ الرابط' : 'Copier lien'}</button>
       </div>
 
@@ -750,9 +750,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           { label: lang==='ar' ? 'سياسة الخصوصية' : '🔒 Politique de confidentialité', tab:'confidentialite' },
           { label: lang==='ar' ? 'سياسة الإرجاع' : '🔄 Politique de retour', tab:'retour' },
         ].map(item => (
-          <button key={item.tab} onClick={() => onPolitique && onPolitique(item.tab)} style={{ background:'none', border:'none', color:'rgba(255,255,255,.3)', fontSize:11, cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3, padding:0, transition:'color .2s' }}
+          <button key={item.tab} onClick={() => onPolitique && onPolitique(item.tab)} style={{ background:'none', border:'none', color:'var(--g3)', fontSize:11, cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3, padding:0, transition:'color .2s' }}
             onMouseEnter={e => e.target.style.color='#C9A84C'}
-            onMouseLeave={e => e.target.style.color='rgba(255,255,255,.3)'}
+            onMouseLeave={e => e.target.style.color='var(--g3)'}
           >{item.label}</button>
         ))}
       </div>
@@ -760,15 +760,15 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {/* ── Produits similaires ── */}
       {(allProducts||[]).filter(x=>x.id!==p.id&&x.categorie===p.categorie&&x.is_active).slice(0,4).length > 0 && (
         <div style={{ padding:'0 16px 100px' }}>
-          <h3 style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.5)', letterSpacing:'.06em', marginBottom:12 }}>VOUS AIMEREZ AUSSI</h3>
+          <h3 style={{ fontSize:14, fontWeight:800, color:'var(--g3)', letterSpacing:'.06em', marginBottom:12 }}>VOUS AIMEREZ AUSSI</h3>
           <div style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:4, scrollbarWidth:'none' }}>
             {(allProducts||[]).filter(x=>x.id!==p.id&&x.categorie===p.categorie&&x.is_active).slice(0,4).map(sim => (
-              <div key={sim.id} onClick={onClose} style={{ background:'#141414', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, overflow:'hidden', cursor:'pointer', width:130, flexShrink:0 }}>
-                <div style={{ height:90, background:'#1a1a1a', overflow:'hidden' }}>
+              <div key={sim.id} onClick={onClose} style={{ background:'var(--card)', border:'1px solid var(--g3)', borderRadius:12, overflow:'hidden', cursor:'pointer', width:130, flexShrink:0 }}>
+                <div style={{ height:90, background:'var(--card2)', overflow:'hidden' }}>
                   {sim.img ? <img src={sim.img} alt={sim.nom} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30 }}>{sim.emoji||'📦'}</div>}
                 </div>
                 <div style={{ padding:'8px 10px' }}>
-                  <div style={{ fontSize:11, color:'white', fontWeight:700, marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{sim.nom}</div>
+                  <div style={{ fontSize:11, color:'var(--g3)', fontWeight:700, marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{sim.nom}</div>
                   <div style={{ fontSize:12, color:'#C9A84C', fontWeight:800 }}>{fmt(sim.prix)}</div>
                 </div>
               </div>
@@ -790,7 +790,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       }}>
         {(p.img||(imgs[0]?.url)) && <img src={p.img||(imgs[0]?.url)} alt="" style={{ width:42, height:42, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:12, color:'white', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.nom}</div>
+          <div style={{ fontSize:12, color:'var(--g3)', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.nom}</div>
           <div style={{ fontSize:14, color:'#C9A84C', fontWeight:900 }}>{fmt(activeBundle?activeBundle.prix:p.prix)}</div>
         </div>
         <button
@@ -806,10 +806,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {lb && imgs.length > 0 && (
         <div onClick={() => setLb(false)} style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.97)', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <img src={imgs[imgIdx]?.url} alt="" style={{ maxWidth:'100%', maxHeight:'90vh', objectFit:'contain' }} />
-          <button onClick={() => setLb(false)} style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,.12)', border:'none', borderRadius:'50%', width:44, height:44, color:'white', fontSize:20, cursor:'pointer' }}>✕</button>
+          <button onClick={() => setLb(false)} style={{ position:'absolute', top:16, right:16, background:'var(--g3)', border:'none', borderRadius:'50%', width:44, height:44, color:'var(--g3)', fontSize:20, cursor:'pointer' }}>✕</button>
           {imgs.length > 1 && <>
-            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i-1+imgs.length)%imgs.length)}} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,.1)', border:'none', borderRadius:'50%', width:48, height:48, color:'white', fontSize:26, cursor:'pointer' }}>‹</button>
-            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i+1)%imgs.length)}} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'rgba(255,255,255,.1)', border:'none', borderRadius:'50%', width:48, height:48, color:'white', fontSize:26, cursor:'pointer' }}>›</button>
+            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i-1+imgs.length)%imgs.length)}} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', background:'var(--g3)', border:'none', borderRadius:'50%', width:48, height:48, color:'var(--g3)', fontSize:26, cursor:'pointer' }}>‹</button>
+            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i+1)%imgs.length)}} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'var(--g3)', border:'none', borderRadius:'50%', width:48, height:48, color:'var(--g3)', fontSize:26, cursor:'pointer' }}>›</button>
           </>}
         </div>
       )}
