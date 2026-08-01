@@ -48,7 +48,7 @@ function LogoCouronne() {
           fontFamily: "'Cinzel', 'Fraunces', Georgia, serif",
           fontSize: 16, fontWeight: 900,
           letterSpacing: '4px',
-          color: 'white',
+          color:'var(--g3)',
           textShadow: '0 0 20px rgba(201,168,76,.12)',
           animation: 'smartReveal 1.2s cubic-bezier(.22,1,.36,1) both',
         }}>SMART</span>
@@ -154,7 +154,7 @@ function LogoCercle() {
           fontFamily: "'Cinzel', 'Fraunces', Georgia, serif",
           fontSize: 15, fontWeight: 900,
           letterSpacing: '3px',
-          color: 'white',
+          color:'var(--g3)',
           lineHeight: 1,
         }}>SMART</span>
         <div style={{ height: '0.5px', background: 'linear-gradient(90deg, #C9A84C, transparent)', width: 52 }} />
@@ -188,7 +188,7 @@ function LogoCercle() {
 //  HEADER PRINCIPAL
 //  Change LOGO_CHOICE entre 1 et 2
 // ══════════════════════════════════════════════
-const LOGO_CHOICE = 1  // ← 1 = Couronne  |  2 = Cercle
+const LOGO_CHOICE = 2  // ← 1 = Couronne  |  2 = Cercle
 
 export default function Header({ cartCount, onCartOpen, search, onSearch }) {
   return (
