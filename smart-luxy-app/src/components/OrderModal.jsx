@@ -181,7 +181,7 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
-          background: '#1a1a1a', border: '1px solid #C9A84C',
+          background: 'var(--card2)', border: '1px solid #C9A84C',
           borderRadius: 10, marginTop: 4, overflow: 'hidden',
           boxShadow: '0 12px 40px rgba(0,0,0,.8)',
         }}>
@@ -192,10 +192,10 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
                 onClick={() => select(opt)}
                 style={{
                   padding: '11px 14px', fontSize: 15, cursor: 'pointer',
-                  color: opt === value ? '#C9A84C' : 'rgba(255,255,255,.85)',
+                  color: opt === value ? '#C9A84C' : 'var(--g3)',
                   background: opt === value ? 'rgba(201,168,76,.1)' : 'transparent',
                   fontWeight: opt === value ? 700 : 400,
-                  borderBottom: '1px solid rgba(255,255,255,.04)',
+                  borderBottom: '1px solid var(--g3)',
                   direction: rtl ? 'rtl' : 'ltr',
                   touchAction: 'manipulation',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -233,13 +233,13 @@ function ConfirmButton({ loading, disabled, onClick, label, labelLoading }) {
       {!disabled && !loading && (
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,.25) 50%,transparent 100%)',
+          background: 'linear-gradient(90deg,transparent 0%,var(--g3) 50%,transparent 100%)',
           animation: 'shimmer 2.5s infinite', backgroundSize: '200% 100%',
         }} />
       )}
       {ripple && <div style={{
         position: 'absolute', inset: 0,
-        background: 'rgba(255,255,255,.3)',
+        background: 'var(--g3)',
         animation: 'ripple .6s ease-out',
         borderRadius: 12,
       }} />}
@@ -320,7 +320,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
 
   const inputStyle = {
     background: '#1e1e1e', border: '1px solid #333', borderRadius: 8,
-    padding: '10px 12px', color: 'white', fontSize: '16px', width: '100%',
+    padding: '10px 12px', color:'var(--g3)', fontSize: '16px', width: '100%',
     outline: 'none', boxSizing: 'border-box',
     direction: rtl ? 'rtl' : 'ltr', fontFamily: 'inherit',
     WebkitTextSizeAdjust: '100%', touchAction: 'manipulation',
@@ -345,7 +345,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div style={{
-        background: '#141414', width: '100%', maxWidth: 600,
+        background: 'var(--card)', width: '100%', maxWidth: 600,
         height: '92dvh', maxHeight: '92dvh',
         borderRadius: '20px 20px 0 0',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -355,11 +355,11 @@ export default function OrderModal({ items, onClose, onSubmit }) {
 
         {/* Header */}
         <div style={{
-          background: '#1a1a1a', borderBottom: '1px solid #2a2a2a',
+          background: 'var(--card2)', borderBottom: '1px solid #2a2a2a',
           padding: '14px 16px', flexShrink: 0,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 900, color: 'white' }}>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 900, color:'var(--g3)' }}>
             📋 {t.title}
           </h2>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -498,7 +498,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
         </div>
 
         {/* Footer */}
-        <div style={{ background: '#1a1a1a', borderTop: '1px solid #2a2a2a', padding: '12px 16px', flexShrink: 0 }}>
+        <div style={{ background: 'var(--card2)', borderTop: '1px solid #2a2a2a', padding: '12px 16px', flexShrink: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#666' }}>
               <span>{t.totalCmd}</span><span>{fmt(totalProduits)}</span>
@@ -509,7 +509,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
                 {fraisLiv === null ? '—' : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #2a2a2a', fontSize: 17, fontWeight: 900, color: 'white' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #2a2a2a', fontSize: 17, fontWeight: 900, color:'var(--g3)' }}>
               <span>{t.totalPayer}</span>
               <span style={{ color: '#C9A84C' }}>{fmt(totalFinal)}</span>
             </div>
@@ -526,7 +526,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
           <button onClick={waOrder} style={{
             width: '100%', padding: '12px',
             background: '#25D366', border: 'none', borderRadius: 12,
-            color: 'white', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+            color:'var(--g3)', fontSize: 14, fontWeight: 800, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
