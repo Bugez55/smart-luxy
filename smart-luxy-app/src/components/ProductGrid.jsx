@@ -6,7 +6,7 @@ function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 function SkeletonCard() {
   return (
     <div className="pcard" style={{ pointerEvents: 'none' }}>
-      <div className="pcard-img" style={{ background: '#1a1a1a' }}>
+      <div className="pcard-img" style={{ background: 'var(--card2)' }}>
         <div className="skeleton" style={{ width: '100%', height: '100%' }} />
       </div>
       <div className="pcard-body" style={{ gap: 10 }}>
@@ -32,12 +32,12 @@ function Stars({ avg, count }) {
         {[1,2,3,4,5].map(i => (
           <span key={i} style={{
             fontSize: 12,
-            color: i <= full ? '#F9A825' : (i === full + 1 && half) ? '#F9A825' : 'rgba(255,255,255,.15)',
+            color: i <= full ? '#F9A825' : (i === full + 1 && half) ? '#F9A825' : 'var(--g3)',
           }}>★</span>
         ))}
       </div>
       {count !== null && count !== undefined && (
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontWeight: 700 }}>
+        <span style={{ fontSize: 10, color: 'var(--g3)', fontWeight: 700 }}>
           ({count > 0 ? count.toLocaleString() : avg.toFixed(1)})
         </span>
       )}
@@ -113,7 +113,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100 - (p.prix / p.prix_old) * 100) : 0
   const outOfStock = p.stock !== null && p.stock !== undefined && p.stock <= 0
   const lowStock   = p.stock !== null && p.stock !== undefined && p.stock > 0 && p.stock <= 5
-  const cardBg     = p.card_color || '#141414'
+  const cardBg     = p.card_color || 'var(--card)'
 
   return (
     <div className="pcard" style={{ opacity: outOfStock ? 0.65 : 1, background: cardBg }}>
@@ -127,7 +127,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
 
         {p.badge && <div className="pcard-badge">{p.badge}</div>}
         {p.video_url && (
-          <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,.7)', borderRadius:6, padding:'2px 7px', fontSize:10, fontWeight:800, color:'white', zIndex:2, display:'flex', alignItems:'center', gap:3 }}>
+          <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,.7)', borderRadius:6, padding:'2px 7px', fontSize:10, fontWeight:800, color:'var(--g3)', zIndex:2, display:'flex', alignItems:'center', gap:3 }}>
             ▶️ Vidéo
           </div>
         )}
@@ -149,7 +149,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
         {lowStock && !outOfStock && (
           <div style={{
             position: 'absolute', bottom: 8, left: 8,
-            background: 'rgba(239,68,68,.92)', color: 'white',
+            background: 'rgba(239,68,68,.92)', color: 'var(--g3)',
             fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6,
             animation: 'stockPulse 1.5s ease-in-out infinite',
           }}>🔥 Plus que {p.stock}</div>
@@ -164,7 +164,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
             {imgs.slice(0, 4).map((img, i) => (
               <div key={i} style={{
                 width: 18, height: 18, borderRadius: 3, overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,.4)',
+                border: '1px solid var(--g3)',
                 opacity: i === 0 ? 1 : 0.7,
               }}>
                 <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -175,7 +175,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
                 width: 18, height: 18, borderRadius: 3,
                 background: 'rgba(0,0,0,.7)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 8, color: 'white', fontWeight: 800,
+                fontSize: 8, color: 'var(--g3)', fontWeight: 800,
               }}>+{imgs.length - 4}</div>
             )}
           </div>
@@ -195,13 +195,13 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
             : (
               <div style={{ display: 'flex', gap: 1 }}>
                 {[1,2,3,4,5].map(i => (
-                  <span key={i} style={{ fontSize: 11, color: 'rgba(255,255,255,.1)' }}>★</span>
+                  <span key={i} style={{ fontSize: 11, color: 'var(--g3)' }}>★</span>
                 ))}
               </div>
             )
           }
           {p.ventes > 0 && (
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 10, color: 'var(--g3)', fontWeight: 700, whiteSpace: 'nowrap' }}>
               ⚡ {p.ventes} vendus
             </span>
           )}
