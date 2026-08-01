@@ -38,7 +38,7 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
       {items.length === 0 ? (
         <div className="cart-empty">
           <div style={{ fontSize: 52 }}>🛍️</div>
-          <p style={{ color: 'rgba(255,255,255,.4)', marginBottom: 20 }}>Votre panier est vide</p>
+          <p style={{ color: 'var(--g3)', marginBottom: 20 }}>Votre panier est vide</p>
           <button onClick={onClose} style={{
             background: 'linear-gradient(135deg,#C9A84C,#E9C46A)',
             border: 'none', borderRadius: 12, padding: '11px 24px',
@@ -77,8 +77,8 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
             <div style={{
               display: 'flex', justifyContent: 'center', gap: 16,
               marginBottom: 14, padding: '10px 0',
-              borderTop: '1px solid rgba(255,255,255,.05)',
-              borderBottom: '1px solid rgba(255,255,255,.05)',
+              borderTop: '1px solid var(--g3)',
+              borderBottom: '1px solid var(--g3)',
             }}>
               {[
                 { icon: '🔒', text: 'Paiement sécurisé' },
@@ -87,7 +87,7 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
               ].map((b, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                   <span style={{ fontSize: 16 }}>{b.icon}</span>
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,.3)', fontWeight: 700, letterSpacing: '.03em', textAlign: 'center' }}>{b.text}</span>
+                  <span style={{ fontSize: 9, color: 'var(--g3)', fontWeight: 700, letterSpacing: '.03em', textAlign: 'center' }}>{b.text}</span>
                 </div>
               ))}
             </div>
@@ -103,10 +103,10 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
                       onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError('') }}
                       onKeyDown={e => e.key === 'Enter' && applyPromo()}
                       style={{
-                        flex: 1, background: 'rgba(255,255,255,.05)',
-                        border: '1px solid rgba(255,255,255,.1)',
+                        flex: 1, background: 'var(--g3)',
+                        border: '1px solid var(--g3)',
                         borderRadius: 9, padding: '9px 12px',
-                        color: 'white', fontSize: '16px', outline: 'none',
+                        color:'var(--g3)', fontSize: '16px', outline: 'none',
                         fontFamily: 'monospace', letterSpacing: '.05em',
                       }}
                     />
@@ -114,7 +114,7 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
                       onClick={applyPromo}
                       disabled={promoLoading || !promoCode.trim()}
                       style={{
-                        background: promoCode.trim() ? 'rgba(201,168,76,.2)' : 'rgba(255,255,255,.04)',
+                        background: promoCode.trim() ? 'rgba(201,168,76,.2)' : 'var(--g3)',
                         border: '1px solid rgba(201,168,76,.3)',
                         borderRadius: 9, padding: '9px 14px',
                         color: promoCode.trim() ? '#C9A84C' : '#444',
@@ -141,8 +141,8 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
             {/* ── Récap prix ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
               <div className="cart-total">
-                <span style={{ color: 'rgba(255,255,255,.5)', fontSize: 13 }}>Sous-total</span>
-                <span style={{ fontSize: 14, color: 'rgba(255,255,255,.5)' }}>{fmt(total)}</span>
+                <span style={{ color: 'var(--g3)', fontSize: 13 }}>Sous-total</span>
+                <span style={{ fontSize: 14, color: 'var(--g3)' }}>{fmt(total)}</span>
               </div>
               {promoData && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -150,8 +150,8 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
                   <span style={{ fontSize: 13, color: '#86efac', fontWeight: 800 }}>-{fmt(reduction)}</span>
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.07)' }}>
-                <strong style={{ fontSize: 16, color: 'white' }}>Total</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px solid var(--g3)' }}>
+                <strong style={{ fontSize: 16, color:'var(--g3)' }}>Total</strong>
                 <strong style={{ fontSize: 22, color: '#C9A84C' }}>{fmt(totalFinal)}</strong>
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
               </span>
             </button>
 
-            <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: 'var(--g3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
               🔒 Paiement à la livraison — 100% sécurisé
             </div>
           </div>
