@@ -59,7 +59,7 @@ export default function SuccessScreen({ order, onClose }) {
       padding: '16px',
     }}>
       <div style={{
-        background: '#0f0f0f',
+        background: 'var(--card)',
         border: '1px solid rgba(201,168,76,.2)',
         borderRadius: 24, width: '100%', maxWidth: 480,
         maxHeight: '92vh', overflowY: 'auto',
@@ -83,18 +83,18 @@ export default function SuccessScreen({ order, onClose }) {
           }}>🎉</div>
 
           <h2 style={{
-            margin: '0 0 8px', fontSize: 22, fontWeight: 900, color: 'white',
+            margin: '0 0 8px', fontSize: 22, fontWeight: 900, color:'var(--g3)',
             animation: 'successFade .4s .3s both',
           }}>Commande confirmée !</h2>
 
           <p style={{
-            margin: '0 0 6px', fontSize: 14, color: 'rgba(255,255,255,.55)',
+            margin: '0 0 6px', fontSize: 14, color: 'var(--g3)',
             animation: 'successFade .4s .4s both',
           }}>
-            Merci <strong style={{ color: 'white' }}>{order.nom_client}</strong> 🙏
+            Merci <strong style={{ color:'var(--g3)' }}>{order.nom_client}</strong> 🙏
           </p>
           <p style={{
-            margin: 0, fontSize: 13, color: 'rgba(255,255,255,.35)',
+            margin: 0, fontSize: 13, color: 'var(--g3)',
             animation: 'successFade .4s .45s both',
           }}>
             Nous vous appellerons au <strong style={{ color: '#C9A84C' }}>{order.telephone}</strong> pour confirmer
@@ -111,7 +111,7 @@ export default function SuccessScreen({ order, onClose }) {
           animation: 'successFade .4s .5s both',
         }}>
           <div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,.3)', fontWeight: 800, letterSpacing: '.08em', marginBottom: 3 }}>
+            <div style={{ fontSize: 10, color: 'var(--g3)', fontWeight: 800, letterSpacing: '.08em', marginBottom: 3 }}>
               NUMÉRO DE SUIVI
             </div>
             <div style={{ fontSize: 16, fontWeight: 900, color: '#C9A84C', letterSpacing: '.05em' }}>
@@ -131,21 +131,21 @@ export default function SuccessScreen({ order, onClose }) {
         {/* ── Récap commande ── */}
         <div style={{
           margin: '0 20px 16px',
-          background: '#141414', border: '1px solid rgba(255,255,255,.06)',
+          background: 'var(--card)', border: '1px solid var(--g3)',
           borderRadius: 12, overflow: 'hidden',
           animation: 'successFade .4s .55s both',
         }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,.06)', fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em' }}>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--g3)', fontSize: 11, fontWeight: 800, color: 'var(--g3)', letterSpacing: '.06em' }}>
             ARTICLES COMMANDÉS
           </div>
           {items.map((item, i) => (
             <div key={i} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '9px 14px',
-              borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,.04)' : 'none',
+              borderBottom: i < items.length - 1 ? '1px solid var(--g3)' : 'none',
             }}>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.7)' }}>
-                {item.nom} <span style={{ color: 'rgba(255,255,255,.3)' }}>×{item.qty}</span>
+              <span style={{ fontSize: 13, color: 'var(--g3)' }}>
+                {item.nom} <span style={{ color: 'var(--g3)' }}>×{item.qty}</span>
               </span>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#C9A84C' }}>
                 {fmt(Number(item.prix) * item.qty)}
@@ -154,10 +154,10 @@ export default function SuccessScreen({ order, onClose }) {
           ))}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,.08)',
-            background: 'rgba(255,255,255,.02)',
+            padding: '10px 14px', borderTop: '1px solid var(--g3)',
+            background: 'var(--g3)',
           }}>
-            <span style={{ fontSize: 14, fontWeight: 900, color: 'white' }}>Total payé</span>
+            <span style={{ fontSize: 14, fontWeight: 900, color:'var(--g3)' }}>Total payé</span>
             <span style={{ fontSize: 18, fontWeight: 900, color: '#C9A84C' }}>{fmt(order.total)}</span>
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function SuccessScreen({ order, onClose }) {
           margin: '0 20px 20px',
           animation: 'successFade .4s .6s both',
         }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em', marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--g3)', letterSpacing: '.06em', marginBottom: 10 }}>
             PROCHAINES ÉTAPES
           </div>
           <div style={{ display: 'flex', gap: 0 }}>
@@ -176,19 +176,19 @@ export default function SuccessScreen({ order, onClose }) {
                 {i < steps.length - 1 && (
                   <div style={{
                     position: 'absolute', top: 16, left: '50%', right: '-50%', height: 2,
-                    background: s.done ? '#C9A84C' : 'rgba(255,255,255,.08)',
+                    background: s.done ? '#C9A84C' : 'var(--g3)',
                     transition: 'background .3s',
                   }} />
                 )}
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%',
-                  background: s.done ? 'rgba(201,168,76,.2)' : 'rgba(255,255,255,.05)',
-                  border: `2px solid ${s.done ? '#C9A84C' : 'rgba(255,255,255,.1)'}`,
+                  background: s.done ? 'rgba(201,168,76,.2)' : 'var(--g3)',
+                  border: `2px solid ${s.done ? '#C9A84C' : 'var(--g3)'}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 14, margin: '0 auto 6px',
                   position: 'relative', zIndex: 1,
                 }}>{s.icon}</div>
-                <div style={{ fontSize: 10, color: s.done ? '#C9A84C' : 'rgba(255,255,255,.3)', fontWeight: 700, lineHeight: 1.3 }}>
+                <div style={{ fontSize: 10, color: s.done ? '#C9A84C' : 'var(--g3)', fontWeight: 700, lineHeight: 1.3 }}>
                   {s.label}
                 </div>
               </div>
@@ -201,7 +201,7 @@ export default function SuccessScreen({ order, onClose }) {
           <button onClick={() => openWA(order)} style={{
             width: '100%', padding: '13px',
             background: '#25D366', border: 'none', borderRadius: 12,
-            color: 'white', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+            color:'var(--g3)', fontSize: 14, fontWeight: 800, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
@@ -212,8 +212,8 @@ export default function SuccessScreen({ order, onClose }) {
 
           <button onClick={onClose} style={{
             width: '100%', padding: '12px',
-            background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)',
-            borderRadius: 12, color: 'rgba(255,255,255,.6)',
+            background: 'var(--g3)', border: '1px solid var(--g3)',
+            borderRadius: 12, color: 'var(--g3)',
             fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}>
             ← Retour à la boutique
