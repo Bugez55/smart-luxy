@@ -49,7 +49,7 @@ export default function AnnouncementBar() {
           <span key={i} style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             padding: '0 40px', fontSize: 12, fontWeight: 600,
-            color: 'rgba(255,255,255,.75)', letterSpacing: '.04em',
+            color: 'var(--g3)', letterSpacing: '.04em',
           }}>
             {msg}
             <span style={{ color: 'rgba(201,168,76,.4)', fontSize: 10 }}>✦</span>
