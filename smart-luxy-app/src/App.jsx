@@ -297,15 +297,15 @@ export default function App() {
         {/* Infos contact */}
         <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:10, flexWrap:'wrap' }}>
           <a href={`tel:+${CONFIG.telephone}`} style={{
-            color:'rgba(255,255,255,.4)', fontSize:12, textDecoration:'none',
+            color:'var(--g3)', fontSize:12, textDecoration:'none',
             display:'flex', alignItems:'center', gap:4,
           }}>📞 +{CONFIG.telephone}</a>
-          <span style={{ color:'rgba(255,255,255,.1)', fontSize:12 }}>|</span>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
           <a href={`mailto:${CONFIG.email}`} style={{
-            color:'rgba(255,255,255,.4)', fontSize:12, textDecoration:'none',
+            color:'var(--g3)', fontSize:12, textDecoration:'none',
             display:'flex', alignItems:'center', gap:4,
           }}>✉️ {CONFIG.email}</a>
-          <span style={{ color:'rgba(255,255,255,.1)', fontSize:12 }}>|</span>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
           <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noreferrer" style={{
             color:'rgba(37,211,102,.5)', fontSize:12, textDecoration:'none',
             display:'flex', alignItems:'center', gap:4,
@@ -317,45 +317,45 @@ export default function App() {
             onClick={() => setPolitiqueTab('confidentialite')}
             style={{
               background:'none', border:'none',
-              color:'rgba(255,255,255,.3)', fontSize:12,
+              color:'var(--g3)', fontSize:12,
               cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
               padding:0, transition:'color .2s',
             }}
             onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.3)'}
+            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
           >
             🔒 Politique de confidentialité
           </button>
-          <span style={{ color:'rgba(255,255,255,.1)', fontSize:12 }}>|</span>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
           <button
             onClick={() => setPolitiqueTab('retour')}
             style={{
               background:'none', border:'none',
-              color:'rgba(255,255,255,.3)', fontSize:12,
+              color:'var(--g3)', fontSize:12,
               cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
               padding:0, transition:'color .2s',
             }}
             onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.3)'}
+            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
           >
             🔄 Politique de retour
           </button>
-          <span style={{ color:'rgba(255,255,255,.1)', fontSize:12 }}>|</span>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
           <button
             onClick={() => setTrackingOpen(true)}
             style={{
               background:'none', border:'none',
-              color:'rgba(255,255,255,.3)', fontSize:12,
+              color:'var(--g3)', fontSize:12,
               cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
               padding:0, transition:'color .2s',
             }}
             onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,.3)'}
+            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
           >
             📦 Suivre ma commande
           </button>
         </div>
-        <p style={{ color:'rgba(255,255,255,.12)', fontSize:11, marginTop:12 }}>
+        <p style={{ color:'var(--g3)', fontSize:11, marginTop:12 }}>
           © {new Date().getFullYear()} Smart Luxy · Tous droits réservés
         </p>
       </footer>
