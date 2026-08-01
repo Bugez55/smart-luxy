@@ -190,7 +190,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
     }} onClick={e => e.target === e.currentTarget && onClose()}>
 
       <div style={{
-        background: '#141414',
+        background: 'var(--card)',
         width: '100%', maxWidth: 680,
         maxHeight: '92vh',
         borderRadius: '20px 20px 0 0',
@@ -201,14 +201,14 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
 
         {/* ── Header ── */}
         <div style={{
-          background: '#1a1a1a',
+          background: 'var(--card2)',
           borderBottom: '1px solid #2a2a2a',
           padding: '16px 16px 12px',
           flexShrink: 0,
         }}>
           {/* Row 1: titre + actions */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontWeight: 900, fontSize: 15, color: 'white', letterSpacing: '-.02em' }}>
+            <div style={{ fontWeight: 900, fontSize: 15, color:'var(--g3)', letterSpacing: '-.02em' }}>
               Smart <span style={{ color: '#C9A84C' }}>Luxy</span>
               <span style={{ color: '#555', fontWeight: 400, marginLeft: 6, fontSize: 13 }}>· Informations légales</span>
             </div>
@@ -236,10 +236,10 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
             ].map(t => (
               <button key={t.key} onClick={() => setTab(t.key)} style={{
                 padding: '10px 8px',
-                background: tab === t.key ? '#C9A84C' : 'rgba(255,255,255,.04)',
+                background: tab === t.key ? '#C9A84C' : 'var(--g3)',
                 border: '1px solid ' + (tab === t.key ? '#C9A84C' : '#2e2e2e'),
                 borderRadius: 10,
-                color: tab === t.key ? '#0e0e0e' : 'rgba(255,255,255,.5)',
+                color: tab === t.key ? '#0e0e0e' : 'var(--g3)',
                 fontSize: 12, fontWeight: 800, cursor: 'pointer',
                 transition: 'all .2s', lineHeight: 1.3,
               }}>
@@ -261,7 +261,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
             border: '1px solid rgba(201,168,76,.15)', borderRadius: 14,
           }}>
             <div style={{ fontSize: 32, marginBottom: 6 }}>{current.emoji}</div>
-            <h1 style={{ fontSize: 18, fontWeight: 900, color: 'white', margin: '0 0 4px', letterSpacing: '-.02em' }}>
+            <h1 style={{ fontSize: 18, fontWeight: 900, color:'var(--g3)', margin: '0 0 4px', letterSpacing: '-.02em' }}>
               {current.title}
             </h1>
             <div style={{ fontSize: 11, color: '#555' }}>{current.date}</div>
@@ -290,7 +290,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
               <div style={{ padding: '12px 14px' }}>
                 <p style={{
                   fontSize: 13.5, lineHeight: 1.9,
-                  color: 'rgba(255,255,255,.65)',
+                  color: 'var(--g3)',
                   margin: 0, whiteSpace: 'pre-line',
                 }}>
                   {s.text}
@@ -302,7 +302,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           {/* Footer légal */}
           <div style={{
             marginTop: 20, padding: '14px',
-            background: '#1a1a1a', border: '1px solid #272727',
+            background: 'var(--card2)', border: '1px solid #272727',
             borderRadius: 12, textAlign: 'center',
           }}>
             <div style={{ fontSize: 12, color: '#444', lineHeight: 1.8 }}>
