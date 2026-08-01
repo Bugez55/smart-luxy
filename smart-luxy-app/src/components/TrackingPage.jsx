@@ -66,12 +66,12 @@ export default function TrackingPage({ onClose }) {
           padding:'16px 20px', borderBottom:'1px solid rgba(201,168,76,.1)',
           display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0,
         }}>
-          <h2 style={{ margin:0, fontSize:18, fontWeight:900, color:'white' }}>
+          <h2 style={{ margin:0, fontSize:18, fontWeight:900, color:'var(--g3)' }}>
             📦 Suivi de commande
           </h2>
           <button onClick={handleClose} style={{
-            background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)',
-            borderRadius:'50%', width:32, height:32, color:'white',
+            background:'var(--g3)', border:'1px solid var(--g3)',
+            borderRadius:'50%', width:32, height:32, color:'var(--g3)',
             fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
           }}>✕</button>
         </div>
@@ -79,7 +79,7 @@ export default function TrackingPage({ onClose }) {
         {/* Corps */}
         <div style={{ flex:1, overflowY:'auto', padding:20 }}>
           {/* Champ de recherche */}
-          <p style={{ fontSize:13, color:'rgba(255,255,255,.45)', marginBottom:12 }}>
+          <p style={{ fontSize:13, color:'var(--g3)', marginBottom:12 }}>
             Entrez votre numéro de commande (ex: SL-ABC123)
           </p>
           <div style={{ display:'flex', gap:8, marginBottom:20 }}>
@@ -89,10 +89,10 @@ export default function TrackingPage({ onClose }) {
               onKeyDown={e => e.key === 'Enter' && search()}
               placeholder="SL-XXXXXX"
               style={{
-                flex:1, background:'rgba(255,255,255,.05)',
-                border:'1px solid rgba(255,255,255,.12)',
+                flex:1, background:'var(--g3)',
+                border:'1px solid var(--g3)',
                 borderRadius:10, padding:'11px 14px',
-                color:'white', fontSize:15, outline:'none',
+                color:'var(--g3)', fontSize:15, outline:'none',
                 fontFamily:'monospace', letterSpacing:'.05em',
               }}
             />
@@ -102,7 +102,7 @@ export default function TrackingPage({ onClose }) {
               style={{
                 background:'linear-gradient(135deg,#C9A84C,#a8832e)',
                 border:'none', borderRadius:10, padding:'11px 20px',
-                color:'#0a0a0a', fontSize:14, fontWeight:900, cursor:'pointer',
+                color:'var(--bk)', fontSize:14, fontWeight:900, cursor:'pointer',
                 minWidth:80,
               }}
             >
@@ -130,7 +130,7 @@ export default function TrackingPage({ onClose }) {
                 <div>
                   <div style={{ fontSize:11, color:'#555', fontWeight:800, textTransform:'uppercase', marginBottom:3 }}>Commande</div>
                   <div style={{ fontSize:16, fontWeight:900, color:'#C9A84C', fontFamily:'monospace' }}>{order.id}</div>
-                  <div style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginTop:2 }}>
+                  <div style={{ fontSize:12, color:'var(--g3)', marginTop:2 }}>
                     {new Date(order.created_at).toLocaleDateString('fr-DZ', { day:'2-digit', month:'long', year:'numeric' })}
                   </div>
                 </div>
@@ -164,7 +164,7 @@ export default function TrackingPage({ onClose }) {
                       {/* Icône */}
                       <div style={{
                         width:38, height:38, borderRadius:'50%', flexShrink:0,
-                        background: done ? (current ? 'rgba(201,168,76,.2)' : 'rgba(201,168,76,.1)') : '#1a1a1a',
+                        background: done ? (current ? 'rgba(201,168,76,.2)' : 'rgba(201,168,76,.1)') : 'var(--card2)',
                         border: `2px solid ${done ? '#C9A84C' : '#2a2a2a'}`,
                         display:'flex', alignItems:'center', justifyContent:'center',
                         fontSize:16, transition:'all .3s',
@@ -188,7 +188,7 @@ export default function TrackingPage({ onClose }) {
                             }}>EN COURS</span>
                           )}
                         </div>
-                        <div style={{ fontSize:12, color: done ? 'rgba(255,255,255,.4)' : '#333', marginTop:2 }}>
+                        <div style={{ fontSize:12, color: done ? 'var(--g3)' : '#333', marginTop:2 }}>
                           {step.desc}
                         </div>
                       </div>
@@ -205,13 +205,13 @@ export default function TrackingPage({ onClose }) {
                 <div style={{ fontSize:11, fontWeight:800, color:'#555', textTransform:'uppercase', marginBottom:10 }}>Livraison</div>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
                   <span style={{ color:'#555' }}>Mode</span>
-                  <span style={{ color:'white', fontWeight:700 }}>
+                  <span style={{ color:'var(--g3)', fontWeight:700 }}>
                     {order.mode_livraison === 'bureau' ? '📦 Retrait bureau (Tizi Ouzou)' : '🏠 À domicile'}
                   </span>
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between' }}>
                   <span style={{ color:'#555' }}>Destination</span>
-                  <span style={{ color:'white' }}>{order.wilaya} — {order.commune}</span>
+                  <span style={{ color:'var(--g3)' }}>{order.wilaya} — {order.commune}</span>
                 </div>
               </div>
 
@@ -223,7 +223,7 @@ export default function TrackingPage({ onClose }) {
                 <div style={{ fontSize:11, fontWeight:800, color:'#555', textTransform:'uppercase', marginBottom:10 }}>Articles</div>
                 {items.map((item, i) => (
                   <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom: i < items.length-1 ? 6 : 0 }}>
-                    <span style={{ color:'rgba(255,255,255,.6)' }}>{item.nom} ×{item.qty}</span>
+                    <span style={{ color:'var(--g3)' }}>{item.nom} ×{item.qty}</span>
                     <span style={{ color:'#C9A84C', fontWeight:700 }}>{fmt(Number(item.prix)*item.qty)}</span>
                   </div>
                 ))}
