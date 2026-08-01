@@ -4,7 +4,7 @@
 export default function NotFound() {
   return (
     <div style={{
-      minHeight: '100vh', background: '#0a0a0a',
+      minHeight: '100vh', background: 'var(--bk, #0a0a0a)',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: '32px 20px', textAlign: 'center',
