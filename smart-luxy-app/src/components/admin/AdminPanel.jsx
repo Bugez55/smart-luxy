@@ -972,6 +972,7 @@ function ThemeEditor({ onToast }) {
     theme_accent: '#C9A84C', theme_text: '#e0e0e0', theme_text_sub: '#888888',
   })
   const [saving, setSaving] = useState(false)
+  const [activePreset, setActivePreset] = useState(null)
 
   useEffect(() => {
     getSettings().then(s => {
@@ -986,9 +987,8 @@ function ThemeEditor({ onToast }) {
     })
   }, [])
 
-  function apply(key, val) {
-    const t = { ...theme, [key]: val }
-    setTheme(t)
+  // Applique un objet CSS complet au DOM en une seule passe
+  function applyToDOM(t) {
     const r = document.documentElement
     r.style.setProperty('--bk', t.theme_bg)
     r.style.setProperty('--bk2', t.theme_bg)
@@ -1002,22 +1002,51 @@ function ThemeEditor({ onToast }) {
     document.body.style.background = t.theme_bg
   }
 
+  // Pour un seul champ modifié manuellement (color picker)
+  function apply(key, val) {
+    setTheme(prev => {
+      const next = { ...prev, [key]: val }
+      applyToDOM(next)
+      return next
+    })
+    setActivePreset(null)
+  }
+
+  // Pour appliquer un preset entier d'un coup — corrige le bug de closure
+  function applyPreset(p, idx) {
+    const next = {
+      theme_bg: p.bg, theme_card: p.card, theme_accent: p.accent,
+      theme_text: p.text, theme_text_sub: p.sub,
+    }
+    setTheme(next)
+    applyToDOM(next)
+    setActivePreset(idx)
+  }
+
   async function save() {
     setSaving(true)
     for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
     setSaving(false)
-    onToast && onToast('✅ Thème sauvegardé !', 'default')
+    onToast && onToast('✅ Thème sauvegardé ! Visible pour tous les clients.', 'default')
   }
 
   const PRESETS = [
-    { name:'🌑 Noir doré',      bg:'#0a0a0a', card:'#141414', accent:'#C9A84C', text:'#e0e0e0', sub:'#888888' },
-    { name:'🤍 Blanc élégant',  bg:'#f5f5f0', card:'#ffffff', accent:'#C9A84C', text:'#1a1a1a', sub:'#666666' },
-    { name:'🌿 Vert naturel',   bg:'#071009', card:'#0f1c0c', accent:'#4caf50', text:'#e0f0e0', sub:'#80b080' },
-    { name:'💙 Bleu nuit',      bg:'#050d1a', card:'#0d1b2e', accent:'#3b82f6', text:'#e0eaff', sub:'#7090b0' },
-    { name:'🌹 Rose luxe',      bg:'#120a0f', card:'#1e0f18', accent:'#e91e8c', text:'#ffe0f0', sub:'#b070a0' },
-    { name:'🔴 Rouge passion',  bg:'#0f0505', card:'#1a0a0a', accent:'#ef4444', text:'#ffe8e8', sub:'#c08080' },
-    { name:'🟣 Violet royal',   bg:'#08050f', card:'#120c1e', accent:'#9333ea', text:'#f0e8ff', sub:'#a080c0' },
-    { name:'🟠 Orange chaud',   bg:'#0f0800', card:'#1a1000', accent:'#f97316', text:'#fff3e0', sub:'#c09060' },
+    { name:'🌑 Noir doré',        bg:'#0a0a0a', card:'#141414', accent:'#C9A84C', text:'#e0e0e0', sub:'#888888' },
+    { name:'🤍 Blanc élégant',    bg:'#f5f5f0', card:'#ffffff', accent:'#C9A84C', text:'#1a1a1a', sub:'#666666' },
+    { name:'⚪ Gris minimal',     bg:'#f0f0f2', card:'#ffffff', accent:'#111111', text:'#1a1a1a', sub:'#707070' },
+    { name:'🌿 Vert naturel',     bg:'#071009', card:'#0f1c0c', accent:'#4caf50', text:'#e0f0e0', sub:'#80b080' },
+    { name:'🍃 Vert menthe clair',bg:'#f0faf5', card:'#ffffff', accent:'#0d9488', text:'#0f2e24', sub:'#4a8577' },
+    { name:'💙 Bleu nuit',        bg:'#050d1a', card:'#0d1b2e', accent:'#3b82f6', text:'#e0eaff', sub:'#7090b0' },
+    { name:'🩵 Bleu ciel clair',  bg:'#f0f7ff', card:'#ffffff', accent:'#2563eb', text:'#0f1f3d', sub:'#5878a8' },
+    { name:'🌹 Rose luxe',        bg:'#120a0f', card:'#1e0f18', accent:'#e91e8c', text:'#ffe0f0', sub:'#b070a0' },
+    { name:'🩷 Rose poudré clair',bg:'#fdf2f6', card:'#ffffff', accent:'#db2777', text:'#3d0f22', sub:'#a06078' },
+    { name:'🔴 Rouge passion',    bg:'#0f0505', card:'#1a0a0a', accent:'#ef4444', text:'#ffe8e8', sub:'#c08080' },
+    { name:'🟣 Violet royal',     bg:'#08050f', card:'#120c1e', accent:'#9333ea', text:'#f0e8ff', sub:'#a080c0' },
+    { name:'💜 Lavande clair',    bg:'#f7f4ff', card:'#ffffff', accent:'#7c3aed', text:'#1f1233', sub:'#7a6699' },
+    { name:'🟠 Orange chaud',     bg:'#0f0800', card:'#1a1000', accent:'#f97316', text:'#fff3e0', sub:'#c09060' },
+    { name:'🍑 Pêche clair',      bg:'#fff7f0', card:'#ffffff', accent:'#ea580c', text:'#331c0d', sub:'#a37a5c' },
+    { name:'⚫ Charbon mat',      bg:'#111111', card:'#1c1c1c', accent:'#d4d4d4', text:'#f0f0f0', sub:'#8a8a8a' },
+    { name:'🟡 Sable doré clair', bg:'#faf6ed', card:'#ffffff', accent:'#b8860b', text:'#2e2410', sub:'#8a7a55' },
   ]
 
   const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
@@ -1034,17 +1063,18 @@ function ThemeEditor({ onToast }) {
       <div style={sec}>
         <span style={lbl}>Palettes prêtes à l'emploi</span>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-          {PRESETS.map(p => (
-            <button key={p.name} onClick={() => {
-              apply('theme_bg', p.bg)
-              apply('theme_card', p.card)
-              apply('theme_accent', p.accent)
-              apply('theme_text', p.text)
-              apply('theme_text_sub', p.sub)
-            }} style={{
-              background: p.card, border: `2px solid ${p.accent}`, borderRadius:12,
-              padding:'12px 10px', cursor:'pointer', textAlign:'left', transition:'transform .15s',
+          {PRESETS.map((p, idx) => (
+            <button key={p.name} onClick={() => applyPreset(p, idx)} style={{
+              background: p.card,
+              border: `2px solid ${activePreset === idx ? p.accent : p.accent + '80'}`,
+              borderRadius:12, padding:'12px 10px', cursor:'pointer', textAlign:'left',
+              transition:'transform .15s, box-shadow .15s',
+              boxShadow: activePreset === idx ? `0 0 0 2px ${p.accent}` : 'none',
+              position:'relative',
             }}>
+              {activePreset === idx && (
+                <div style={{ position:'absolute', top:6, right:6, width:16, height:16, borderRadius:'50%', background:p.accent, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:p.card, fontWeight:900 }}>✓</div>
+              )}
               <div style={{ display:'flex', gap:4, marginBottom:6 }}>
                 {[p.bg, p.card, p.accent, p.text].map((col, i) => (
                   <div key={i} style={{ width:14, height:14, borderRadius:3, background:col, border:'1px solid rgba(255,255,255,.15)' }} />
@@ -1099,7 +1129,7 @@ function ThemeEditor({ onToast }) {
 
       {/* Boutons */}
       <div style={{ display:'flex', gap:8 }}>
-        <button onClick={() => { apply('theme_bg','#0a0a0a'); apply('theme_card','#141414'); apply('theme_accent','#C9A84C'); apply('theme_text','#e0e0e0'); apply('theme_text_sub','#888888') }}
+        <button onClick={() => applyPreset(PRESETS[0], 0)}
           style={{ flex:1, padding:'11px', background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, color:'rgba(255,255,255,.5)', fontSize:12, fontWeight:800, cursor:'pointer' }}>
           ↺ Réinitialiser
         </button>
