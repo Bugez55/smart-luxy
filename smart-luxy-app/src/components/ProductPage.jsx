@@ -213,7 +213,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid var(--g3)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
         <button onClick={onClose} style={{ background:'var(--g3)', border:'none', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
         <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
-        <button onClick={() => setLang(l => l==='fr'?'ar':'fr')} style={{ background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)', borderRadius:20, padding:'4px 10px', color:'#C9A84C', fontSize:11, fontWeight:800, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap' }}>
+        <button onClick={() => setLang(l => l==='fr'?'ar':'fr')} style={{ background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)', borderRadius:20, padding:'4px 10px', color:'var(--br)', fontSize:11, fontWeight:800, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap' }}>
           {lang==='fr' ? '🇩🇿 عربي' : '🇫🇷 FR'}
         </button>
         {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
@@ -330,9 +330,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
         {/* Prix */}
         <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:14 }}>
-          <span style={{ fontSize:30, fontWeight:900, color:'#C9A84C' }}>{fmt(p.prix)}</span>
+          <span style={{ fontSize:30, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
           {p.prix_old && <>
-            <span style={{ fontSize:15, color:'#555', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
+            <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
             <span style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'2px 8px', borderRadius:6 }}>-{disc}%</span>
           </>}
         </div>
@@ -368,7 +368,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         <div style={{ padding:'0 16px 16px' }}>
           {specs.map((s,i) => (
             <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
-              <span style={{ color:'#C9A84C', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
+              <span style={{ color:'var(--br)', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
               <span style={{ color:'var(--g3)', fontSize:14, lineHeight:1.5 }}>{s}</span>
             </div>
           ))}
@@ -404,7 +404,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             <div key={i} style={{ marginBottom:6, borderRadius:12, overflow:'hidden', border:'1px solid var(--g3)' }}>
               <button onClick={() => setOpenFaq(openFaq===i?null:i)} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background:openFaq===i?'rgba(201,168,76,.1)':'var(--card)', border:'none', padding:'13px 14px', color:'var(--g3)', fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'left', gap:8 }}>
                 <span style={{ flex:1 }}>{item.q}</span>
-                <span style={{ color:'#C9A84C', fontSize:18, flexShrink:0, fontWeight:900 }}>{openFaq===i?'−':'+'}</span>
+                <span style={{ color:'var(--br)', fontSize:18, flexShrink:0, fontWeight:900 }}>{openFaq===i?'−':'+'}</span>
               </button>
               {openFaq===i && (
                 <div style={{ background:'var(--card)', padding:'12px 14px', fontSize:13, color:'var(--g3)', lineHeight:1.7, borderTop:'1px solid var(--g3)' }}>
@@ -473,7 +473,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ background:'var(--card2)', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
                 <span style={{ color:'var(--g3)', fontWeight:900, fontSize:20, minWidth:32, textAlign:'center' }}>{qty}</span>
-                <button onClick={() => setQty(q => q+1)} style={{ background:'var(--card2)', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'#C9A84C', fontSize:20, cursor:'pointer', fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+                <button onClick={() => setQty(q => q+1)} style={{ background:'var(--card2)', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'var(--br)', fontSize:20, cursor:'pointer', fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
               </div>
             </div>
           )}
@@ -497,7 +497,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             <div style={{ position:'relative' }}>
               <div onClick={() => { setWilayaOpen(o=>!o); setCommuneOpen(false) }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', color:form.wilaya?'var(--g3)':'var(--g4)' }}>
                 <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{form.wilaya || (lang==='ar' ? 'اختر الولاية' : 'Choisir une wilaya')}</span>
-                <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{wilayaOpen?'▲':'▼'}</span>
+                <span style={{ color:'var(--br)', fontSize:10, flexShrink:0, marginLeft:8 }}>{wilayaOpen?'▲':'▼'}</span>
               </div>
               {wilayaOpen && (
                 <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'var(--card2)', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
@@ -517,7 +517,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             <div style={{ position:'relative' }}>
               <div onClick={() => { if(form.wilaya){setCommuneOpen(o=>!o); setWilayaOpen(false)} }} style={{ ...inp, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:form.wilaya?'pointer':'not-allowed', opacity:form.wilaya?1:.5, color:form.commune?'var(--g3)':'var(--g4)' }}>
                 <span>{form.commune||(form.wilaya?lang==='ar' ? 'اختر البلدية' : 'Choisir une commune':lang==='ar' ? 'اختر الولاية أولاً' : "Choisir d'abord une wilaya")}</span>
-                <span style={{ color:'#C9A84C', fontSize:10, flexShrink:0, marginLeft:8 }}>{communeOpen?'▲':'▼'}</span>
+                <span style={{ color:'var(--br)', fontSize:10, flexShrink:0, marginLeft:8 }}>{communeOpen?'▲':'▼'}</span>
               </div>
               {communeOpen && (
                 <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'var(--card2)', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
@@ -629,11 +629,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 {/* Instructions CCP */}
                 {modePaiement === 'ccp' && (
                   <div style={{ background:'rgba(201,168,76,.08)', border:'1px solid rgba(201,168,76,.2)', borderRadius:10, padding:'12px 14px' }}>
-                    <div style={{ fontSize:12, fontWeight:800, color:'#C9A84C', marginBottom:6 }}>
+                    <div style={{ fontSize:12, fontWeight:800, color:'var(--br)', marginBottom:6 }}>
                       🏦 {lang==='ar' ? 'معلومات التحويل' : 'Informations pour le virement'}
                     </div>
                     <div style={{ fontSize:13, color:'var(--g3)', marginBottom:4 }}>
-                      <strong>{lang==='ar' ? 'رقم CCP:' : 'Numéro CCP:'}</strong> <span style={{ fontFamily:'monospace', fontSize:15, color:'#C9A84C', fontWeight:900 }}>{paiementInfo.ccp}</span>
+                      <strong>{lang==='ar' ? 'رقم CCP:' : 'Numéro CCP:'}</strong> <span style={{ fontFamily:'monospace', fontSize:15, color:'var(--br)', fontWeight:900 }}>{paiementInfo.ccp}</span>
                     </div>
                     {paiementInfo.ccp_nom && (
                       <div style={{ fontSize:12, color:'var(--g3)', marginBottom:8 }}>
@@ -671,7 +671,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, borderTop:'1px solid var(--g3)', fontSize:17, fontWeight:900, color:'var(--g3)' }}>
                 <span>💰 Total à payer</span>
-                <span style={{ color:'#C9A84C' }}>{fmt(totalFinal)}</span>
+                <span style={{ color:'var(--br)' }}>{fmt(totalFinal)}</span>
               </div>
             </div>
           )}
@@ -769,7 +769,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 </div>
                 <div style={{ padding:'8px 10px' }}>
                   <div style={{ fontSize:11, color:'var(--g3)', fontWeight:700, marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{sim.nom}</div>
-                  <div style={{ fontSize:12, color:'#C9A84C', fontWeight:800 }}>{fmt(sim.prix)}</div>
+                  <div style={{ fontSize:12, color:'var(--br)', fontWeight:800 }}>{fmt(sim.prix)}</div>
                 </div>
               </div>
             ))}
@@ -791,7 +791,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         {(p.img||(imgs[0]?.url)) && <img src={p.img||(imgs[0]?.url)} alt="" style={{ width:42, height:42, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:12, color:'var(--g3)', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.nom}</div>
-          <div style={{ fontSize:14, color:'#C9A84C', fontWeight:900 }}>{fmt(activeBundle?activeBundle.prix:p.prix)}</div>
+          <div style={{ fontSize:14, color:'var(--br)', fontWeight:900 }}>{fmt(activeBundle?activeBundle.prix:p.prix)}</div>
         </div>
         <button
           disabled={outOfStock}
