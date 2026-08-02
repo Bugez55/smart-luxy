@@ -133,7 +133,7 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
                   <span style={{ fontSize: 13, color: '#86efac', fontWeight: 700 }}>
                     🎟️ {promoData.code} — -{promoData.reduction}%
                   </span>
-                  <button onClick={removePromo} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16 }}>✕</button>
+                  <button onClick={removePromo} style={{ background: 'none', border: 'none', color: 'var(--g4)', cursor: 'pointer', fontSize: 16 }}>✕</button>
                 </div>
               )}
             </div>
