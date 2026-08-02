@@ -128,15 +128,15 @@ export default function TrackingPage({ onClose }) {
                 display:'flex', justifyContent:'space-between', alignItems:'center',
               }}>
                 <div>
-                  <div style={{ fontSize:11, color:'#555', fontWeight:800, textTransform:'uppercase', marginBottom:3 }}>Commande</div>
-                  <div style={{ fontSize:16, fontWeight:900, color:'#C9A84C', fontFamily:'monospace' }}>{order.id}</div>
+                  <div style={{ fontSize:11, color:'var(--g4)', fontWeight:800, textTransform:'uppercase', marginBottom:3 }}>Commande</div>
+                  <div style={{ fontSize:16, fontWeight:900, color:'var(--br)', fontFamily:'monospace' }}>{order.id}</div>
                   <div style={{ fontSize:12, color:'var(--g3)', marginTop:2 }}>
                     {new Date(order.created_at).toLocaleDateString('fr-DZ', { day:'2-digit', month:'long', year:'numeric' })}
                   </div>
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:11, color:'#555', fontWeight:800, textTransform:'uppercase', marginBottom:3 }}>Total</div>
-                  <div style={{ fontSize:18, fontWeight:900, color:'#C9A84C' }}>{fmt(order.total)}</div>
+                  <div style={{ fontSize:11, color:'var(--g4)', fontWeight:800, textTransform:'uppercase', marginBottom:3 }}>Total</div>
+                  <div style={{ fontSize:18, fontWeight:900, color:'var(--br)' }}>{fmt(order.total)}</div>
                 </div>
               </div>
 
@@ -145,7 +145,7 @@ export default function TrackingPage({ onClose }) {
                 background:'#1e1e1e', border:'1px solid #2a2a2a',
                 borderRadius:12, padding:'16px', marginBottom:16,
               }}>
-                <div style={{ fontSize:11, fontWeight:800, color:'#555', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:14 }}>
+                <div style={{ fontSize:11, fontWeight:800, color:'var(--g4)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:14 }}>
                   Statut de la commande
                 </div>
                 {STEPS.map((step, i) => {
@@ -182,7 +182,7 @@ export default function TrackingPage({ onClose }) {
                           {step.label}
                           {current && (
                             <span style={{
-                              background:'rgba(201,168,76,.15)', color:'#C9A84C',
+                              background:'rgba(201,168,76,.15)', color:'var(--br)',
                               fontSize:10, fontWeight:800, padding:'2px 8px',
                               borderRadius:10, border:'1px solid rgba(201,168,76,.25)',
                             }}>EN COURS</span>
@@ -202,15 +202,15 @@ export default function TrackingPage({ onClose }) {
                 background:'#1e1e1e', border:'1px solid #2a2a2a',
                 borderRadius:12, padding:'12px 16px', marginBottom:16, fontSize:13,
               }}>
-                <div style={{ fontSize:11, fontWeight:800, color:'#555', textTransform:'uppercase', marginBottom:10 }}>Livraison</div>
+                <div style={{ fontSize:11, fontWeight:800, color:'var(--g4)', textTransform:'uppercase', marginBottom:10 }}>Livraison</div>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-                  <span style={{ color:'#555' }}>Mode</span>
+                  <span style={{ color:'var(--g4)' }}>Mode</span>
                   <span style={{ color:'var(--g3)', fontWeight:700 }}>
                     {order.mode_livraison === 'bureau' ? '📦 Retrait bureau (Tizi Ouzou)' : '🏠 À domicile'}
                   </span>
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between' }}>
-                  <span style={{ color:'#555' }}>Destination</span>
+                  <span style={{ color:'var(--g4)' }}>Destination</span>
                   <span style={{ color:'var(--g3)' }}>{order.wilaya} — {order.commune}</span>
                 </div>
               </div>
@@ -220,11 +220,11 @@ export default function TrackingPage({ onClose }) {
                 background:'#1e1e1e', border:'1px solid #2a2a2a',
                 borderRadius:12, padding:'12px 16px', fontSize:13,
               }}>
-                <div style={{ fontSize:11, fontWeight:800, color:'#555', textTransform:'uppercase', marginBottom:10 }}>Articles</div>
+                <div style={{ fontSize:11, fontWeight:800, color:'var(--g4)', textTransform:'uppercase', marginBottom:10 }}>Articles</div>
                 {items.map((item, i) => (
                   <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom: i < items.length-1 ? 6 : 0 }}>
                     <span style={{ color:'var(--g3)' }}>{item.nom} ×{item.qty}</span>
-                    <span style={{ color:'#C9A84C', fontWeight:700 }}>{fmt(Number(item.prix)*item.qty)}</span>
+                    <span style={{ color:'var(--br)', fontWeight:700 }}>{fmt(Number(item.prix)*item.qty)}</span>
                   </div>
                 ))}
               </div>
