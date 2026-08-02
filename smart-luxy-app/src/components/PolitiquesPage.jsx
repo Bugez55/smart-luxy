@@ -210,7 +210,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ fontWeight: 900, fontSize: 15, color:'var(--g3)', letterSpacing: '-.02em' }}>
               Smart <span style={{ color: '#C9A84C' }}>Luxy</span>
-              <span style={{ color: '#555', fontWeight: 400, marginLeft: 6, fontSize: 13 }}>· Informations légales</span>
+              <span style={{ color: 'var(--g4)', fontWeight: 400, marginLeft: 6, fontSize: 13 }}>· Informations légales</span>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setLang(l => l === 'fr' ? 'ar' : 'fr')} style={{
@@ -222,7 +222,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
               </button>
               <button onClick={onClose} style={{
                 background: '#2a2a2a', border: 'none', borderRadius: '50%',
-                width: 32, height: 32, color: '#aaa', fontSize: 15,
+                width: 32, height: 32, color: 'var(--g4)', fontSize: 15,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>✕</button>
             </div>
@@ -264,7 +264,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
             <h1 style={{ fontSize: 18, fontWeight: 900, color:'var(--g3)', margin: '0 0 4px', letterSpacing: '-.02em' }}>
               {current.title}
             </h1>
-            <div style={{ fontSize: 11, color: '#555' }}>{current.date}</div>
+            <div style={{ fontSize: 11, color: 'var(--g4)' }}>{current.date}</div>
           </div>
 
           {/* Sections */}
@@ -305,7 +305,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
             background: 'var(--card2)', border: '1px solid #272727',
             borderRadius: 12, textAlign: 'center',
           }}>
-            <div style={{ fontSize: 12, color: '#444', lineHeight: 1.8 }}>
+            <div style={{ fontSize: 12, color: 'var(--g4)', lineHeight: 1.8 }}>
               {lang === 'fr'
                 ? `© ${new Date().getFullYear()} Smart Luxy · Algérie 🇩🇿\nTous droits réservés`
                 : `© ${new Date().getFullYear()} Smart Luxy · الجزائر 🇩🇿\nجميع الحقوق محفوظة`
