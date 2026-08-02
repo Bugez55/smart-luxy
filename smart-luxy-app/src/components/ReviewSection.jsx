@@ -138,7 +138,7 @@ export default function ReviewSection({ productId }) {
         <button onClick={() => { setOpen(true); setSent(false) }} style={{
           background: 'rgba(201,168,76,.12)', border: '1px solid rgba(201,168,76,.25)',
           borderRadius: 10, padding: '7px 14px',
-          color: '#C9A84C', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          color:'var(--br)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
         }}>
           ✍️ Laisser un avis
         </button>
@@ -211,7 +211,7 @@ export default function ReviewSection({ productId }) {
                   )}
                   <button onClick={() => fileRef.current?.click()} style={{
                     background: '#222', border: '1px dashed #444', borderRadius: 8,
-                    padding: '8px 14px', color: '#aaa', fontSize: 12, cursor: 'pointer',
+                    padding: '8px 14px', color: 'var(--g4)', fontSize: 12, cursor: 'pointer',
                   }}>
                     {uploading ? '⏳ Upload...' : photoPreview ? '🔄 Changer' : '📁 Ajouter une photo'}
                   </button>
@@ -222,7 +222,7 @@ export default function ReviewSection({ productId }) {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => setOpen(false)} style={{
                   flex: 1, background: 'none', border: '1px solid #333',
-                  borderRadius: 10, padding: '10px', color: '#666',
+                  borderRadius: 10, padding: '10px', color: 'var(--g4)',
                   fontSize: 13, cursor: 'pointer',
                 }}>Annuler</button>
                 <button
