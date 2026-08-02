@@ -173,7 +173,7 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {value || placeholder}
         </span>
-        <span style={{ color: '#C9A84C', fontSize: 10, marginLeft: 8, flexShrink: 0 }}>
+        <span style={{ color:'var(--br)', fontSize: 10, marginLeft: 8, flexShrink: 0 }}>
           {open ? '▲' : '▼'}
         </span>
       </div>
@@ -326,7 +326,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
     WebkitTextSizeAdjust: '100%', touchAction: 'manipulation',
   }
   const labelStyle = {
-    fontSize: 11, fontWeight: 800, color: '#888',
+    fontSize: 11, fontWeight: 800, color: 'var(--g4)',
     textTransform: rtl ? 'none' : 'uppercase',
     letterSpacing: rtl ? 0 : '.05em',
     display: 'block', marginBottom: 5,
@@ -365,14 +365,14 @@ export default function OrderModal({ items, onClose, onSubmit }) {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button onClick={switchLang} style={{
               background: 'rgba(201,168,76,.12)', border: '1px solid rgba(201,168,76,.25)',
-              borderRadius: 20, padding: '4px 12px', color: '#C9A84C',
+              borderRadius: 20, padding: '4px 12px', color:'var(--br)',
               fontSize: 12, fontWeight: 800, cursor: 'pointer',
             }}>
               {lang === 'fr' ? '🇩🇿 عربي' : '🇫🇷 Français'}
             </button>
             <button onClick={onClose} style={{
               background: '#252525', border: 'none', borderRadius: '50%',
-              width: 30, height: 30, color: '#aaa', cursor: 'pointer',
+              width: 30, height: 30, color: 'var(--g4)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
             }}>✕</button>
           </div>
@@ -391,8 +391,8 @@ export default function OrderModal({ items, onClose, onSubmit }) {
                 display: 'flex', justifyContent: 'space-between',
                 fontSize: 13.5, marginBottom: i < items.length - 1 ? 6 : 0,
               }}>
-                <span style={{ color: '#aaa' }}>{item.nom} ×{item.qty}</span>
-                <span style={{ color: '#C9A84C', fontWeight: 700 }}>{fmt(Number(item.prix) * item.qty)}</span>
+                <span style={{ color: 'var(--g4)' }}>{item.nom} ×{item.qty}</span>
+                <span style={{ color:'var(--br)', fontWeight: 700 }}>{fmt(Number(item.prix) * item.qty)}</span>
               </div>
             ))}
           </div>
@@ -425,7 +425,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
           {/* Wilaya + Commune */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div>
-              <label style={labelStyle}>{t.wilaya} <span style={{ color: '#C9A84C' }}>*</span></label>
+              <label style={labelStyle}>{t.wilaya} <span style={{ color:'var(--br)' }}>*</span></label>
               <SearchSelect
                 options={wilayasOptions}
                 value={form.wilaya}
@@ -436,9 +436,9 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             </div>
             <div>
               <label style={labelStyle}>
-                {t.commune} <span style={{ color: '#C9A84C' }}>*</span>
+                {t.commune} <span style={{ color:'var(--br)' }}>*</span>
                 {communes.length > 0 && (
-                  <span style={{ color: '#C9A84C', fontWeight: 400, marginLeft: rtl ? 0 : 4 }}>
+                  <span style={{ color:'var(--br)', fontWeight: 400, marginLeft: rtl ? 0 : 4 }}>
                     ({communes.length})
                   </span>
                 )}
@@ -462,7 +462,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
               borderRadius: 10, padding: '10px 14px', marginBottom: 12,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
-              <span style={{ fontSize: 13, color: '#aaa' }}>
+              <span style={{ fontSize: 13, color: 'var(--g4)' }}>
                 {t.fraisLiv} {modeLiv === 'domicile' ? '🏠' : '📦'}
               </span>
               <span style={{ fontWeight: 800, color: fraisLiv === 0 ? '#4CAF50' : '#C9A84C', fontSize: 15 }}>
@@ -474,11 +474,11 @@ export default function OrderModal({ items, onClose, onSubmit }) {
           {/* Nom + Tel */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div>
-              <label style={labelStyle}>{t.nom} <span style={{ color: '#C9A84C' }}>*</span></label>
+              <label style={labelStyle}>{t.nom} <span style={{ color:'var(--br)' }}>*</span></label>
               <input placeholder={t.nomPh} value={form.nom} onChange={e => set('nom', e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t.tel} <span style={{ color: '#C9A84C' }}>*</span></label>
+              <label style={labelStyle}>{t.tel} <span style={{ color:'var(--br)' }}>*</span></label>
               <input placeholder={t.telPh} value={form.tel} onChange={e => set('tel', e.target.value)} style={inputStyle} type="tel" />
             </div>
           </div>
@@ -500,10 +500,10 @@ export default function OrderModal({ items, onClose, onSubmit }) {
         {/* Footer */}
         <div style={{ background: 'var(--card2)', borderTop: '1px solid #2a2a2a', padding: '12px 16px', flexShrink: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#666' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--g4)' }}>
               <span>{t.totalCmd}</span><span>{fmt(totalProduits)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#666' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--g4)' }}>
               <span>{t.fraisLiv}</span>
               <span style={{ color: fraisLiv === 0 ? '#4CAF50' : '#aaa' }}>
                 {fraisLiv === null ? '—' : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
@@ -511,7 +511,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #2a2a2a', fontSize: 17, fontWeight: 900, color:'var(--g3)' }}>
               <span>{t.totalPayer}</span>
-              <span style={{ color: '#C9A84C' }}>{fmt(totalFinal)}</span>
+              <span style={{ color:'var(--br)' }}>{fmt(totalFinal)}</span>
             </div>
           </div>
 
