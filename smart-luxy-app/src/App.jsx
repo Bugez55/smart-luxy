@@ -182,7 +182,7 @@ export default function App() {
     // n'est jamais renvoyé au navigateur, seulement vrai/faux
     try {
       const { data: validSupabase } = await supabase.rpc('verify_admin_password', { input_password: pw })
-      const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
+      const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Wazyo2026Secure!'
 
       if (validSupabase || pw === pwVercel) {
         localStorage.setItem('sl_admin', '1')
@@ -192,7 +192,7 @@ export default function App() {
       }
     } catch (e) {
       // Fallback si la fonction RPC n'existe pas encore (avant migration SQL)
-      const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
+      const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Wazyo2026Secure!'
       if (pw === pwVercel) {
         localStorage.setItem('sl_admin', '1')
         setAdminAuth(true)
@@ -291,7 +291,7 @@ export default function App() {
       )}
 
       <footer className="footer">
-        <div className="fbn">Smart <em>Luxy</em></div>
+        <div className="fbn">Wazyo</div>
         <p className="ftag">{CONFIG.slogan}</p>
 
         {/* Infos contact */}
@@ -356,7 +356,7 @@ export default function App() {
           </button>
         </div>
         <p style={{ color:'var(--g3)', fontSize:11, marginTop:12 }}>
-          © {new Date().getFullYear()} Smart Luxy · Tous droits réservés
+          © {new Date().getFullYear()} Wazyo · Tous droits réservés
         </p>
       </footer>
 
