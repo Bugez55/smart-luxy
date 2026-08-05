@@ -1,53 +1,104 @@
 import { useState, useEffect } from 'react'
 
 // ══════════════════════════════════════════════
-//  LOGO WAZYO — Mark géométrique + wordmark
+//  LOGO WAZYO — Vague + flèche dorée animées
+//  (inspiré du logo officiel : swoosh + arrow through wordmark)
 // ══════════════════════════════════════════════
 function LogoWazyo() {
   const [loaded, setLoaded] = useState(false)
+  const [hover, setHover] = useState(false)
+
   useEffect(() => { setLoaded(true) }, [])
 
   return (
-    <a href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-      {/* Mark géométrique — zigzag doré dans un anneau */}
+    <a
+      href="/"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 2,
+        position: 'relative',
+      }}
+    >
+      {/* Wordmark avec vague + flèche traversante, comme le logo officiel */}
       <div style={{
-        position: 'relative', width: 38, height: 38, flexShrink: 0,
-        opacity: loaded ? 1 : 0, transform: loaded ? 'scale(1)' : 'scale(.8)',
-        transition: 'opacity .5s ease, transform .5s cubic-bezier(.22,1,.36,1)',
+        position: 'relative', width: 148, height: 40,
+        opacity: loaded ? 1 : 0, transform: loaded ? 'translateY(0)' : 'translateY(6px)',
+        transition: 'opacity .6s ease, transform .6s cubic-bezier(.22,1,.36,1)',
       }}>
-        <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-          <circle cx="19" cy="19" r="17" stroke="var(--br)" strokeWidth="1.6" opacity="0.9" />
+        <svg width="148" height="40" viewBox="0 0 148 40" fill="none">
+          <defs>
+            <linearGradient id="wazyoGold" x1="0" y1="0" x2="148" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#C9A24B" />
+              <stop offset="50%" stopColor="#E9C46A" />
+              <stop offset="100%" stopColor="#C9A24B" />
+            </linearGradient>
+          </defs>
+
+          {/* Texte WAZYO */}
+          <text
+            x="0" y="27"
+            fontFamily="'Fraunces', Georgia, serif"
+            fontWeight="800"
+            fontSize="23"
+            letterSpacing="0.5"
+            fill="var(--g3)"
+          >
+            WAZYO
+          </text>
+
+          {/* Vague dorée qui traverse le mot, glisse en continu */}
           <path
-            d="M9 14 L14.5 26 L19 16.5 L23.5 26 L29 14"
-            stroke="var(--br)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none"
+            d="M2 24 C 24 34, 46 14, 68 22 S 112 30, 138 16"
+            stroke="url(#wazyoGold)"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            fill="none"
             style={{
-              strokeDasharray: 40, strokeDashoffset: loaded ? 0 : 40,
-              transition: 'stroke-dashoffset 1s ease .2s',
+              strokeDasharray: 220,
+              strokeDashoffset: loaded ? 0 : 220,
+              transition: 'stroke-dashoffset 1.1s ease .15s',
             }}
-          />
-          <circle cx="19" cy="8.5" r="1.6" fill="#E9C46A">
-            <animate attributeName="opacity" values="0.4;1;0.4" dur="2.4s" repeatCount="indefinite" />
-          </circle>
+          >
+            {/* léger flux permanent sur la vague, façon "courant" doré */}
+            <animate
+              attributeName="stroke-dashoffset"
+              values="0;-14;0"
+              dur="3.2s"
+              repeatCount="indefinite"
+            />
+          </path>
+
+          {/* Pointe de flèche au bout de la vague — s'anime au hover */}
+          <g style={{
+            transform: hover ? 'translate(4px, -3px)' : 'translate(0, 0)',
+            transformOrigin: '138px 16px',
+            transition: 'transform .35s cubic-bezier(.22,1,.36,1)',
+          }}>
+            <path
+              d="M138 16 L131 12.5 M138 16 L133 22.5"
+              stroke="url(#wazyoGold)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* pulse discret pour attirer l'œil sur la pointe */}
+            <circle cx="138" cy="16" r="2.2" fill="#E9C46A">
+              <animate attributeName="r" values="2;3.2;2" dur="2.4s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2.4s" repeatCount="indefinite" />
+            </circle>
+          </g>
         </svg>
       </div>
 
-      {/* Wordmark */}
-      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-        <span style={{
-          fontFamily: "'Fraunces', Georgia, serif",
-          fontSize: 21, fontWeight: 800, letterSpacing: '.01em',
-          color: 'var(--g3)',
-        }}>
-          Wazyo
-        </span>
-        <span style={{
-          fontFamily: "'Outfit', system-ui, sans-serif",
-          fontSize: 9, fontWeight: 700, letterSpacing: '.24em', textTransform: 'uppercase',
-          color: 'var(--br)', marginTop: 2,
-        }}>
-          Boutique
-        </span>
-      </div>
+      {/* Sous-titre */}
+      <span style={{
+        fontFamily: "'Outfit', system-ui, sans-serif",
+        fontSize: 9, fontWeight: 700, letterSpacing: '.24em', textTransform: 'uppercase',
+        color: 'var(--br)', marginLeft: 4, whiteSpace: 'nowrap',
+      }}>
+        Boutique
+      </span>
     </a>
   )
 }
