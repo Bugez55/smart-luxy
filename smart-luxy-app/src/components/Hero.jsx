@@ -73,8 +73,8 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
             color: 'white',
             fontWeight: 700,
           }}>
-            Smart<br/>
-            <span style={{ fontStyle: 'italic', color: '#C9A84C' }}>Luxy.</span>
+            Wazyo<br/>
+            <span style={{ fontStyle: 'italic', color: '#C9A84C' }}>Dz.</span>
           </h1>
 
           {/* Sous-titre */}
