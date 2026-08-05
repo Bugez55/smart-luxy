@@ -7,7 +7,7 @@ export default function AdminLogin({ onLogin }) {
     <div className="login-wrap">
       <div className="login-box">
         <div style={{ fontSize: 48 }}>🔐</div>
-        <h1>Smart <span style={{ color: '#C9A84C' }}>Luxy</span></h1>
+        <h1>Waz <span style={{ color: '#C9A84C' }}>Yo</span></h1>
         <p>Panneau d'administration</p>
         <input
           type="password"
