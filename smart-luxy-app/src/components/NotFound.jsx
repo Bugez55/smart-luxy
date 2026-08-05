@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════
-//  PAGE 404 — Smart Luxy
+//  PAGE 404 — Wazyo
 // ══════════════════════════════════════════════
 export default function NotFound() {
   return (
@@ -96,7 +96,7 @@ export default function NotFound() {
         letterSpacing: '.1em',
         animation: 'fadeUp .6s .3s ease both', opacity: 0,
         animationFillMode: 'forwards',
-      }}>SMART LUXY · ALGÉRIE</div>
+      }}>WAZYO · ALGÉRIE</div>
 
       <style>{`
         @keyframes fadeUp {
