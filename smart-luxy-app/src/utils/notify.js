@@ -75,7 +75,7 @@ export function genId() {
 // ── Alerte stock bas (< seuil) ──
 export async function alertStockBas(produit, stock, seuil = 5) {
   const emoji = stock === 0 ? '🚫' : '⚠️'
-  const msg = `${emoji} *STOCK BAS — Smart Luxy*
+  const msg = `${emoji} *STOCK BAS — Wazyo*
 
 ` +
     `📦 Produit : *${produit.nom}*
