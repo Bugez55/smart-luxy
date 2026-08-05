@@ -39,7 +39,7 @@ function printInvoice(order) {
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Facture — Smart Luxy #${order.id?.slice(0,8).toUpperCase()}</title>
+  <title>Facture — Wazyo #${order.id?.slice(0,8).toUpperCase()}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; background: white; }
@@ -105,7 +105,7 @@ function printInvoice(order) {
   <!-- Header -->
   <div class="inv-header">
     <div>
-      <div class="brand">Smart <em>Luxy</em></div>
+      <div class="brand">Wazyo</div>
       <div class="brand-sub">Boutique en ligne · Algérie 🇩🇿</div>
     </div>
     <div class="inv-meta">
@@ -176,8 +176,8 @@ function printInvoice(order) {
   <!-- Footer -->
   <div class="inv-footer">
     <div class="inv-footer-left">
-      Smart Luxy · Boutique en ligne · Algérie<br>
-      📱 +213 556 688 810 · nabilmohellebi2@gmail.com<br>
+      Wazyo · Boutique en ligne · Algérie<br>
+      📱 +213 556 688 810 · contact@wazyo.com<br>
       Paiement à la livraison (COD)
     </div>
     <div class="inv-footer-right">
@@ -213,7 +213,7 @@ function AdminSettings({ onLogout, onToast }) {
 
   // ── Infos boutique ──
   const [shop, setShop] = useState({
-    name:    'Smart Luxy',
+    name:    'Wazyo',
     phone:   '213556688810',
     address: 'Tizi Ouzou, Algérie',
     email:   '',
@@ -223,7 +223,7 @@ function AdminSettings({ onLogout, onToast }) {
   useEffect(() => {
     getSettings().then(s => {
       setShop({
-        name:    s.shop_name    || 'Smart Luxy',
+        name:    s.shop_name    || 'Wazyo',
         phone:   s.shop_phone   || '213556688810',
         address: s.shop_address || 'Tizi Ouzou, Algérie',
         email:   s.shop_email   || '',
@@ -281,7 +281,7 @@ function AdminSettings({ onLogout, onToast }) {
     setPwSaving(true)
     try {
       // Vérification sécurisée — le mot de passe stocké n'est jamais lu directement
-      const pwEnVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Satellite200223@luxy'
+      const pwEnVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Wazyo2026Secure!'
       let validSupabase = false
       try {
         const res = await supabase.rpc('verify_admin_password', { input_password: pwForm.current })
@@ -455,7 +455,7 @@ function AdminSettings({ onLogout, onToast }) {
 
         <div style={{ marginBottom: 10 }}>
           <label style={lbl}>Nom de la boutique</label>
-          <input value={shop.name} onChange={e => setShop(s => ({ ...s, name: e.target.value }))} style={inp} placeholder="Smart Luxy" />
+          <input value={shop.name} onChange={e => setShop(s => ({ ...s, name: e.target.value }))} style={inp} placeholder="Wazyo" />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
@@ -465,7 +465,7 @@ function AdminSettings({ onLogout, onToast }) {
           </div>
           <div>
             <label style={lbl}>Email</label>
-            <input value={shop.email} onChange={e => setShop(s => ({ ...s, email: e.target.value }))} style={inp} placeholder="contact@smart-luxy.dz" type="email" />
+            <input value={shop.email} onChange={e => setShop(s => ({ ...s, email: e.target.value }))} style={inp} placeholder="contact@wazyo.dz" type="email" />
           </div>
         </div>
 
@@ -783,7 +783,7 @@ function LivraisonManager({ orders, onToast }) {
     </style>
     </head><body>
     <button onclick="window.print()" style="background:#000;color:white;border:none;padding:10px 28px;border-radius:8px;font-size:14px;cursor:pointer;margin-bottom:16px;display:block;width:100%">🖨️ Imprimer le bordereau</button>
-    <div class="title">Smart Luxy</div>
+    <div class="title">Wazyo</div>
     <div class="sub">Bordereau de livraison · Algérie 🇩🇿</div>
     <div class="box">
       <div class="row"><span class="label">N° Commande:</span><span class="val" style="font-weight:900;font-size:15px">${order.id}</span></div>
@@ -1507,7 +1507,7 @@ export default function AdminPanel({ onLogout, onToast }) {
         <div style="border:2px solid #333; border-radius:10px; padding:20px; margin-bottom:20px; page-break-inside:avoid;">
           <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
             <div>
-              <div style="font-size:18px; font-weight:900;">Smart Luxy</div>
+              <div style="font-size:18px; font-weight:900;">Wazyo</div>
               <div style="font-size:11px; color:#666;">Boutique en ligne · Algérie</div>
             </div>
             <div style="text-align:right;">
@@ -1548,7 +1548,7 @@ export default function AdminPanel({ onLogout, onToast }) {
 
     const win = window.open('', '_blank')
     win.document.write(`
-      <html><head><title>Factures Smart Luxy</title>
+      <html><head><title>Factures Wazyo</title>
       <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
         @media print {
@@ -1711,7 +1711,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
     a.href     = url
-    a.download = `smart-luxy-commandes-${new Date().toISOString().slice(0,10)}.csv`
+    a.download = `wazyo-commandes-${new Date().toISOString().slice(0,10)}.csv`
     a.click()
     URL.revokeObjectURL(url)
     onToast && onToast(`✅ ${rows.length} commandes exportées`, 'default')
@@ -1748,7 +1748,7 @@ export default function AdminPanel({ onLogout, onToast }) {
       <div className="adm-top">
         <div className="adm-logo">
           <span style={{ width:30, height:30, background:'white', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#C9A84C' }}>S</span>
-          Smart <em>Luxy</em> — Admin
+          Wazyo — Admin
         </div>
         <div className="adm-tabs">
           {[['orders','📋 Commandes'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
