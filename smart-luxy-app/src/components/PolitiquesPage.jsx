@@ -15,7 +15,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
         sections: [
           {
             title: '1. Informations collectées',
-            text: `Dans le cadre de votre commande, Smart Luxy collecte uniquement les informations suivantes :\n• Nom et prénom\n• Numéro de téléphone\n• Wilaya et commune de livraison\n• Adresse de livraison (optionnel)\n• Note de commande (optionnel)\n\nCes informations sont strictement nécessaires au traitement et à la livraison de votre commande.`
+            text: `Dans le cadre de votre commande, Wazyo collecte uniquement les informations suivantes :\n• Nom et prénom\n• Numéro de téléphone\n• Wilaya et commune de livraison\n• Adresse de livraison (optionnel)\n• Note de commande (optionnel)\n\nCes informations sont strictement nécessaires au traitement et à la livraison de votre commande.`
           },
           {
             title: '2. Utilisation des données',
@@ -27,7 +27,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '4. Sécurité',
-            text: `Smart Luxy met en place toutes les mesures techniques nécessaires pour protéger vos données contre tout accès non autorisé, modification, divulgation ou destruction. Vos informations sont stockées de manière sécurisée via des services certifiés.`
+            text: `Wazyo met en place toutes les mesures techniques nécessaires pour protéger vos données contre tout accès non autorisé, modification, divulgation ou destruction. Vos informations sont stockées de manière sécurisée via des services certifiés.`
           },
           {
             title: '5. Vos droits',
@@ -39,11 +39,11 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '7. Modifications',
-            text: `Smart Luxy se réserve le droit de modifier cette politique à tout moment. Les modifications entrent en vigueur dès leur publication sur le site. Nous vous encourageons à consulter régulièrement cette page.`
+            text: `Wazyo se réserve le droit de modifier cette politique à tout moment. Les modifications entrent en vigueur dès leur publication sur le site. Nous vous encourageons à consulter régulièrement cette page.`
           },
           {
             title: '8. Contact',
-            text: `Pour toute question relative à votre vie privée :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : nabilmohellebi2@gmail.com`
+            text: `Pour toute question relative à votre vie privée :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : contact@wazyo.com`
           }
         ]
       },
@@ -55,7 +55,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
         sections: [
           {
             title: '١. المعلومات التي نجمعها',
-            text: `عند تقديم طلبك، تقوم Smart Luxy بجمع المعلومات التالية فقط:\n• الاسم واللقب\n• رقم الهاتف\n• الولاية والبلدية للتوصيل\n• عنوان التوصيل (اختياري)\n• ملاحظة الطلب (اختياري)\n\nهذه المعلومات ضرورية فقط لمعالجة طلبك وتسليمه.`
+            text: `عند تقديم طلبك، تقوم Wazyo بجمع المعلومات التالية فقط:\n• الاسم واللقب\n• رقم الهاتف\n• الولاية والبلدية للتوصيل\n• عنوان التوصيل (اختياري)\n• ملاحظة الطلب (اختياري)\n\nهذه المعلومات ضرورية فقط لمعالجة طلبك وتسليمه.`
           },
           {
             title: '٢. استخدام البيانات',
@@ -67,7 +67,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '٤. الأمان',
-            text: `تتخذ Smart Luxy جميع التدابير التقنية اللازمة لحماية بياناتك من أي وصول غير مصرح به أو تعديل أو إفصاح أو تدمير. يتم تخزين معلوماتك بشكل آمن عبر خدمات معتمدة.`
+            text: `تتخذ Wazyo جميع التدابير التقنية اللازمة لحماية بياناتك من أي وصول غير مصرح به أو تعديل أو إفصاح أو تدمير. يتم تخزين معلوماتك بشكل آمن عبر خدمات معتمدة.`
           },
           {
             title: '٥. حقوقك',
@@ -79,11 +79,11 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '٧. التعديلات',
-            text: `تحتفظ Smart Luxy بحق تعديل هذه السياسة في أي وقت. تدخل التعديلات حيز التنفيذ فور نشرها على الموقع. نشجعك على مراجعة هذه الصفحة بانتظام.`
+            text: `تحتفظ Wazyo بحق تعديل هذه السياسة في أي وقت. تدخل التعديلات حيز التنفيذ فور نشرها على الموقع. نشجعك على مراجعة هذه الصفحة بانتظام.`
           },
           {
             title: '٨. التواصل',
-            text: `لأي سؤال يتعلق بخصوصيتك:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: nabilmohellebi2@gmail.com`
+            text: `لأي سؤال يتعلق بخصوصيتك:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: contact@wazyo.com`
           }
         ]
       }
@@ -116,7 +116,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '6. Échange',
-            text: `Si vous préférez un échange plutôt qu'un remboursement :\n• L'échange est possible sous réserve de disponibilité du produit\n• Livraison du produit de remplacement offerte par Smart Luxy en cas de défaut ou erreur de notre part\n• Délai d'échange : 3 à 7 jours ouvrables après réception du retour\n\nContactez-nous via WhatsApp pour organiser l'échange.`
+            text: `Si vous préférez un échange plutôt qu'un remboursement :\n• L'échange est possible sous réserve de disponibilité du produit\n• Livraison du produit de remplacement offerte par Wazyo en cas de défaut ou erreur de notre part\n• Délai d'échange : 3 à 7 jours ouvrables après réception du retour\n\nContactez-nous via WhatsApp pour organiser l'échange.`
           },
           {
             title: '7. Colis endommagé à la livraison',
@@ -124,11 +124,11 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '8. Responsabilité',
-            text: `Smart Luxy s'engage à :\n• Vendre uniquement des produits conformes aux descriptions publiées\n• Traiter toutes les réclamations dans un délai de 24 à 48 heures\n• Assurer un service après-vente sérieux et réactif\n\nSmart Luxy n'est pas responsable des retards de livraison causés par des événements exceptionnels (grèves, catastrophes naturelles, etc.).`
+            text: `Wazyo s'engage à :\n• Vendre uniquement des produits conformes aux descriptions publiées\n• Traiter toutes les réclamations dans un délai de 24 à 48 heures\n• Assurer un service après-vente sérieux et réactif\n\nWazyo n'est pas responsable des retards de livraison causés par des événements exceptionnels (grèves, catastrophes naturelles, etc.).`
           },
           {
             title: '9. Contact SAV',
-            text: `Pour toute réclamation ou question :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : nabilmohellebi2@gmail.com\n🕐 Disponible 7j/7 de 8h à 22h`
+            text: `Pour toute réclamation ou question :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : contact@wazyo.com\n🕐 Disponible 7j/7 de 8h à 22h`
           }
         ]
       },
@@ -160,7 +160,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '٦. الاستبدال',
-            text: `إذا كنت تفضل الاستبدال بدلاً من الاسترداد:\n• الاستبدال ممكن بشرط توفر المنتج\n• تكاليف شحن المنتج البديل على عاتق Smart Luxy في حالة العيب أو الخطأ من جانبنا\n• مدة الاستبدال: 3 إلى 7 أيام عمل بعد استلام المُرجَع\n\nتواصل معنا عبر واتساب لتنظيم الاستبدال.`
+            text: `إذا كنت تفضل الاستبدال بدلاً من الاسترداد:\n• الاستبدال ممكن بشرط توفر المنتج\n• تكاليف شحن المنتج البديل على عاتق Wazyo في حالة العيب أو الخطأ من جانبنا\n• مدة الاستبدال: 3 إلى 7 أيام عمل بعد استلام المُرجَع\n\nتواصل معنا عبر واتساب لتنظيم الاستبدال.`
           },
           {
             title: '٧. الطرود التالفة عند التسليم',
@@ -168,11 +168,11 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '٨. المسؤولية',
-            text: `تلتزم Smart Luxy بـ:\n• بيع المنتجات المطابقة للأوصاف المنشورة فقط\n• معالجة جميع الشكاوى في غضون 24 إلى 48 ساعة\n• ضمان خدمة ما بعد البيع جدية وسريعة الاستجابة\n\nلا تتحمل Smart Luxy المسؤولية عن تأخيرات التوصيل الناجمة عن أحداث استثنائية (إضرابات، كوارث طبيعية، إلخ).`
+            text: `تلتزم Wazyo بـ:\n• بيع المنتجات المطابقة للأوصاف المنشورة فقط\n• معالجة جميع الشكاوى في غضون 24 إلى 48 ساعة\n• ضمان خدمة ما بعد البيع جدية وسريعة الاستجابة\n\nلا تتحمل Wazyo المسؤولية عن تأخيرات التوصيل الناجمة عن أحداث استثنائية (إضرابات، كوارث طبيعية، إلخ).`
           },
           {
             title: '٩. خدمة ما بعد البيع',
-            text: `لأي شكوى أو سؤال:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: nabilmohellebi2@gmail.com\n🕐 متاح 7 أيام/7 من 8 صباحًا إلى 10 مساءً`
+            text: `لأي شكوى أو سؤال:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: contact@wazyo.com\n🕐 متاح 7 أيام/7 من 8 صباحًا إلى 10 مساءً`
           }
         ]
       }
@@ -209,7 +209,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           {/* Row 1: titre + actions */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ fontWeight: 900, fontSize: 15, color:'var(--g3)', letterSpacing: '-.02em' }}>
-              Smart <span style={{ color: '#C9A84C' }}>Luxy</span>
+              Wazyo
               <span style={{ color: 'var(--g4)', fontWeight: 400, marginLeft: 6, fontSize: 13 }}>· Informations légales</span>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -307,8 +307,8 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           }}>
             <div style={{ fontSize: 12, color: 'var(--g4)', lineHeight: 1.8 }}>
               {lang === 'fr'
-                ? `© ${new Date().getFullYear()} Smart Luxy · Algérie 🇩🇿\nTous droits réservés`
-                : `© ${new Date().getFullYear()} Smart Luxy · الجزائر 🇩🇿\nجميع الحقوق محفوظة`
+                ? `© ${new Date().getFullYear()} Wazyo · Algérie 🇩🇿\nTous droits réservés`
+                : `© ${new Date().getFullYear()} Wazyo · الجزائر 🇩🇿\nجميع الحقوق محفوظة`
               }
             </div>
           </div>
