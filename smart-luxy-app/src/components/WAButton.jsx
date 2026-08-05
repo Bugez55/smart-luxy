@@ -18,7 +18,7 @@ export default function WAButton() {
 
   if (!visible) return null
 
-  const msg = encodeURIComponent("Bonjour Smart Luxy 👋 J'aimerais avoir plus d'informations sur vos produits.")
+  const msg = encodeURIComponent("Bonjour Wazyo 👋 J'aimerais avoir plus d'informations sur vos produits.")
 
   return (
     <div style={{
