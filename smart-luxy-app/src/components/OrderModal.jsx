@@ -314,7 +314,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
       ? (rtl ? 'استلام من المكتب' : 'Retrait bureau')
       : (rtl ? 'توصيل للمنزل' : 'Livraison à domicile')
     const msg = items.map(i => `• ${i.nom} ×${i.qty} = ${fmt(Number(i.prix) * i.qty)}`).join('\n')
-    const txt = `🛍️ Commande Smart Luxy\n\nClient: ${form.nom || '…'}\nTél: ${form.tel || '…'}\nWilaya: ${form.wilaya || '…'} / ${form.commune || '…'}\n\nArticles:\n${msg}\n\nSous-total: ${fmt(totalProduits)}\nLivraison (${livTxt}): ${fraisLiv !== null ? fmt(fraisLiv) : '?'}\n\n💰 TOTAL: ${fmt(totalFinal)}`
+    const txt = `🛍️ Commande Wazyo\n\nClient: ${form.nom || '…'}\nTél: ${form.tel || '…'}\nWilaya: ${form.wilaya || '…'} / ${form.commune || '…'}\n\nArticles:\n${msg}\n\nSous-total: ${fmt(totalProduits)}\nLivraison (${livTxt}): ${fraisLiv !== null ? fmt(fraisLiv) : '?'}\n\n💰 TOTAL: ${fmt(totalFinal)}`
     window.open(`https://wa.me/${import.meta.env.VITE_WA_NUMBER || '213556688810'}?text=${encodeURIComponent(txt)}`, '_blank')
   }
 
