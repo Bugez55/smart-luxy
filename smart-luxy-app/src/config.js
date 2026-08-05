@@ -5,7 +5,7 @@
 
 const CONFIG = {
   // ── Infos boutique ──
-  nom:      'Smart Luxy',
+  nom:      'Wazyo',
   slogan:   'Boutique en ligne · Algérie 🇩🇿',
   adresse:  'Tizi Ouzou, Algérie',
 
@@ -15,8 +15,8 @@ const CONFIG = {
   whatsapp:   '213556688810',   // Même numéro ou différent
 
   // ── Réseaux sociaux ──
-  facebook:   'https://facebook.com/smartluxy',
-  instagram:  'https://instagram.com/smartluxy',
+  facebook:   'https://facebook.com/Wazyo',
+  instagram:  'https://instagram.com/Wazyo',
   tiktok:     '',
 
   // ── Livraison ──
