@@ -19,7 +19,7 @@ export async function notifyTelegram(order) {
   ).join('\n')
   const livTxt = order.mode_livraison === 'bureau' ? '📦 Retrait bureau' : '🏠 Livraison à domicile'
   const msg = `
-🛍️ *Nouvelle commande Smart Luxy*
+🛍️ *Nouvelle commande Wazyo*
 ━━━━━━━━━━━━━━━━
 🆔 *${order.id}*
 
@@ -45,7 +45,7 @@ export function buildWAMessage(order) {
   ).join('\n')
   const livTxt = order.mode_livraison === 'bureau' ? 'Retrait bureau' : 'Livraison à domicile'
   return encodeURIComponent(
-    `🛍️ Commande Smart Luxy\n` +
+    `🛍️ Commande Wazyo\n` +
     `🆔 N° : ${order.id}\n\n` +
     `👤 ${order.nom_client} — 📞 ${order.telephone}\n` +
     `📍 ${order.wilaya} / ${order.commune}\n` +
@@ -112,7 +112,7 @@ export async function resumeQuotidien(orders, products) {
 
   const dateStr = today.toLocaleDateString('fr-DZ', { weekday:'long', day:'numeric', month:'long' })
 
-  const msg = `📊 *Résumé du jour — Smart Luxy*
+  const msg = `📊 *Résumé du jour — Wazyo*
 ` +
     `📅 ${dateStr}
 ` +
