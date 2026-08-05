@@ -1,104 +1,123 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 
 // ══════════════════════════════════════════════
-//  LOGO WAZYO — Vague + flèche dorée animées
-//  (inspiré du logo officiel : swoosh + arrow through wordmark)
+//  LOGO WAZYO — Mark "boussole" : l'aiguille pointe
+//  toujours vers l'avant. Repos → hover → clic
+//  chacun a sa propre animation distincte.
 // ══════════════════════════════════════════════
 function LogoWazyo() {
-  const [loaded, setLoaded] = useState(false)
-  const [hover, setHover] = useState(false)
+  const [active, setActive] = useState(false)   // pendant l'anim de clic
+  const timeoutRef = useRef(null)
 
-  useEffect(() => { setLoaded(true) }, [])
+  function handleClick(e) {
+    e.preventDefault()
+    setActive(true)
+    clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => setActive(false), 900)
+  }
 
   return (
     <a
       href="/"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 2,
-        position: 'relative',
-      }}
+      onClick={handleClick}
+      className={`wz-logo${active ? ' wz-active' : ''}`}
+      style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12 }}
     >
-      {/* Wordmark avec vague + flèche traversante, comme le logo officiel */}
-      <div style={{
-        position: 'relative', width: 148, height: 40,
-        opacity: loaded ? 1 : 0, transform: loaded ? 'translateY(0)' : 'translateY(6px)',
-        transition: 'opacity .6s ease, transform .6s cubic-bezier(.22,1,.36,1)',
-      }}>
-        <svg width="148" height="40" viewBox="0 0 148 40" fill="none">
-          <defs>
-            <linearGradient id="wazyoGold" x1="0" y1="0" x2="148" y2="0" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#C9A24B" />
-              <stop offset="50%" stopColor="#E9C46A" />
-              <stop offset="100%" stopColor="#C9A24B" />
-            </linearGradient>
-          </defs>
+      <style>{`
+        .wz-logo { --gold: #E9C46A; --gold-deep: #A9803A; position: relative; }
 
-          {/* Texte WAZYO */}
-          <text
-            x="0" y="27"
-            fontFamily="'Fraunces', Georgia, serif"
-            fontWeight="800"
-            fontSize="23"
-            letterSpacing="0.5"
-            fill="var(--g3)"
-          >
-            WAZYO
-          </text>
+        .wz-mark { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
 
-          {/* Vague dorée qui traverse le mot, glisse en continu */}
-          <path
-            d="M2 24 C 24 34, 46 14, 68 22 S 112 30, 138 16"
-            stroke="url(#wazyoGold)"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            fill="none"
-            style={{
-              strokeDasharray: 220,
-              strokeDashoffset: loaded ? 0 : 220,
-              transition: 'stroke-dashoffset 1.1s ease .15s',
-            }}
-          >
-            {/* léger flux permanent sur la vague, façon "courant" doré */}
-            <animate
-              attributeName="stroke-dashoffset"
-              values="0;-14;0"
-              dur="3.2s"
-              repeatCount="indefinite"
-            />
-          </path>
+        /* anneau de boussole */
+        .wz-ring {
+          transform-origin: 21px 21px;
+          transition: stroke .4s ease, opacity .4s ease;
+        }
+        .wz-tick { transition: transform .5s cubic-bezier(.22,1,.36,1), opacity .4s ease; transform-origin: 21px 21px; }
 
-          {/* Pointe de flèche au bout de la vague — s'anime au hover */}
-          <g style={{
-            transform: hover ? 'translate(4px, -3px)' : 'translate(0, 0)',
-            transformOrigin: '138px 16px',
-            transition: 'transform .35s cubic-bezier(.22,1,.36,1)',
-          }}>
-            <path
-              d="M138 16 L131 12.5 M138 16 L133 22.5"
-              stroke="url(#wazyoGold)"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* pulse discret pour attirer l'œil sur la pointe */}
-            <circle cx="138" cy="16" r="2.2" fill="#E9C46A">
-              <animate attributeName="r" values="2;3.2;2" dur="2.4s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2.4s" repeatCount="indefinite" />
-            </circle>
-          </g>
-        </svg>
+        /* aiguille : repos = pointe vers le bas-gauche (rangée) */
+        .wz-needle {
+          transform-origin: 21px 21px;
+          transform: rotate(150deg);
+          transition: transform .6s cubic-bezier(.22,1.4,.36,1);
+        }
+        /* survol : l'aiguille se redresse et pointe vers le haut-droit, comme sur le wordmark d'origine */
+        .wz-logo:hover .wz-needle { transform: rotate(-38deg); }
+        .wz-logo:hover .wz-ring { stroke: var(--gold); }
+        .wz-logo:hover .wz-tick { transform: scale(1.3); }
+
+        /* clic : l'aiguille tourne plein tour puis se cale, avec un ping qui se propage */
+        .wz-active .wz-needle { animation: wz-spin .8s cubic-bezier(.3,1.2,.3,1) forwards; }
+        @keyframes wz-spin {
+          0%   { transform: rotate(150deg); }
+          65%  { transform: rotate(-398deg); }
+          100% { transform: rotate(-38deg); }
+        }
+
+        .wz-ping { transform-origin: 21px 21px; opacity: 0; }
+        .wz-active .wz-ping { animation: wz-ping .8s ease-out forwards; }
+        @keyframes wz-ping {
+          0%   { transform: scale(.4); opacity: .55; }
+          100% { transform: scale(2.1); opacity: 0; }
+        }
+
+        /* léger sweep doré sur le mot au clic */
+        .wz-word { position: relative; overflow: hidden; }
+        .wz-shine {
+          position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+          background: linear-gradient(100deg, transparent, rgba(233,196,106,.55), transparent);
+          transform: skewX(-18deg);
+        }
+        .wz-active .wz-shine { animation: wz-sweep .8s ease forwards; }
+        @keyframes wz-sweep {
+          0%   { left: -60%; }
+          100% { left: 130%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .wz-needle, .wz-ring, .wz-tick, .wz-ping, .wz-shine { animation: none !important; transition: none !important; }
+        }
+      `}</style>
+
+      <svg className="wz-mark" viewBox="0 0 42 42" fill="none">
+        {/* anneau */}
+        <circle className="wz-ring" cx="21" cy="21" r="17" stroke="var(--br)" strokeWidth="1.4" opacity="0.85" />
+
+        {/* 4 points cardinaux, comme le monogramme original */}
+        {[0, 90, 180, 270].map(deg => {
+          const r = 17
+          const x = 21 + r * Math.cos((deg - 90) * Math.PI / 180)
+          const y = 21 + r * Math.sin((deg - 90) * Math.PI / 180)
+          return <circle key={deg} className="wz-tick" cx={x} cy={y} r="1.6" fill="#E9C46A" />
+        })}
+
+        {/* aiguille — losange asymétrique type boussole */}
+        <g className="wz-needle">
+          <path d="M21 6 L25 21 L21 25 L17 21 Z" fill="#E9C46A" />
+          <path d="M21 25 L25 21 L21 36 L17 21 Z" fill="var(--gold-deep, #A9803A)" opacity="0.9" />
+        </g>
+
+        {/* halo pour le clic */}
+        <circle className="wz-ping" cx="21" cy="21" r="17" stroke="#E9C46A" strokeWidth="1.5" fill="none" />
+      </svg>
+
+      <div className="wz-word" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+        <span style={{
+          fontFamily: "'Fraunces', Georgia, serif",
+          fontSize: 22, fontWeight: 800, letterSpacing: '.01em',
+          color: 'var(--g3)',
+        }}>
+          Wazyo
+        </span>
+        <span style={{
+          fontFamily: "'Outfit', system-ui, sans-serif",
+          fontSize: 9, fontWeight: 700, letterSpacing: '.24em', textTransform: 'uppercase',
+          color: 'var(--br)', marginTop: 3,
+        }}>
+          Boutique
+        </span>
+        <span className="wz-shine" />
       </div>
-
-      {/* Sous-titre */}
-      <span style={{
-        fontFamily: "'Outfit', system-ui, sans-serif",
-        fontSize: 9, fontWeight: 700, letterSpacing: '.24em', textTransform: 'uppercase',
-        color: 'var(--br)', marginLeft: 4, whiteSpace: 'nowrap',
-      }}>
-        Boutique
-      </span>
     </a>
   )
 }
@@ -109,11 +128,11 @@ function LogoWazyo() {
 export default function Header({ cartCount, onCartOpen, search, onSearch }) {
   const [scrolled, setScrolled] = useState(false)
 
-  useEffect(() => {
+  useState(() => {
     function onScroll() { setScrolled(window.scrollY > 12) }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  })
 
   return (
     <header style={{
