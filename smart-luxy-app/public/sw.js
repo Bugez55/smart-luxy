@@ -2,7 +2,7 @@
 //  SERVICE WORKER — Smart Luxy PWA
 //  Cache des assets statiques pour mode offline
 // ══════════════════════════════════════════════
-const CACHE = 'smart-luxy-v1'
+const CACHE = 'wazyo-v1'
 
 const STATIC = [
   '/',
