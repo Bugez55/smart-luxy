@@ -154,8 +154,8 @@ export default function SuccessScreen({ order, onClose }) {
           ))}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '10px 14px', borderTop: '1px solid var(--g3)',
-            background: 'var(--g3)',
+            padding: '10px 14px', borderTop: '1px solid rgba(128,128,128,.25)',
+            background: 'rgba(128,128,128,.08)',
           }}>
             <span style={{ fontSize: 14, fontWeight: 900, color:'var(--g3)' }}>Total payé</span>
             <span style={{ fontSize: 18, fontWeight: 900, color: '#C9A84C' }}>{fmt(order.total)}</span>
@@ -212,7 +212,7 @@ export default function SuccessScreen({ order, onClose }) {
 
           <button onClick={onClose} style={{
             width: '100%', padding: '12px',
-            background: 'var(--g3)', border: '1px solid var(--g3)',
+            background: 'var(--card2)', border: '1px solid rgba(128,128,128,.3)',
             borderRadius: 12, color: 'var(--g3)',
             fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}>
