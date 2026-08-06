@@ -82,6 +82,19 @@ export default function App() {
     init()
   }, [loadProducts])
 
+  // ── Bouton retour physique du téléphone/navigateur — ferme la page produit ──
+  useEffect(() => {
+    function handlePopState() {
+      const hash = window.location.hash
+      if (!hash.startsWith('#produit-')) {
+        // L'utilisateur est revenu en arrière depuis la page produit → on la ferme
+        setOpenProduct(null)
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   // ── Appliquer le thème depuis Supabase + cache localStorage ──
   useEffect(() => {
     getSettings().then(s => {
