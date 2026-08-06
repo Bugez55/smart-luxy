@@ -103,8 +103,8 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
                       onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError('') }}
                       onKeyDown={e => e.key === 'Enter' && applyPromo()}
                       style={{
-                        flex: 1, background: 'var(--g3)',
-                        border: '1px solid var(--g3)',
+                        flex: 1, background: 'var(--card2)',
+                        border: '1px solid rgba(128,128,128,.3)',
                         borderRadius: 9, padding: '9px 12px',
                         color:'var(--g3)', fontSize: '16px', outline: 'none',
                         fontFamily: 'monospace', letterSpacing: '.05em',
