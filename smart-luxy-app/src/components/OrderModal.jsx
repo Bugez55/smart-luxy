@@ -239,7 +239,7 @@ function ConfirmButton({ loading, disabled, onClick, label, labelLoading }) {
       )}
       {ripple && <div style={{
         position: 'absolute', inset: 0,
-        background: 'var(--g3)',
+        background: 'rgba(255,255,255,.35)',
         animation: 'ripple .6s ease-out',
         borderRadius: 12,
       }} />}
