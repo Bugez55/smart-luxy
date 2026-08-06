@@ -70,7 +70,7 @@ export default function TrackingPage({ onClose }) {
             📦 Suivi de commande
           </h2>
           <button onClick={handleClose} style={{
-            background:'var(--g3)', border:'1px solid var(--g3)',
+            background:'var(--card2)', border:'1px solid rgba(128,128,128,.3)',
             borderRadius:'50%', width:32, height:32, color:'var(--g3)',
             fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
           }}>✕</button>
@@ -89,8 +89,8 @@ export default function TrackingPage({ onClose }) {
               onKeyDown={e => e.key === 'Enter' && search()}
               placeholder="SL-XXXXXX"
               style={{
-                flex:1, background:'var(--g3)',
-                border:'1px solid var(--g3)',
+                flex:1, background:'var(--card2)',
+                border:'1px solid rgba(128,128,128,.3)',
                 borderRadius:10, padding:'11px 14px',
                 color:'var(--g3)', fontSize:15, outline:'none',
                 fontFamily:'monospace', letterSpacing:'.05em',
