@@ -211,7 +211,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Header sticky ── */}
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid var(--g3)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
-        <button onClick={onClose} style={{ background:'var(--g3)', border:'none', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
+        <button onClick={onClose} style={{ background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
         <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
         <button onClick={() => setLang(l => l==='fr'?'ar':'fr')} style={{ background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)', borderRadius:20, padding:'4px 10px', color:'var(--br)', fontSize:11, fontWeight:800, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap' }}>
           {lang==='fr' ? '🇩🇿 عربي' : '🇫🇷 FR'}
@@ -279,7 +279,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           return (
             <a href={embed.src} target="_blank" rel="noreferrer"
               style={{ display:'flex', alignItems:'center', gap:12, padding:'16px', background:color, border:`1px solid ${borderColor}`, margin:'0 12px', borderRadius:14, textDecoration:'none', flexShrink:0 }}>
-              <div style={{ width:52, height:52, borderRadius:12, background:'var(--g3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>{icon}</div>
+              <div style={{ width:52, height:52, borderRadius:12, background:'rgba(128,128,128,.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>{icon}</div>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:14, fontWeight:900, color:'var(--g3)', marginBottom:3 }}>Voir la vidéo {platform}</div>
                 <div style={{ fontSize:11, color:'var(--g3)', lineHeight:1.4 }}>Appuie pour regarder la vidéo du produit sur {platform}</div>
@@ -661,7 +661,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           {/* ── Récap prix ── */}
           {form.wilaya && (
-            <div style={{ background:'var(--g3)', borderRadius:12, padding:'12px 14px', marginBottom:16, border:'1px solid var(--g3)' }}>
+            <div style={{ background:'rgba(201,168,76,.08)', borderRadius:12, padding:'12px 14px', marginBottom:16, border:'1px solid rgba(201,168,76,.25)' }}>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:6 }}>
                 <span>🛍️ Prix produit</span><span>{fmt(currentPrix)}</span>
               </div>
@@ -725,9 +725,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Partager le produit ── */}
       <div style={{ padding:'0 16px 16px', display:'flex', gap:8, alignItems:'center' }}>
-        <div style={{ flex:1, height:1, background:'var(--g3)' }} />
+        <div style={{ flex:1, height:1, background:'rgba(128,128,128,.25)' }} />
         <span style={{ fontSize:11, color:'var(--g3)', fontWeight:700 }}>PARTAGER</span>
-        <div style={{ flex:1, height:1, background:'var(--g3)' }} />
+        <div style={{ flex:1, height:1, background:'rgba(128,128,128,.25)' }} />
       </div>
       <div style={{ display:'flex', gap:10, padding:'0 16px 20px' }}>
         <a
@@ -740,7 +740,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         </a>
         <button
           onClick={() => { navigator.clipboard?.writeText(window.location.href); }}
-          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:'var(--g3)', border:'1px solid var(--g3)', borderRadius:12, padding:'11px 16px', color:'var(--g3)', fontSize:12, fontWeight:800, cursor:'pointer' }}
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:12, padding:'11px 16px', color:'var(--g3)', fontSize:12, fontWeight:800, cursor:'pointer' }}
         >🔗 {lang==='ar' ? 'نسخ الرابط' : 'Copier lien'}</button>
       </div>
 
@@ -806,10 +806,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {lb && imgs.length > 0 && (
         <div onClick={() => setLb(false)} style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.97)', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <img src={imgs[imgIdx]?.url} alt="" style={{ maxWidth:'100%', maxHeight:'90vh', objectFit:'contain' }} />
-          <button onClick={() => setLb(false)} style={{ position:'absolute', top:16, right:16, background:'var(--g3)', border:'none', borderRadius:'50%', width:44, height:44, color:'var(--g3)', fontSize:20, cursor:'pointer' }}>✕</button>
+          <button onClick={() => setLb(false)} style={{ position:'absolute', top:16, right:16, background:'rgba(30,30,30,.85)', border:'1px solid rgba(255,255,255,.2)', borderRadius:'50%', width:44, height:44, color:'#fff', fontSize:20, cursor:'pointer' }}>✕</button>
           {imgs.length > 1 && <>
-            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i-1+imgs.length)%imgs.length)}} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', background:'var(--g3)', border:'none', borderRadius:'50%', width:48, height:48, color:'var(--g3)', fontSize:26, cursor:'pointer' }}>‹</button>
-            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i+1)%imgs.length)}} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'var(--g3)', border:'none', borderRadius:'50%', width:48, height:48, color:'var(--g3)', fontSize:26, cursor:'pointer' }}>›</button>
+            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i-1+imgs.length)%imgs.length)}} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', background:'rgba(30,30,30,.85)', border:'1px solid rgba(255,255,255,.2)', borderRadius:'50%', width:48, height:48, color:'#fff', fontSize:26, cursor:'pointer' }}>‹</button>
+            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i+1)%imgs.length)}} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'rgba(30,30,30,.85)', border:'1px solid rgba(255,255,255,.2)', borderRadius:'50%', width:48, height:48, color:'#fff', fontSize:26, cursor:'pointer' }}>›</button>
           </>}
         </div>
       )}
