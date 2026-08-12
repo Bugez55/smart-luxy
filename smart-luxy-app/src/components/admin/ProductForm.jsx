@@ -37,7 +37,38 @@ export default function ProductForm({ product, onClose, onSave }) {
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
+  // Vérifie la vraie signature binaire du fichier (les premiers octets)
+  // pour empêcher un fichier malveillant renommé en .jpg/.png de passer
+  async function isRealImage(file) {
+    const buffer = await file.slice(0, 12).arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+
+    // Signatures binaires officielles des vrais formats image
+    const signatures = {
+      jpg:  'ffd8ff',
+      png:  '89504e47',
+      gif:  '474946',
+      webp: '52494646', // RIFF (WebP commence par RIFF....WEBP)
+    }
+    return Object.values(signatures).some(sig => hex.startsWith(sig))
+  }
+
   async function uploadFile(file) {
+    // Rejeter tout fichier dont le contenu réel n'est pas une vraie image
+    // (empêche un .html/.js/.exe renommé en .png de contourner le filtre accept="")
+    const looksLikeImage = await isRealImage(file)
+    if (!looksLikeImage) {
+      alert('❌ Ce fichier n\'est pas une image valide. Seuls JPG, PNG, GIF et WebP sont acceptés.')
+      return null
+    }
+
+    // Limite de taille raisonnable (10 Mo) pour éviter les abus
+    if (file.size > 10 * 1024 * 1024) {
+      alert('❌ Fichier trop volumineux (max 10 Mo).')
+      return null
+    }
+
     setUploading(true)
 
     // Détecter GIF par extension ET par type MIME (certains mobiles ne remplissent pas le type)
