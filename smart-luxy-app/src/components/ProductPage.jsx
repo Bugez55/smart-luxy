@@ -337,7 +337,30 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </>}
         </div>
 
-        {isPromo && <CountdownTimer />}
+        {/* 🔥 Barre de progression stock — urgence */}
+        {p.stock_initial > 0 && p.stock !== null && p.stock !== undefined && (() => {
+          const vendus = Math.max(0, p.stock_initial - p.stock)
+          const pct = Math.min(100, Math.round((vendus / p.stock_initial) * 100))
+          if (vendus <= 0) return null
+          return (
+            <div style={{ marginBottom:14, background:'rgba(239,68,68,.06)', border:'1px solid rgba(239,68,68,.2)', borderRadius:12, padding:'10px 14px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                <span style={{ fontSize:12, fontWeight:800, color:'#fca5a5' }}>🔥 {vendus} vendus sur {p.stock_initial}</span>
+                <span style={{ fontSize:11, fontWeight:700, color:'var(--g4)' }}>{pct}%</span>
+              </div>
+              <div style={{ height:7, background:'rgba(255,255,255,.08)', borderRadius:4, overflow:'hidden' }}>
+                <div style={{
+                  height:'100%', width:`${pct}%`,
+                  background:'linear-gradient(90deg,#f97316,#ef4444)',
+                  borderRadius:4, transition:'width .5s ease',
+                  animation: pct >= 70 ? 'stockGlow 1.8s ease-in-out infinite' : 'none',
+                }} />
+              </div>
+            </div>
+          )
+        })()}
+
+
 
         {/* Viewers en temps réel */}
         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
@@ -817,6 +840,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       <style>{`
         @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
         @keyframes imgIn{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:scale(1)}}
+        @keyframes stockGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3)}}
       `}</style>
     </div>
   )
