@@ -10,6 +10,8 @@ export default function ProductForm({ product, onClose, onSave }) {
     nom:           product?.nom || '',
     prix:          product?.prix || '',
     prix_old:      product?.prix_old || '',
+    cout_achat:    product?.cout_achat !== undefined && product?.cout_achat !== null ? String(product.cout_achat) : '',
+    frais_liv_est: '400',
     categorie:     product?.categorie || '',
     badge:         product?.badge || '',
     emoji:         product?.emoji || '📦',
@@ -20,6 +22,7 @@ export default function ProductForm({ product, onClose, onSave }) {
     img:           product?.img || '',
     display_order: product?.display_order || 99,
     stock:         product?.stock !== undefined && product?.stock !== null ? String(product.stock) : '',
+    stock_initial: product?.stock_initial !== undefined && product?.stock_initial !== null ? String(product.stock_initial) : '',
     video_url:     product?.video_url || '',
     display_mode:  product?.display_mode || 'scroll',
     card_color:    product?.card_color || '',
@@ -162,6 +165,7 @@ export default function ProductForm({ product, onClose, onSave }) {
       nom:           form.nom,
       prix:          Number(form.prix),
       prix_old:      Number(form.prix_old) || null,
+      cout_achat:    form.cout_achat !== '' ? Number(form.cout_achat) : null,
       categorie:     form.categorie,
       badge:         form.badge,
       emoji:         form.emoji,
@@ -172,6 +176,7 @@ export default function ProductForm({ product, onClose, onSave }) {
       img:           form.img || form.images[0]?.url || null,
       display_order: Number(form.display_order) || 99,
       stock:         form.stock !== '' ? Number(form.stock) : null,
+      stock_initial: form.stock_initial !== '' ? Number(form.stock_initial) : null,
       video_url:     form.video_url || null,
       display_mode:  form.display_mode || 'scroll',
       card_color:    form.card_color || null,
@@ -236,6 +241,116 @@ export default function ProductForm({ product, onClose, onSave }) {
             </div>
           </div>
 
+          {/* ── 💰 Calculateur de marge ── */}
+          <div className="pf-section" style={{ border:'2px solid rgba(34,197,94,.25)', borderRadius:14 }}>
+            <h3 style={{ display:'flex', alignItems:'center', gap:8 }}>
+              💰 Calculateur de marge
+              <span style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', marginLeft:4 }}>→ Vérifie que tu ne vends pas à perte</span>
+            </h3>
+
+            <div className="pf-grid">
+              <div className="form-field">
+                <label>Prix fournisseur / achat (DA)</label>
+                <input
+                  type="number"
+                  placeholder="Ex: 1200"
+                  value={form.cout_achat}
+                  onChange={e => set('cout_achat', e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Frais livraison estimés (DA)</label>
+                <input
+                  type="number"
+                  placeholder="400"
+                  value={form.frais_liv_est}
+                  onChange={e => set('frais_liv_est', e.target.value)}
+                />
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginTop:4 }}>
+                  Moyenne nationale ≈ 400-700 DA (ajustable selon wilaya)
+                </div>
+              </div>
+            </div>
+
+            {(() => {
+              const prixVente = Number(form.prix) || 0
+              const coutAchat = Number(form.cout_achat) || 0
+              const fraisLiv = Number(form.frais_liv_est) || 0
+              const hasData = prixVente > 0 && coutAchat > 0
+
+              if (!hasData) {
+                return (
+                  <div style={{ textAlign:'center', padding:16, color:'rgba(255,255,255,.25)', fontSize:12, marginTop:8 }}>
+                    Remplis le prix de vente et le prix fournisseur pour voir ta marge
+                  </div>
+                )
+              }
+
+              const margeNette = prixVente - coutAchat - fraisLiv
+              const margePct = coutAchat > 0 ? (margeNette / coutAchat) * 100 : 0
+              const isNegative = margeNette < 0
+              const isLow = margeNette >= 0 && margePct < 30
+              const isGood = margePct >= 30
+
+              const prixPour30 = Math.ceil((coutAchat * 1.3 + fraisLiv) / 10) * 10
+              const prixPour50 = Math.ceil((coutAchat * 1.5 + fraisLiv) / 10) * 10
+              const prixPour100 = Math.ceil((coutAchat * 2 + fraisLiv) / 10) * 10
+
+              const color = isNegative ? '#ef4444' : isLow ? '#f59e0b' : '#22c55e'
+              const bgColor = isNegative ? 'rgba(239,68,68,.1)' : isLow ? 'rgba(245,158,11,.1)' : 'rgba(34,197,94,.1)'
+              const borderColor = isNegative ? 'rgba(239,68,68,.3)' : isLow ? 'rgba(245,158,11,.3)' : 'rgba(34,197,94,.3)'
+
+              return (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ background:bgColor, border:`1px solid ${borderColor}`, borderRadius:12, padding:'14px 16px', marginBottom:10 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                      <span style={{ fontSize:12, color:'rgba(255,255,255,.5)', fontWeight:700 }}>
+                        {isNegative ? '🚨 Tu vends à PERTE' : isLow ? '⚠️ Marge faible' : '✅ Bonne marge'}
+                      </span>
+                      <span style={{ fontSize:20, fontWeight:900, color }}>
+                        {margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString()} DA
+                      </span>
+                    </div>
+                    <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>
+                      Soit {margePct.toFixed(0)}% de marge sur ton prix d'achat
+                    </div>
+                    <div style={{ display:'flex', gap:12, marginTop:8, fontSize:11, color:'rgba(255,255,255,.35)' }}>
+                      <span>Vente: {prixVente.toLocaleString()} DA</span>
+                      <span>− Achat: {coutAchat.toLocaleString()} DA</span>
+                      <span>− Livraison: {fraisLiv.toLocaleString()} DA</span>
+                    </div>
+                  </div>
+
+                  {(isNegative || isLow) && (
+                    <div style={{ background:'rgba(255,255,255,.03)', borderRadius:10, padding:'10px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.5)', marginBottom:8 }}>
+                        💡 Prix suggérés pour une meilleure marge :
+                      </div>
+                      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                        {[
+                          { label:'Marge 30%', prix:prixPour30 },
+                          { label:'Marge 50%', prix:prixPour50 },
+                          { label:'Marge 100%', prix:prixPour100 },
+                        ].map(s => (
+                          <button
+                            key={s.label}
+                            type="button"
+                            onClick={() => set('prix', String(s.prix))}
+                            style={{
+                              background:'rgba(34,197,94,.1)', border:'1px solid rgba(34,197,94,.25)',
+                              borderRadius:8, padding:'6px 12px', color:'#86efac',
+                              fontSize:11, fontWeight:700, cursor:'pointer',
+                            }}
+                          >{s.label} → {s.prix.toLocaleString()} DA</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+
           {/* ── STOCK ── */}
           <div className="pf-section">
             <h3>📦 Gestion du stock</h3>
@@ -257,6 +372,40 @@ export default function ProductForm({ product, onClose, onSave }) {
                 }}
               />
             </div>
+
+            {/* Stock initial — pour la barre de progression "urgence" */}
+            <div className="form-field" style={{ marginTop: 10 }}>
+              <label>Stock initial (optionnel)</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="Ex: 50 — pour afficher une barre 'X vendus sur 50'"
+                value={form.stock_initial}
+                onChange={e => set('stock_initial', e.target.value)}
+              />
+              <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginTop:4 }}>
+                Renseigne le stock de départ pour afficher une barre de progression qui crée de l'urgence chez le client (ex: "42 vendus sur 50")
+              </div>
+            </div>
+
+            {/* Aperçu barre de progression */}
+            {form.stock_initial && form.stock !== '' && Number(form.stock_initial) > 0 && (() => {
+              const total = Number(form.stock_initial)
+              const restant = Number(form.stock)
+              const vendus = Math.max(0, total - restant)
+              const pct = Math.min(100, Math.round((vendus / total) * 100))
+              return (
+                <div style={{ marginTop: 10, background:'rgba(239,68,68,.06)', border:'1px solid rgba(239,68,68,.2)', borderRadius:10, padding:'10px 14px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, fontWeight:700, marginBottom:6 }}>
+                    <span style={{ color:'#fca5a5' }}>🔥 {vendus} vendus sur {total}</span>
+                    <span style={{ color:'rgba(255,255,255,.4)' }}>{pct}%</span>
+                  </div>
+                  <div style={{ height:6, background:'rgba(255,255,255,.08)', borderRadius:3, overflow:'hidden' }}>
+                    <div style={{ height:'100%', width:`${pct}%`, background:'linear-gradient(90deg,#f97316,#ef4444)', borderRadius:3, transition:'width .3s' }} />
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Indicateur visuel */}
             <div style={{
