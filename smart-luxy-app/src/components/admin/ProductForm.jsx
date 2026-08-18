@@ -10,8 +10,13 @@ export default function ProductForm({ product, onClose, onSave }) {
     nom:           product?.nom || '',
     prix:          product?.prix || '',
     prix_old:      product?.prix_old || '',
-    cout_achat:    product?.cout_achat !== undefined && product?.cout_achat !== null ? String(product.cout_achat) : '',
-    frais_liv_est: '400',
+    cout_achat:        product?.cout_achat !== undefined && product?.cout_achat !== null ? String(product.cout_achat) : '',
+    frais_liv_est:     product?.frais_liv_est || '400',
+    ads_cout_da:       product?.ads_cout_da !== undefined && product?.ads_cout_da !== null ? String(product.ads_cout_da) : '',
+    taux_confirmation: product?.taux_confirmation !== undefined && product?.taux_confirmation !== null ? String(product.taux_confirmation) : '60',
+    taux_livraison:    product?.taux_livraison !== undefined && product?.taux_livraison !== null ? String(product.taux_livraison) : '60',
+    cout_stockage:     product?.cout_stockage !== undefined && product?.cout_stockage !== null ? String(product.cout_stockage) : '',
+    cout_retour:       product?.cout_retour !== undefined && product?.cout_retour !== null ? String(product.cout_retour) : '',
     categorie:     product?.categorie || '',
     badge:         product?.badge || '',
     emoji:         product?.emoji || '📦',
@@ -165,7 +170,12 @@ export default function ProductForm({ product, onClose, onSave }) {
       nom:           form.nom,
       prix:          Number(form.prix),
       prix_old:      Number(form.prix_old) || null,
-      cout_achat:    form.cout_achat !== '' ? Number(form.cout_achat) : null,
+      cout_achat:        form.cout_achat !== '' ? Number(form.cout_achat) : null,
+      ads_cout_da:       form.ads_cout_da !== '' ? Number(form.ads_cout_da) : null,
+      taux_confirmation: form.taux_confirmation !== '' ? Number(form.taux_confirmation) : 60,
+      taux_livraison:    form.taux_livraison !== '' ? Number(form.taux_livraison) : 60,
+      cout_stockage:     form.cout_stockage !== '' ? Number(form.cout_stockage) : null,
+      cout_retour:       form.cout_retour !== '' ? Number(form.cout_retour) : null,
       categorie:     form.categorie,
       badge:         form.badge,
       emoji:         form.emoji,
@@ -241,90 +251,135 @@ export default function ProductForm({ product, onClose, onSave }) {
             </div>
           </div>
 
-          {/* ── 💰 Calculateur de marge ── */}
+          {/* ── 💰 Calculateur de marge réel (avec pub Facebook/TikTok) ── */}
           <div className="pf-section" style={{ border:'2px solid rgba(34,197,94,.25)', borderRadius:14 }}>
             <h3 style={{ display:'flex', alignItems:'center', gap:8 }}>
-              💰 Calculateur de marge
-              <span style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', marginLeft:4 }}>→ Vérifie que tu ne vends pas à perte</span>
+              💰 Calculateur de marge réelle
+              <span style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', marginLeft:4 }}>→ Pub, confirmation, livraison, retours — le vrai coût</span>
             </h3>
+            <p style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginBottom:12, lineHeight:1.5 }}>
+              Sur 100 clics publicitaires, tout le monde ne confirme pas sa commande, et tout le monde ne se fait pas livrer. Ce calcul répartit le vrai coût pub sur les ventes qui aboutissent réellement.
+            </p>
 
             <div className="pf-grid">
               <div className="form-field">
                 <label>Prix fournisseur / achat (DA)</label>
-                <input
-                  type="number"
-                  placeholder="Ex: 1200"
-                  value={form.cout_achat}
-                  onChange={e => set('cout_achat', e.target.value)}
-                />
+                <input type="number" placeholder="Ex: 1200" value={form.cout_achat} onChange={e => set('cout_achat', e.target.value)} />
               </div>
               <div className="form-field">
-                <label>Frais livraison estimés (DA)</label>
-                <input
-                  type="number"
-                  placeholder="400"
-                  value={form.frais_liv_est}
-                  onChange={e => set('frais_liv_est', e.target.value)}
-                />
+                <label>Coût pub par clic/lead (DA)</label>
+                <input type="number" placeholder="Ex: 260" value={form.ads_cout_da} onChange={e => set('ads_cout_da', e.target.value)} />
                 <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginTop:4 }}>
-                  Moyenne nationale ≈ 400-700 DA (ajustable selon wilaya)
+                  Dépense Facebook/TikTok ÷ nombre de clics ou leads
+                </div>
+              </div>
+              <div className="form-field">
+                <label>Taux de confirmation (%)</label>
+                <input type="number" min="1" max="100" placeholder="60" value={form.taux_confirmation} onChange={e => set('taux_confirmation', e.target.value)} />
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginTop:4 }}>
+                  % de leads qui confirment vraiment leur commande
+                </div>
+              </div>
+              <div className="form-field">
+                <label>Taux de livraison (%)</label>
+                <input type="number" min="1" max="100" placeholder="60" value={form.taux_livraison} onChange={e => set('taux_livraison', e.target.value)} />
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginTop:4 }}>
+                  % de commandes confirmées vraiment livrées (reste = retour)
+                </div>
+              </div>
+              <div className="form-field">
+                <label>Frais livraison (DA)</label>
+                <input type="number" placeholder="400" value={form.frais_liv_est} onChange={e => set('frais_liv_est', e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label>Stockage / autres charges (DA)</label>
+                <input type="number" placeholder="Ex: 200" value={form.cout_stockage} onChange={e => set('cout_stockage', e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label>Coût moyen d'un retour (DA)</label>
+                <input type="number" placeholder="Ex: 250" value={form.cout_retour} onChange={e => set('cout_retour', e.target.value)} />
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginTop:4 }}>
+                  Frais de renvoi transporteur pour un colis refusé
                 </div>
               </div>
             </div>
 
             {(() => {
-              const prixVente = Number(form.prix) || 0
-              const coutAchat = Number(form.cout_achat) || 0
-              const fraisLiv = Number(form.frais_liv_est) || 0
+              const prixVente   = Number(form.prix) || 0
+              const coutAchat   = Number(form.cout_achat) || 0
+              const adsCout     = Number(form.ads_cout_da) || 0
+              const tauxConfirm = Number(form.taux_confirmation) || 60
+              const tauxLiv     = Number(form.taux_livraison) || 60
+              const fraisLiv    = Number(form.frais_liv_est) || 0
+              const coutStock   = Number(form.cout_stockage) || 0
+              const coutRetour  = Number(form.cout_retour) || 0
+
               const hasData = prixVente > 0 && coutAchat > 0
 
               if (!hasData) {
                 return (
                   <div style={{ textAlign:'center', padding:16, color:'rgba(255,255,255,.25)', fontSize:12, marginTop:8 }}>
-                    Remplis le prix de vente et le prix fournisseur pour voir ta marge
+                    Remplis au moins le prix de vente et le prix fournisseur pour voir ta marge
                   </div>
                 )
               }
 
-              const margeNette = prixVente - coutAchat - fraisLiv
+              // ── Vraie cascade : coût pub réparti sur les ventes qui aboutissent ──
+              const coutParConfirmee = tauxConfirm > 0 ? (adsCout * 100) / tauxConfirm : 0
+              const coutParLivree    = tauxLiv > 0 ? (coutParConfirmee * 100) / tauxLiv : 0
+              const coutRetourAmorti = tauxLiv > 0 ? coutRetour * ((100 - tauxLiv) / tauxLiv) : 0
+
+              const coutTotal = coutAchat + coutParLivree + fraisLiv + coutStock + coutRetourAmorti
+              const margeNette = prixVente - coutTotal
               const margePct = coutAchat > 0 ? (margeNette / coutAchat) * 100 : 0
+
               const isNegative = margeNette < 0
               const isLow = margeNette >= 0 && margePct < 30
-              const isGood = margePct >= 30
-
-              const prixPour30 = Math.ceil((coutAchat * 1.3 + fraisLiv) / 10) * 10
-              const prixPour50 = Math.ceil((coutAchat * 1.5 + fraisLiv) / 10) * 10
-              const prixPour100 = Math.ceil((coutAchat * 2 + fraisLiv) / 10) * 10
-
               const color = isNegative ? '#ef4444' : isLow ? '#f59e0b' : '#22c55e'
               const bgColor = isNegative ? 'rgba(239,68,68,.1)' : isLow ? 'rgba(245,158,11,.1)' : 'rgba(34,197,94,.1)'
               const borderColor = isNegative ? 'rgba(239,68,68,.3)' : isLow ? 'rgba(245,158,11,.3)' : 'rgba(34,197,94,.3)'
 
+              const prixPour30 = Math.ceil((coutTotal * 1.3) / 10) * 10
+              const prixPour50 = Math.ceil((coutTotal * 1.5) / 10) * 10
+              const prixPour100 = Math.ceil((coutTotal * 2) / 10) * 10
+
               return (
                 <div style={{ marginTop: 14 }}>
+                  {/* Détail de la cascade — seulement si pub renseignée */}
+                  {adsCout > 0 && (
+                    <div style={{ background:'rgba(255,255,255,.03)', borderRadius:10, padding:'12px 14px', marginBottom:10, fontSize:11, color:'rgba(255,255,255,.5)', lineHeight:1.9 }}>
+                      <div style={{ fontWeight:800, color:'rgba(255,255,255,.6)', marginBottom:4 }}>📉 Cascade du coût publicitaire réel :</div>
+                      <div>Coût pub par clic : <strong style={{color:'white'}}>{adsCout.toLocaleString()} DA</strong></div>
+                      <div>÷ {tauxConfirm}% confirment → <strong style={{color:'white'}}>{coutParConfirmee.toFixed(0)} DA</strong> par commande confirmée</div>
+                      <div>÷ {tauxLiv}% livrées → <strong style={{color:'#fca5a5'}}>{coutParLivree.toFixed(0)} DA</strong> par vente réellement livrée</div>
+                    </div>
+                  )}
+
                   <div style={{ background:bgColor, border:`1px solid ${borderColor}`, borderRadius:12, padding:'14px 16px', marginBottom:10 }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
                       <span style={{ fontSize:12, color:'rgba(255,255,255,.5)', fontWeight:700 }}>
                         {isNegative ? '🚨 Tu vends à PERTE' : isLow ? '⚠️ Marge faible' : '✅ Bonne marge'}
                       </span>
                       <span style={{ fontSize:20, fontWeight:900, color }}>
-                        {margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString()} DA
+                        {margeNette >= 0 ? '+' : ''}{margeNette.toLocaleString(undefined,{maximumFractionDigits:0})} DA
                       </span>
                     </div>
                     <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>
-                      Soit {margePct.toFixed(0)}% de marge sur ton prix d'achat
+                      Soit {margePct.toFixed(0)}% de marge — coût réel total : {coutTotal.toLocaleString(undefined,{maximumFractionDigits:0})} DA
                     </div>
-                    <div style={{ display:'flex', gap:12, marginTop:8, fontSize:11, color:'rgba(255,255,255,.35)' }}>
-                      <span>Vente: {prixVente.toLocaleString()} DA</span>
-                      <span>− Achat: {coutAchat.toLocaleString()} DA</span>
-                      <span>− Livraison: {fraisLiv.toLocaleString()} DA</span>
+                    <div style={{ display:'flex', gap:10, marginTop:8, fontSize:10, color:'rgba(255,255,255,.35)', flexWrap:'wrap' }}>
+                      <span>Achat: {coutAchat.toLocaleString()}</span>
+                      <span>Pub: {coutParLivree.toFixed(0)}</span>
+                      <span>Livraison: {fraisLiv.toLocaleString()}</span>
+                      <span>Stockage: {coutStock.toLocaleString()}</span>
+                      <span>Retours: {coutRetourAmorti.toFixed(0)}</span>
                     </div>
                   </div>
 
                   {(isNegative || isLow) && (
                     <div style={{ background:'rgba(255,255,255,.03)', borderRadius:10, padding:'10px 14px' }}>
                       <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.5)', marginBottom:8 }}>
-                        💡 Prix suggérés pour une meilleure marge :
+                        💡 Prix suggérés pour une meilleure marge (coût réel inclus) :
                       </div>
                       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                         {[
