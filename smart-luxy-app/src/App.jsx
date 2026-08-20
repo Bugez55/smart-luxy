@@ -32,10 +32,9 @@ export default function App() {
     return path !== '/' && path !== '' && !path.startsWith('/#')
   })
 
-  const [isAdmin] = useState(() =>
-    window.location.search.includes('admin') || localStorage.getItem('sl_admin') === '1'
-  )
-  const [adminAuth, setAdminAuth] = useState(() => localStorage.getItem('sl_admin') === '1')
+  const [isAdmin] = useState(() => window.location.search.includes('admin'))
+  const [adminAuth, setAdminAuth] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
 
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -141,23 +140,21 @@ export default function App() {
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
 
   async function submitOrder(form) {
-    const id = genId()
-    const order = {
-      id,
-      items: form.items,
-      nom_client: form.nom,
-      telephone: form.tel,
-      wilaya: form.wilaya,
-      commune: form.commune,
-      adresse: form.adresse || '',
-      note: form.note || '',
-      mode_livraison: form.mode_livraison || 'domicile',
-      frais_livraison: form.frais_livraison || 0,
-      total: form.total || form.items.reduce((s, i) => s + Number(i.prix) * i.qty, 0),
-      statut: 'new'
-    }
-
-    const { error } = await supabase.from('orders').insert(order)
+    // Le prix est recalculé côté serveur (fonction create_order) — le total
+    // envoyé par le navigateur n'est plus jamais utilisé tel quel, ça bloque
+    // toute tentative de manipulation de prix côté client.
+    const { data: order, error } = await supabase.rpc('create_order', {
+      p_nom_client: form.nom,
+      p_telephone: form.tel,
+      p_wilaya: form.wilaya,
+      p_commune: form.commune,
+      p_adresse: form.adresse || '',
+      p_note: form.note || '',
+      p_items: form.items,
+      p_mode_livraison: form.mode_livraison || 'domicile',
+      p_frais_livraison: form.frais_livraison || 0,
+      p_mode_paiement: form.mode_paiement || 'livraison',
+    })
     if (error) { toast('❌ Erreur. Veuillez réessayer.', 'error'); return }
 
     // ── Déduire le stock + alerter si stock bas ──
@@ -190,33 +187,30 @@ export default function App() {
     loadProducts()
   }
 
-  async function handleLogin(pw) {
-    // Vérification sécurisée côté serveur — le mot de passe réel
-    // n'est jamais renvoyé au navigateur, seulement vrai/faux
-    try {
-      const { data: validSupabase } = await supabase.rpc('verify_admin_password', { input_password: pw })
-      const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Wazyo2026Secure!'
+  // ── Vraie authentification Supabase Auth (remplace le mdp en clair) ──
+  useEffect(() => {
+    if (!isAdmin) { setAuthLoading(false); return }
+    supabase.auth.getSession().then(({ data }) => {
+      setAdminAuth(!!data.session)
+      setAuthLoading(false)
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAdminAuth(!!session)
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [isAdmin])
 
-      if (validSupabase || pw === pwVercel) {
-        localStorage.setItem('sl_admin', '1')
-        setAdminAuth(true)
-      } else {
-        toast('❌ Mot de passe incorrect', 'error')
-      }
-    } catch (e) {
-      // Fallback si la fonction RPC n'existe pas encore (avant migration SQL)
-      const pwVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Wazyo2026Secure!'
-      if (pw === pwVercel) {
-        localStorage.setItem('sl_admin', '1')
-        setAdminAuth(true)
-      } else {
-        toast('❌ Mot de passe incorrect', 'error')
-      }
+  async function handleLogin(email, pw) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pw })
+    if (error) {
+      toast('❌ Identifiants incorrects', 'error')
+      return false
     }
+    return true
   }
 
-  function handleLogout() {
-    localStorage.removeItem('sl_admin')
+  async function handleLogout() {
+    await supabase.auth.signOut()
     setAdminAuth(false)
     window.location.href = '/'
   }
@@ -230,6 +224,7 @@ export default function App() {
 
   // ── Admin ────────────────────────────────────────────
   if (isAdmin) {
+    if (authLoading) return <div style={{ minHeight:'100vh', background:'var(--bk)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--g4)' }}>Chargement…</div>
     if (!adminAuth) return <AdminLogin onLogin={handleLogin} />
     return <AdminPanel onLogout={handleLogout} onToast={toast} />
   }
