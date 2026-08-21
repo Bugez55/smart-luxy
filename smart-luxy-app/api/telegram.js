@@ -28,9 +28,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', isAllowedOrigin ? origin : ALLOWED_ORIGIN)
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-
   if (!isAllowedOrigin) {
     return res.status(403).json({ error: 'Origine non autorisée' })
   }
@@ -42,8 +42,8 @@ export default async function handler(req, res) {
 
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chatId = process.env.TELEGRAM_CHAT_ID
-
   if (!token || !chatId) {
+    console.error('Telegram non configuré: TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID manquant')
     return res.status(500).json({ error: 'Telegram non configuré côté serveur' })
   }
 
@@ -56,12 +56,24 @@ export default async function handler(req, res) {
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
+      body: JSON.stringify({
+        chat_id: chatId,
+        text
+        // parse_mode retiré : "Markdown" cassait l'envoi dès que le texte
+        // contenait un caractère spécial non échappé (., -, _, (), etc.)
+      })
     })
 
     const data = await response.json()
+
+    if (!response.ok) {
+      // Log visible dans les Runtime Logs Vercel pour debug rapide
+      console.error('Erreur API Telegram:', JSON.stringify(data))
+    }
+
     return res.status(response.ok ? 200 : 500).json(data)
   } catch (error) {
+    console.error('Erreur proxy Telegram:', error)
     return res.status(500).json({ error: error.message })
   }
 }
