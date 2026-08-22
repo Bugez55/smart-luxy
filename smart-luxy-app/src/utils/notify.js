@@ -4,12 +4,16 @@ import CONFIG from '../config'
 // Fonction sécurisée qui passe par le proxy serveur — le token ne quitte jamais Vercel
 async function sendTelegram(text) {
   try {
-    await fetch('/api/telegram', {
+    const res = await fetch('/api/telegram', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     })
-  } catch (e) { console.warn('Telegram proxy:', e) }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      console.error('❌ Telegram proxy erreur', res.status, body)
+    }
+  } catch (e) { console.error('❌ Telegram proxy — erreur réseau:', e) }
 }
 
 
@@ -19,21 +23,21 @@ export async function notifyTelegram(order) {
   ).join('\n')
   const livTxt = order.mode_livraison === 'bureau' ? '📦 Retrait bureau' : '🏠 Livraison à domicile'
   const msg = `
-🛍️ *Nouvelle commande Wazyo*
+🛍️ Nouvelle commande Wazyo
 ━━━━━━━━━━━━━━━━
-🆔 *${order.id}*
+🆔 ${order.id}
 
-👤 *Client :* ${order.nom_client}
-📞 *Tél :* ${order.telephone}
-📍 *Wilaya :* ${order.wilaya}
-🏘️ *Commune :* ${order.commune}
-${order.adresse ? `🏠 *Adresse :* ${order.adresse}\n` : ''}${order.note ? `📝 *Note :* ${order.note}\n` : ''}🚚 *Livraison :* ${livTxt}
+👤 Client : ${order.nom_client}
+📞 Tél : ${order.telephone}
+📍 Wilaya : ${order.wilaya}
+🏘️ Commune : ${order.commune}
+${order.adresse ? `🏠 Adresse : ${order.adresse}\n` : ''}${order.note ? `📝 Note : ${order.note}\n` : ''}🚚 Livraison : ${livTxt}
 ━━━━━━━━━━━━━━━━
-🧾 *Articles :*
+🧾 Articles :
 ${items}
 ━━━━━━━━━━━━━━━━
 🚚 Frais livraison : ${order.frais_livraison ? order.frais_livraison.toLocaleString() + ' DA' : 'Gratuit'}
-💰 *TOTAL : ${order.total?.toLocaleString()} DA*
+💰 TOTAL : ${order.total?.toLocaleString()} DA
 `.trim()
 
   await sendTelegram(msg)
@@ -75,12 +79,12 @@ export function genId() {
 // ── Alerte stock bas (< seuil) ──
 export async function alertStockBas(produit, stock, seuil = 5) {
   const emoji = stock === 0 ? '🚫' : '⚠️'
-  const msg = `${emoji} *STOCK BAS — Wazyo*
+  const msg = `${emoji} STOCK BAS — Wazyo
 
 ` +
-    `📦 Produit : *${produit.nom}*
+    `📦 Produit : ${produit.nom}
 ` +
-    `🔢 Stock restant : *${stock} unité${stock > 1 ? 's' : ''}*
+    `🔢 Stock restant : ${stock} unité${stock > 1 ? 's' : ''}
 ` +
     `${stock === 0 ? '❌ ÉPUISÉ — le produit est désactivé sur le site' : `⚡ Plus que ${stock} — pense à réapprovisionner !`}`
 
@@ -112,23 +116,23 @@ export async function resumeQuotidien(orders, products) {
 
   const dateStr = today.toLocaleDateString('fr-DZ', { weekday:'long', day:'numeric', month:'long' })
 
-  const msg = `📊 *Résumé du jour — Wazyo*
+  const msg = `📊 Résumé du jour — Wazyo
 ` +
     `📅 ${dateStr}
 ` +
     `━━━━━━━━━━━━━━━━
 ` +
-    `🛍️ Commandes : *${todayOrders.length}*
+    `🛍️ Commandes : ${todayOrders.length}
 ` +
     `🆕 Nouvelles : ${nouvelles}
 ` +
     `✅ Confirmées : ${confirmees}
 ` +
-    `💰 CA du jour : *${ca.toLocaleString()} DA*
+    `💰 CA du jour : ${ca.toLocaleString()} DA
 ` +
     `━━━━━━━━━━━━━━━━
 ` +
-    (topProd ? `🏆 Top produit : *${topProd[0]}* (${topProd[1]} vendu${topProd[1]>1?'s':''})
+    (topProd ? `🏆 Top produit : ${topProd[0]} (${topProd[1]} vendu${topProd[1]>1?'s':''})
 ` : '') +
     (stockBas.length > 0 ? `⚠️ Stock bas : ${stockBas.map(p => `${p.nom} (${p.stock})`).join(', ')}
 ` : '') +
