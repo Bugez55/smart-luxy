@@ -45,6 +45,55 @@ export default function ProductForm({ product, onClose, onSave }) {
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
+  // ── 🔗 Import rapide depuis un lien fournisseur ──
+  const [importUrl, setImportUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importPreview, setImportPreview] = useState(null)
+  const [importError, setImportError] = useState('')
+  const [selectedImgs, setSelectedImgs] = useState([])
+
+  async function fetchImportPreview() {
+    if (!importUrl.trim()) return
+    setImporting(true)
+    setImportError('')
+    setImportPreview(null)
+    try {
+      const res = await fetch('/api/import-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: importUrl.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setImportError(data.error || "Impossible d'importer ce produit")
+      } else {
+        setImportPreview(data)
+        setSelectedImgs(data.images.map((_, i) => i)) // tout sélectionné par défaut
+      }
+    } catch (e) {
+      setImportError('Erreur réseau — vérifie le lien')
+    }
+    setImporting(false)
+  }
+
+  function applyImport() {
+    if (!importPreview) return
+    if (importPreview.nom) set('nom', importPreview.nom)
+    if (importPreview.prix) set('prix', String(importPreview.prix))
+    if (importPreview.description) set('description', `<p>${importPreview.description}</p>`)
+
+    const chosenImages = importPreview.images.filter((_, i) => selectedImgs.includes(i))
+    if (chosenImages.length > 0) {
+      const newImgs = chosenImages.map(url => ({ url, label: '', type: 'image' }))
+      const updatedImages = [...form.images, ...newImgs]
+      set('images', updatedImages)
+      if (!form.img) set('img', chosenImages[0])
+    }
+
+    setImportPreview(null)
+    setImportUrl('')
+  }
+
   // Vérifie la vraie signature binaire du fichier (les premiers octets)
   // pour empêcher un fichier malveillant renommé en .jpg/.png de passer
   async function isRealImage(file) {
@@ -211,6 +260,100 @@ export default function ProductForm({ product, onClose, onSave }) {
         </div>
 
         <div className="pf-body">
+          {/* ── 🔗 Import rapide depuis un lien fournisseur ── */}
+          {!isEdit && (
+            <div className="pf-section" style={{ border:'2px solid rgba(59,130,246,.3)', borderRadius:14 }}>
+              <h3 style={{ display:'flex', alignItems:'center', gap:8 }}>
+                🔗 Import rapide
+                <span style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', marginLeft:4 }}>→ Colle un lien produit (Shipper, DropDz, autre boutique)</span>
+              </h3>
+              <div style={{ display:'flex', gap:8 }}>
+                <input
+                  value={importUrl}
+                  onChange={e => setImportUrl(e.target.value)}
+                  placeholder="https://..."
+                  style={{ flex:1, background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:13, outline:'none' }}
+                  onKeyDown={e => e.key === 'Enter' && fetchImportPreview()}
+                />
+                <button
+                  onClick={fetchImportPreview}
+                  disabled={importing || !importUrl.trim()}
+                  style={{
+                    background: importUrl.trim() ? 'rgba(59,130,246,.15)' : '#111',
+                    border: `1px solid ${importUrl.trim() ? 'rgba(59,130,246,.4)' : '#333'}`,
+                    borderRadius:8, padding:'10px 18px', color: importUrl.trim() ? '#93c5fd' : '#555',
+                    fontSize:13, fontWeight:800, cursor: importUrl.trim() ? 'pointer' : 'default', whiteSpace:'nowrap',
+                  }}
+                >{importing ? '⏳ Analyse…' : '🔍 Importer'}</button>
+              </div>
+
+              {importError && (
+                <div style={{ marginTop:10, background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.25)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#fca5a5' }}>
+                  ❌ {importError}
+                </div>
+              )}
+
+              {importPreview && (
+                <div style={{ marginTop:12, background:'#111', borderRadius:12, padding:14 }}>
+                  <div style={{ fontSize:11, fontWeight:800, color:'#93c5fd', marginBottom:10 }}>APERÇU TROUVÉ</div>
+
+                  {importPreview.nom && (
+                    <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:6 }}>{importPreview.nom}</div>
+                  )}
+                  {importPreview.prix && (
+                    <div style={{ fontSize:13, color:'#C9A84C', fontWeight:800, marginBottom:6 }}>{importPreview.prix.toLocaleString()} DA (détecté)</div>
+                  )}
+                  {importPreview.description && (
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,.5)', marginBottom:10, lineHeight:1.5 }}>
+                      {importPreview.description.slice(0, 150)}{importPreview.description.length > 150 ? '…' : ''}
+                    </div>
+                  )}
+
+                  {importPreview.images.length > 0 && (
+                    <>
+                      <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', marginBottom:8 }}>
+                        Photos trouvées — clique pour désélectionner celles que tu ne veux pas :
+                      </div>
+                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
+                        {importPreview.images.map((img, i) => (
+                          <div
+                            key={i}
+                            onClick={() => setSelectedImgs(s => s.includes(i) ? s.filter(x => x !== i) : [...s, i])}
+                            style={{
+                              width:64, height:64, borderRadius:8, overflow:'hidden', cursor:'pointer',
+                              border: `2px solid ${selectedImgs.includes(i) ? '#22c55e' : 'rgba(255,255,255,.15)'}`,
+                              opacity: selectedImgs.includes(i) ? 1 : 0.35, position:'relative', flexShrink:0,
+                            }}
+                          >
+                            <img src={img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            {selectedImgs.includes(i) && (
+                              <div style={{ position:'absolute', top:2, right:2, background:'#22c55e', borderRadius:'50%', width:16, height:16, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'#000', fontWeight:900 }}>✓</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={applyImport} style={{
+                      flex:1, background:'linear-gradient(135deg,#22c55e,#16a34a)', border:'none', borderRadius:8,
+                      padding:'10px', color:'#000', fontSize:12, fontWeight:800, cursor:'pointer',
+                    }}>✅ Utiliser ces infos</button>
+                    <button onClick={() => { setImportPreview(null); setImportUrl('') }} style={{
+                      background:'#1a1a1a', border:'1px solid #333', borderRadius:8,
+                      padding:'10px 16px', color:'rgba(255,255,255,.5)', fontSize:12, fontWeight:700, cursor:'pointer',
+                    }}>Annuler</button>
+                  </div>
+
+                  <div style={{ marginTop:10, fontSize:10, color:'rgba(255,255,255,.25)', lineHeight:1.5 }}>
+                    ⚠️ Vérifie toujours le prix et la description avant de publier — l'extraction automatique n'est pas garantie à 100% selon le site source.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Infos de base ── */}
           <div className="pf-section">
             <h3>Informations</h3>
