@@ -79,8 +79,17 @@ export default function ProductForm({ product, onClose, onSave }) {
   function applyImport() {
     if (!importPreview) return
     if (importPreview.nom) set('nom', importPreview.nom)
-    if (importPreview.prix) set('prix', String(importPreview.prix))
     if (importPreview.description) set('description', `<p>${importPreview.description}</p>`)
+
+    if (importPreview.prix) {
+      if (importPreview.source === 'aliexpress') {
+        // Prix AliExpress en $ — on le met dans "coût fournisseur" (calculateur de marge),
+        // JAMAIS directement dans le prix de vente pour éviter une confusion $/DA
+        set('cout_achat', String(Math.round(importPreview.prix * 280))) // conversion approx, à ajuster
+      } else {
+        set('prix', String(importPreview.prix))
+      }
+    }
 
     const chosenImages = importPreview.images.filter((_, i) => selectedImgs.includes(i))
     if (chosenImages.length > 0) {
@@ -301,7 +310,14 @@ export default function ProductForm({ product, onClose, onSave }) {
                     <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:6 }}>{importPreview.nom}</div>
                   )}
                   {importPreview.prix && (
-                    <div style={{ fontSize:13, color:'#C9A84C', fontWeight:800, marginBottom:6 }}>{importPreview.prix.toLocaleString()} DA (détecté)</div>
+                    <div style={{ fontSize:13, color:'#C9A84C', fontWeight:800, marginBottom:6 }}>
+                      {importPreview.prix.toLocaleString()} {importPreview.source === 'aliexpress' ? '$ (à convertir en DA !)' : 'DA (détecté)'}
+                    </div>
+                    {importPreview.source === 'aliexpress' && (
+                      <div style={{ fontSize:11, color:'#fca5a5', marginBottom:8, background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.2)', borderRadius:6, padding:'6px 10px' }}>
+                        ⚠️ Prix AliExpress en dollars — pense à le convertir en DA et ajouter tes marges/frais avant de publier
+                      </div>
+                    )}
                   )}
                   {importPreview.description && (
                     <div style={{ fontSize:12, color:'rgba(255,255,255,.5)', marginBottom:10, lineHeight:1.5 }}>
