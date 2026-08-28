@@ -310,14 +310,16 @@ export default function ProductForm({ product, onClose, onSave }) {
                     <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:6 }}>{importPreview.nom}</div>
                   )}
                   {importPreview.prix && (
-                    <div style={{ fontSize:13, color:'#C9A84C', fontWeight:800, marginBottom:6 }}>
-                      {importPreview.prix.toLocaleString()} {importPreview.source === 'aliexpress' ? '$ (à convertir en DA !)' : 'DA (détecté)'}
-                    </div>
-                    {importPreview.source === 'aliexpress' && (
-                      <div style={{ fontSize:11, color:'#fca5a5', marginBottom:8, background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.2)', borderRadius:6, padding:'6px 10px' }}>
-                        ⚠️ Prix AliExpress en dollars — pense à le convertir en DA et ajouter tes marges/frais avant de publier
+                    <>
+                      <div style={{ fontSize:13, color:'#C9A84C', fontWeight:800, marginBottom:6 }}>
+                        {importPreview.prix.toLocaleString()} {importPreview.source === 'aliexpress' ? '$ (à convertir en DA !)' : 'DA (détecté)'}
                       </div>
-                    )}
+                      {importPreview.source === 'aliexpress' && (
+                        <div style={{ fontSize:11, color:'#fca5a5', marginBottom:8, background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.2)', borderRadius:6, padding:'6px 10px' }}>
+                          ⚠️ Prix AliExpress en dollars — pense à le convertir en DA et ajouter tes marges/frais avant de publier
+                        </div>
+                      )}
+                    </>
                   )}
                   {importPreview.description && (
                     <div style={{ fontSize:12, color:'rgba(255,255,255,.5)', marginBottom:10, lineHeight:1.5 }}>
