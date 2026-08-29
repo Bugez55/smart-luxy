@@ -1733,10 +1733,18 @@ export default function AdminPanel({ onLogout, onToast }) {
   async function saveProd(data) {
     if (data.id) {
       const { error } = await supabase.from('products').update(data).eq('id', data.id)
-      if (error) { onToast('❌ Erreur sauvegarde', 'error'); return }
+      if (error) {
+        console.error('Erreur update produit:', error)
+        onToast('❌ ' + (error.message || 'Erreur sauvegarde'), 'error')
+        return
+      }
     } else {
       const { error } = await supabase.from('products').insert({ ...data, is_active: true, display_order: products.length + 1 })
-      if (error) { onToast('❌ Erreur ajout', 'error'); return }
+      if (error) {
+        console.error('Erreur insert produit:', error)
+        onToast('❌ ' + (error.message || 'Erreur ajout'), 'error')
+        return
+      }
     }
     onToast('✅ Produit enregistré !')
     setEditProd(null)
