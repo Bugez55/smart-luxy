@@ -126,10 +126,21 @@ export default function ProductForm({ product, onClose, onSave }) {
 
     const chosenImages = importPreview.images.filter((_, i) => selectedImgs.includes(i))
     if (chosenImages.length > 0) {
-      const newImgs = chosenImages.map(url => ({ url, label: '', type: 'image' }))
-      const updatedImages = [...form.images, ...newImgs]
+      // Répartition automatique : les 4 premières photos vont dans le carrousel (haut),
+      // le reste va dans la galerie verticale (bas) — évite de tout entasser au même endroit
+      const CAROUSEL_MAX = 4
+      const forCarousel = chosenImages.slice(0, CAROUSEL_MAX)
+      const forGallery = chosenImages.slice(CAROUSEL_MAX)
+
+      const newCarouselImgs = forCarousel.map(url => ({ url, label: '', type: 'image' }))
+      const updatedImages = [...form.images, ...newCarouselImgs]
       set('images', updatedImages)
-      if (!form.img) set('img', chosenImages[0])
+      if (!form.img) set('img', forCarousel[0])
+
+      if (forGallery.length > 0) {
+        const newGalleryImgs = forGallery.map(url => ({ url, label: '', type: 'image' }))
+        set('images_gallery', [...(form.images_gallery || []), ...newGalleryImgs])
+      }
     }
 
     setImportPreview(null)
