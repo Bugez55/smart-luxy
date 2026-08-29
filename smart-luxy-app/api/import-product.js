@@ -26,28 +26,44 @@ function decodeEntities(str) {
 function extractAliExpress(html) {
   const result = { nom: null, prix: null, description: null, images: [] }
 
+  // Titre — plusieurs formats possibles selon la version de page
   let m = html.match(/"subject"\s*:\s*"((?:[^"\\]|\\.)*)"/) ||
-           html.match(/"productTitle"\s*:\s*"((?:[^"\\]|\\.)*)"/)
-  if (m) result.nom = decodeEntities(m[1].replace(/\\"/g, '"'))
+           html.match(/"productTitle"\s*:\s*"((?:[^"\\]|\\.)*)"/) ||
+           html.match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/) ||
+           html.match(/<h1[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)<\/h1>/i) ||
+           html.match(/<title>([^<]+)<\/title>/i)
+  if (m) result.nom = decodeEntities(m[1].replace(/\\"/g, '"')).replace(/\s*-\s*AliExpress.*$/i, '').trim()
 
+  // Prix (plusieurs formats possibles selon la version du site)
   m = html.match(/"formatedActivityPrice"\s*:\s*"([^"]+)"/) ||
       html.match(/"formatedPrice"\s*:\s*"([^"]+)"/) ||
       html.match(/"minActivityAmount"\s*:\s*\{[^}]*"value"\s*:\s*([\d.]+)/) ||
-      html.match(/"minAmount"\s*:\s*\{[^}]*"value"\s*:\s*([\d.]+)/)
+      html.match(/"minAmount"\s*:\s*\{[^}]*"value"\s*:\s*([\d.]+)/) ||
+      html.match(/"salePrice"\s*:\s*\{[^}]*"value"\s*:\s*([\d.]+)/)
   if (m) {
     const rawPrice = m[1].replace(/[^\d.,]/g, '').replace(',', '.')
     result.prix = parseFloat(rawPrice) || null
   }
 
+  // Images — imagePathList contient toutes les photos galerie
   m = html.match(/"imagePathList"\s*:\s*\[([^\]]+)\]/) ||
-      html.match(/"images"\s*:\s*\[([^\]]+)\]/)
+      html.match(/"images"\s*:\s*\[([^\]]+)\]/) ||
+      html.match(/"imageList"\s*:\s*\[([^\]]+)\]/)
   if (m) {
     const urls = m[1].match(/"(https?:\/\/[^"]+)"/g)
     if (urls) result.images = urls.map(u => u.replace(/^"|"$/g, ''))
   }
 
-  m = html.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/)
-  if (m) result.description = decodeEntities(m[1].replace(/\\"/g, '"'))
+  // Description — plusieurs emplacements possibles + fallback meta description standard
+  m = html.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/) ||
+      html.match(/"productDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+  if (m) {
+    result.description = decodeEntities(m[1].replace(/\\"/g, '"'))
+  } else {
+    // Fallback : meta description classique si rien trouvé dans les données internes
+    const metaDesc = getAllMeta(html, 'og:description')[0] || getAllMeta(html, 'description')[0]
+    if (metaDesc) result.description = decodeEntities(metaDesc).trim()
+  }
 
   return result
 }
