@@ -51,12 +51,16 @@ export default function ProductForm({ product, onClose, onSave }) {
   const [importPreview, setImportPreview] = useState(null)
   const [importError, setImportError] = useState('')
   const [selectedImgs, setSelectedImgs] = useState([])
+  const [canPasteHtml, setCanPasteHtml] = useState(false)
+  const [showPasteBox, setShowPasteBox] = useState(false)
+  const [pastedHtml, setPastedHtml] = useState('')
 
   async function fetchImportPreview() {
     if (!importUrl.trim()) return
     setImporting(true)
     setImportError('')
     setImportPreview(null)
+    setCanPasteHtml(false)
     try {
       const res = await fetch('/api/import-product', {
         method: 'POST',
@@ -66,12 +70,41 @@ export default function ProductForm({ product, onClose, onSave }) {
       const data = await res.json()
       if (!res.ok) {
         setImportError(data.error || "Impossible d'importer ce produit")
+        if (data.canPasteHtml) setCanPasteHtml(true)
       } else {
         setImportPreview(data)
         setSelectedImgs(data.images.map((_, i) => i)) // tout sélectionné par défaut
       }
     } catch (e) {
       setImportError('Erreur réseau — vérifie le lien')
+      setCanPasteHtml(true)
+    }
+    setImporting(false)
+  }
+
+  async function fetchImportFromHtml() {
+    if (!pastedHtml.trim() || pastedHtml.trim().length < 200) {
+      setImportError('Colle le code source complet de la page (Ctrl+A puis Ctrl+C sur la page produit)')
+      return
+    }
+    setImporting(true)
+    setImportError('')
+    try {
+      const res = await fetch('/api/import-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: pastedHtml.trim(), url: importUrl.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setImportError(data.error || "Impossible d'extraire les infos de ce code")
+      } else {
+        setImportPreview(data)
+        setSelectedImgs(data.images.map((_, i) => i))
+        setShowPasteBox(false)
+      }
+    } catch (e) {
+      setImportError('Erreur — réessaie')
     }
     setImporting(false)
   }
@@ -299,6 +332,51 @@ export default function ProductForm({ product, onClose, onSave }) {
               {importError && (
                 <div style={{ marginTop:10, background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.25)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#fca5a5' }}>
                   ❌ {importError}
+                </div>
+              )}
+
+              {canPasteHtml && !showPasteBox && (
+                <button
+                  onClick={() => setShowPasteBox(true)}
+                  style={{
+                    marginTop:10, width:'100%', background:'rgba(59,130,246,.12)', border:'1px solid rgba(59,130,246,.3)',
+                    borderRadius:8, padding:'10px', color:'#93c5fd', fontSize:12, fontWeight:800, cursor:'pointer',
+                  }}
+                >📋 Coller le code source à la place</button>
+              )}
+
+              {showPasteBox && (
+                <div style={{ marginTop:12, background:'#111', borderRadius:12, padding:14 }}>
+                  <div style={{ fontSize:12, fontWeight:800, color:'#93c5fd', marginBottom:8 }}>📋 Coller le code source</div>
+                  <ol style={{ fontSize:11, color:'rgba(255,255,255,.5)', paddingLeft:18, lineHeight:1.8, marginBottom:10 }}>
+                    <li>Ouvre la page produit dans un nouvel onglet de ton navigateur</li>
+                    <li>Clic droit n'importe où sur la page → <strong style={{color:'white'}}>« Afficher le code source »</strong> (ou <code>Ctrl+U</code>)</li>
+                    <li>Sur la page de code : <code>Ctrl+A</code> pour tout sélectionner, puis <code>Ctrl+C</code> pour copier</li>
+                    <li>Reviens ici et colle (<code>Ctrl+V</code>) dans la zone ci-dessous</li>
+                  </ol>
+                  <textarea
+                    value={pastedHtml}
+                    onChange={e => setPastedHtml(e.target.value)}
+                    placeholder="Colle ici le code source complet de la page produit..."
+                    rows={5}
+                    style={{ width:'100%', background:'#0a0a0a', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:11, outline:'none', resize:'vertical', boxSizing:'border-box', fontFamily:'monospace', marginBottom:10 }}
+                  />
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button
+                      onClick={fetchImportFromHtml}
+                      disabled={importing || pastedHtml.trim().length < 200}
+                      style={{
+                        flex:1, background: pastedHtml.trim().length >= 200 ? 'rgba(34,197,94,.15)' : '#1a1a1a',
+                        border: `1px solid ${pastedHtml.trim().length >= 200 ? 'rgba(34,197,94,.4)' : '#333'}`,
+                        borderRadius:8, padding:'9px', color: pastedHtml.trim().length >= 200 ? '#86efac' : '#555',
+                        fontSize:12, fontWeight:800, cursor: pastedHtml.trim().length >= 200 ? 'pointer' : 'default',
+                      }}
+                    >{importing ? '⏳ Analyse…' : '🔍 Extraire les infos'}</button>
+                    <button
+                      onClick={() => { setShowPasteBox(false); setPastedHtml('') }}
+                      style={{ background:'#1a1a1a', border:'1px solid #333', borderRadius:8, padding:'9px 16px', color:'rgba(255,255,255,.5)', fontSize:12, fontWeight:700, cursor:'pointer' }}
+                    >Annuler</button>
+                  </div>
                 </div>
               )}
 
