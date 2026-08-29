@@ -1,5 +1,6 @@
 // api/import-product.js — Import rapide de produit depuis un lien fournisseur
-// Support renforcé : Open Graph + JSON-LD + extraction spécifique AliExpress
+// Support : Open Graph + JSON-LD + extraction spécifique AliExpress
+// + fallback "coller le code source" quand le fetch serveur est bloqué (anti-robot)
 
 const ALLOWED_ORIGIN = 'https://wazyo.vercel.app'
 
@@ -25,12 +26,10 @@ function decodeEntities(str) {
 function extractAliExpress(html) {
   const result = { nom: null, prix: null, description: null, images: [] }
 
-  // Titre
   let m = html.match(/"subject"\s*:\s*"((?:[^"\\]|\\.)*)"/) ||
            html.match(/"productTitle"\s*:\s*"((?:[^"\\]|\\.)*)"/)
   if (m) result.nom = decodeEntities(m[1].replace(/\\"/g, '"'))
 
-  // Prix (plusieurs formats possibles selon la version du site)
   m = html.match(/"formatedActivityPrice"\s*:\s*"([^"]+)"/) ||
       html.match(/"formatedPrice"\s*:\s*"([^"]+)"/) ||
       html.match(/"minActivityAmount"\s*:\s*\{[^}]*"value"\s*:\s*([\d.]+)/) ||
@@ -40,7 +39,6 @@ function extractAliExpress(html) {
     result.prix = parseFloat(rawPrice) || null
   }
 
-  // Images — imagePathList contient toutes les photos galerie
   m = html.match(/"imagePathList"\s*:\s*\[([^\]]+)\]/) ||
       html.match(/"images"\s*:\s*\[([^\]]+)\]/)
   if (m) {
@@ -48,11 +46,60 @@ function extractAliExpress(html) {
     if (urls) result.images = urls.map(u => u.replace(/^"|"$/g, ''))
   }
 
-  // Description — souvent une URL séparée vers une page de description (iframe), sinon fallback meta
   m = html.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/)
   if (m) result.description = decodeEntities(m[1].replace(/\\"/g, '"'))
 
   return result
+}
+
+// ── Extraction générale : Open Graph + JSON-LD ──
+function extractGeneric(html) {
+  let nom = getAllMeta(html, 'og:title')[0] || getAllMeta(html, 'twitter:title')[0] || null
+  if (nom) nom = decodeEntities(nom).trim()
+
+  let description = getAllMeta(html, 'og:description')[0] || getAllMeta(html, 'description')[0] || null
+  if (description) description = decodeEntities(description).trim()
+
+  let images = getAllMeta(html, 'og:image')
+  let prix = null
+
+  const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)
+  for (const match of jsonLdMatches) {
+    try {
+      let data = JSON.parse(match[1])
+      if (Array.isArray(data)) data = data.find(d => d['@type'] === 'Product') || data[0]
+      if (data['@graph']) data = data['@graph'].find(d => d['@type'] === 'Product') || data
+      if (data['@type'] === 'Product' || data.name) {
+        nom = nom || data.name
+        description = description || data.description
+        const offer = Array.isArray(data.offers) ? data.offers[0] : data.offers
+        if (offer?.price) prix = parseFloat(offer.price)
+        if (data.image) {
+          const jsonLdImages = Array.isArray(data.image) ? data.image : [data.image]
+          images = [...new Set([...images, ...jsonLdImages])]
+        }
+      }
+    } catch (e) { /* JSON-LD malformé, ignoré */ }
+  }
+
+  if (images.length < 2) {
+    const galleryMatch = html.match(/"images?"\s*:\s*\[([^\]]{20,2000})\]/)
+    if (galleryMatch) {
+      const found = galleryMatch[1].match(/"(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/gi)
+      if (found) images = [...new Set([...images, ...found.map(f => f.replace(/^"|"$/g, ''))])]
+    }
+  }
+
+  return { nom, prix, description, images }
+}
+
+function finalizeResult(extracted, isAliExpress) {
+  let { nom, prix, description, images } = extracted
+  images = [...new Set(images)]
+    .filter(img => typeof img === 'string' && img.startsWith('http'))
+    .slice(0, 10)
+  if (description && description.length > 2000) description = description.slice(0, 2000) + '…'
+  return { nom: nom || '', description: description || '', prix, images, source: isAliExpress ? 'aliexpress' : 'generic' }
 }
 
 export default async function handler(req, res) {
@@ -65,7 +112,25 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   if (!isAllowedOrigin) return res.status(403).json({ error: 'Origine non autorisée' })
 
-  const { url } = req.body
+  const { url, html: pastedHtml } = req.body
+
+  // ── Cas 1 : HTML collé directement (fallback anti-blocage) ──
+  // Le navigateur de l'ADMIN a déjà chargé la page normalement, donc aucune
+  // protection anti-robot ne s'applique — on extrait juste depuis le texte fourni.
+  if (pastedHtml && typeof pastedHtml === 'string') {
+    if (pastedHtml.length < 200) {
+      return res.status(400).json({ error: 'Le code collé semble incomplet ou vide.' })
+    }
+    const isAliExpress = /aliexpress|"aeItemId"|"productId"/i.test(pastedHtml.slice(0, 5000)) || (url && /aliexpress\./i.test(url))
+    const extracted = isAliExpress ? extractAliExpress(pastedHtml) : extractGeneric(pastedHtml)
+    const result = finalizeResult(extracted, isAliExpress)
+    if (!result.nom && result.images.length === 0) {
+      return res.status(422).json({ error: "Aucune information trouvée dans le code collé. Assure-toi d'avoir copié la page complète (Ctrl+A puis Ctrl+C sur la page, pas juste une partie)." })
+    }
+    return res.status(200).json(result)
+  }
+
+  // ── Cas 2 : lien fourni — le serveur va chercher la page lui-même ──
   if (!url || typeof url !== 'string' || !url.startsWith('http')) {
     return res.status(400).json({ error: 'Lien invalide' })
   }
@@ -87,88 +152,19 @@ export default async function handler(req, res) {
     }
 
     const html = await response.text()
+    const extracted = isAliExpress ? extractAliExpress(html) : extractGeneric(html)
+    const result = finalizeResult(extracted, isAliExpress)
 
-    let nom = null, description = null, prix = null, images = []
-
-    // ── Cas spécial AliExpress ──
-    if (isAliExpress) {
-      const ali = extractAliExpress(html)
-      nom = ali.nom
-      prix = ali.prix
-      description = ali.description
-      images = ali.images
-
-      if (!nom && !images.length) {
-        return res.status(422).json({
-          error: "AliExpress a bloqué la récupération automatique (protection anti-robot). Copie le titre, prix et enregistre les photos manuellement depuis la page produit."
-        })
-      }
-    } else {
-      // ── Cas général : Open Graph + JSON-LD ──
-      const ogTitles = getAllMeta(html, 'og:title')
-      nom = ogTitles[0] || getAllMeta(html, 'twitter:title')[0] || null
-      // Ne PAS tronquer le titre — on le garde tel quel, décodé
-      if (nom) nom = decodeEntities(nom).trim()
-
-      description = getAllMeta(html, 'og:description')[0] || getAllMeta(html, 'description')[0] || null
-      if (description) description = decodeEntities(description).trim()
-
-      // Toutes les images og:image (il peut y en avoir plusieurs balises)
-      images = getAllMeta(html, 'og:image')
-
-      // JSON-LD — plus fiable pour le prix, et peut compléter les images
-      const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)
-      for (const match of jsonLdMatches) {
-        try {
-          let data = JSON.parse(match[1])
-          if (Array.isArray(data)) data = data.find(d => d['@type'] === 'Product') || data[0]
-          if (data['@graph']) data = data['@graph'].find(d => d['@type'] === 'Product') || data
-          if (data['@type'] === 'Product' || data.name) {
-            nom = nom || data.name
-            description = description || data.description
-            const offer = Array.isArray(data.offers) ? data.offers[0] : data.offers
-            if (offer?.price) prix = parseFloat(offer.price)
-            if (data.image) {
-              const jsonLdImages = Array.isArray(data.image) ? data.image : [data.image]
-              images = [...new Set([...images, ...jsonLdImages])]
-            }
-          }
-        } catch (e) { /* JSON-LD malformé, ignoré */ }
-      }
-
-      // Fallback : chercher un pattern générique de galerie d'images dans le HTML
-      if (images.length < 2) {
-        const galleryMatch = html.match(/"images?"\s*:\s*\[([^\]]{20,2000})\]/)
-        if (galleryMatch) {
-          const found = galleryMatch[1].match(/"(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/gi)
-          if (found) images = [...new Set([...images, ...found.map(f => f.replace(/^"|"$/g, ''))])]
-        }
-      }
+    if (!result.nom && result.images.length === 0) {
+      const msg = isAliExpress
+        ? "AliExpress a bloqué la récupération automatique (protection anti-robot). Utilise l'option \"Coller le code source\" ci-dessous à la place — ça fonctionne car ta propre page n'est pas bloquée."
+        : "Aucune information trouvée sur cette page. Le site n'expose peut-être pas de données produit standard — essaie \"Coller le code source\"."
+      return res.status(422).json({ error: msg, canPasteHtml: true })
     }
 
-    // Nettoyage final images : dédupliquer, filtrer, limiter à 10
-    images = [...new Set(images)]
-      .filter(img => typeof img === 'string' && img.startsWith('http'))
-      .slice(0, 10)
-
-    if (!nom && images.length === 0) {
-      return res.status(422).json({ error: "Aucune information trouvée sur cette page. Le site n'expose peut-être pas de données produit standard." })
-    }
-
-    // Limiter la description pour éviter du texte brut mal formaté trop long
-    if (description && description.length > 2000) {
-      description = description.slice(0, 2000) + '…'
-    }
-
-    return res.status(200).json({
-      nom: nom || '',
-      description: description || '',
-      prix,
-      images,
-      source: isAliExpress ? 'aliexpress' : 'generic',
-    })
+    return res.status(200).json(result)
   } catch (error) {
     console.error('Erreur import produit:', error)
-    return res.status(500).json({ error: "Erreur lors de la récupération de la page. Vérifie le lien." })
+    return res.status(500).json({ error: "Erreur lors de la récupération de la page. Essaie \"Coller le code source\".", canPasteHtml: true })
   }
 }
