@@ -137,9 +137,22 @@ export default async function handler(req, res) {
     if (pastedHtml.length < 200) {
       return res.status(400).json({ error: 'Le code collé semble incomplet ou vide.' })
     }
-    const isAliExpress = /aliexpress|"aeItemId"|"productId"/i.test(pastedHtml.slice(0, 5000)) || (url && /aliexpress\./i.test(url))
-    const extracted = isAliExpress ? extractAliExpress(pastedHtml) : extractGeneric(pastedHtml)
-    const result = finalizeResult(extracted, isAliExpress)
+    // Scanner TOUT le contenu (pas juste le début) pour détecter AliExpress de façon fiable
+    const isAliExpress = /aliexpress\.(com|fr|us)|"aeItemId"|"aeop_/i.test(pastedHtml) || (url && /aliexpress\./i.test(url))
+
+    // Approche combinée : on tente les deux extracteurs et on fusionne,
+    // pour maximiser les chances peu importe la structure exacte de la page
+    const aliResult = isAliExpress ? extractAliExpress(pastedHtml) : { nom:null, prix:null, description:null, images:[] }
+    const genResult = extractGeneric(pastedHtml)
+
+    const merged = {
+      nom: aliResult.nom || genResult.nom,
+      prix: aliResult.prix || genResult.prix,
+      description: aliResult.description || genResult.description,
+      images: [...new Set([...(aliResult.images||[]), ...(genResult.images||[])])],
+    }
+
+    const result = finalizeResult(merged, isAliExpress)
     if (!result.nom && result.images.length === 0) {
       return res.status(422).json({ error: "Aucune information trouvée dans le code collé. Assure-toi d'avoir copié la page complète (Ctrl+A puis Ctrl+C sur la page, pas juste une partie)." })
     }
@@ -168,8 +181,15 @@ export default async function handler(req, res) {
     }
 
     const html = await response.text()
-    const extracted = isAliExpress ? extractAliExpress(html) : extractGeneric(html)
-    const result = finalizeResult(extracted, isAliExpress)
+    const aliResult = isAliExpress ? extractAliExpress(html) : { nom:null, prix:null, description:null, images:[] }
+    const genResult = extractGeneric(html)
+    const merged = {
+      nom: aliResult.nom || genResult.nom,
+      prix: aliResult.prix || genResult.prix,
+      description: aliResult.description || genResult.description,
+      images: [...new Set([...(aliResult.images||[]), ...(genResult.images||[])])],
+    }
+    const result = finalizeResult(merged, isAliExpress)
 
     if (!result.nom && result.images.length === 0) {
       const msg = isAliExpress
