@@ -19,6 +19,7 @@ import { getSettings, saveSetting } from './utils/useSettings'
 import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
 import ProductGallery from './components/ProductGallery'
+import CookieConsent from './components/CookieConsent'
 
 // ── Facebook Pixel — Tracking événements ──
 function fbq(...args) {
@@ -119,7 +120,7 @@ export default function App() {
       return [...prev, { ...product, qty }]
     })
     toast(`✅ ${product.nom} ajouté au panier`)
-    fbq('track', 'AddToCart', {
+    window.fbq && fbq('track', 'AddToCart', {
       content_name: product.nom,
       content_ids: [product.id],
       content_type: 'product',
@@ -170,7 +171,7 @@ export default function App() {
       }
     }
 
-    fbq('track', 'Purchase', {
+    window.fbq && fbq('track', 'Purchase', {
       value: order.total,
       currency: 'DZD',
       content_ids: order.items.map(i => i.id),
@@ -278,7 +279,7 @@ export default function App() {
           onProductClick={(p) => {
             setOpenProduct(p)
             window.history.pushState({}, '', '#produit-' + p.id)
-            fbq('track', 'ViewContent', {
+            window.fbq && fbq('track', 'ViewContent', {
               content_name: p.nom,
               content_ids: [p.id],
               content_type: 'product',
@@ -410,7 +411,7 @@ export default function App() {
         onRemove={removeFromCart}
         onChangeQty={changeQty}
         onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart)
-            fbq('track', 'InitiateCheckout', {
+            window.fbq && fbq('track', 'InitiateCheckout', {
               value: cart.reduce((s,i) => s + i.prix * i.qty, 0),
               currency: 'DZD',
               num_items: cart.reduce((s,i) => s + i.qty, 0),
@@ -445,6 +446,7 @@ export default function App() {
       {/* Tracking */}
       {trackingOpen && <TrackingPage onClose={() => setTrackingOpen(false)} />}
       <WAButton />
+      <CookieConsent />
 
       {/* Toasts */}
       <div className="toasts">
