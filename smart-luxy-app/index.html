@@ -42,21 +42,25 @@
   <meta name="twitter:image"       content="https://wazyo.com/og-image.jpg" />
 
   <!-- ══════════════════════════════════════════
-       FACEBOOK PIXEL — Tracking des conversions
-       REMPLACE "2485119758546353" par ton vrai ID
-       (Gestionnaire de publicités Facebook → Pixels)
+       FACEBOOK PIXEL — chargé UNIQUEMENT après consentement cookies
+       Le script ne se lance plus tout seul — window.loadFacebookPixel()
+       est appelé depuis le composant CookieConsent une fois accepté.
+       REMPLACE "2485119758546353" par ton vrai ID si besoin
   ══════════════════════════════════════════ -->
   <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '2485119758546353');
-    fbq('track', 'PageView');
+    window.loadFacebookPixel = function() {
+      if (window.fbq) return // déjà chargé, on ne le fait pas deux fois
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '2485119758546353');
+      fbq('track', 'PageView');
+    }
   </script>
 
 
@@ -79,7 +83,6 @@
   </style>
 </head>
 <body>
-  <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=2485119758546353&ev=PageView&noscript=1"/></noscript>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 
