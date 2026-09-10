@@ -32,7 +32,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [openFaq, setOpenFaq] = useState(null)
   const [viewers] = useState(() => Math.floor(Math.random() * 8) + 3)
   const [ordered, setOrdered] = useState(false)
-  const [lang, setLang] = useState('fr')
+  const [lang, setLang] = useState('ar')
   const rtl = lang === 'ar'
   const [imgIdx, setImgIdx] = useState(0)
   const [lb, setLb] = useState(false)
@@ -132,6 +132,15 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
   function setF(k, v) { setForm(f => ({ ...f, [k]:v, ...(k==='wilaya'?{commune:''}:{}) })) }
 
+  // Sur mobile, le clavier + sa barre d'outils cachent souvent le champ en cours
+  // de saisie. On recentre le champ à l'écran juste après l'ouverture du clavier.
+  function handleFocusScroll(e) {
+    const el = e.target
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+  }
+
   // Lock body scroll
   useEffect(() => {
     const scrollY = window.scrollY
@@ -213,9 +222,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid var(--g3)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
         <button onClick={onClose} style={{ background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
         <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
-        <button onClick={() => setLang(l => l==='fr'?'ar':'fr')} style={{ background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)', borderRadius:20, padding:'4px 10px', color:'var(--br)', fontSize:11, fontWeight:800, cursor:'pointer', flexShrink:0, whiteSpace:'nowrap' }}>
-          {lang==='fr' ? '🇩🇿 عربي' : '🇫🇷 FR'}
-        </button>
         {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
       </div>
 
@@ -328,13 +334,25 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
         )}
 
-        {/* Prix */}
-        <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:14 }}>
-          <span style={{ fontSize:30, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
-          {p.prix_old && <>
-            <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
-            <span style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'2px 8px', borderRadius:6 }}>-{disc}%</span>
-          </>}
+        {/* Prix + bouton Commander immédiat */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+          <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
+            <span style={{ fontSize:30, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
+            {p.prix_old && <>
+              <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
+              <span style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'2px 8px', borderRadius:6 }}>-{disc}%</span>
+            </>}
+          </div>
+          {!outOfStock && (
+            <button
+              onClick={() => formRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })}
+              style={{
+                background:'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:10,
+                padding:'11px 20px', color:'#000', fontSize:13, fontWeight:900, cursor:'pointer',
+                whiteSpace:'nowrap', flexShrink:0,
+              }}
+            >{lang==='ar' ? '🛒 اطلب الآن' : '🛒 Commander'}</button>
+          )}
         </div>
 
         {/* 🔥 Barre de progression stock — urgence */}
@@ -445,9 +463,16 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       <div ref={formRef} style={{ margin:'0 12px 16px', background:'var(--card)', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, direction: rtl ? 'rtl' : 'ltr' }}>
 
         {/* En-tête formulaire */}
-        <div style={{ background:'linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05))', borderBottom:'1px solid rgba(201,168,76,.2)', padding:'16px', textAlign:'center' }}>
-          <div style={{ fontSize:17, fontWeight:900, color:'var(--g3)', marginBottom:3 }}>🛒 Passer commande</div>
-          <div style={{ fontSize:12, color:'var(--g3)' }}>Paiement à la livraison ✅ Partout en Algérie 🇩🇿</div>
+        <div style={{ position:'relative', background:'linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05))', borderBottom:'1px solid rgba(201,168,76,.2)', padding:'16px', textAlign:'center' }}>
+          <button onClick={() => setLang(l => l==='fr'?'ar':'fr')} style={{
+            position:'absolute', top:12, right:12,
+            background:'rgba(201,168,76,.15)', border:'1px solid rgba(201,168,76,.3)', borderRadius:20,
+            padding:'5px 12px', color:'var(--br)', fontSize:11, fontWeight:800, cursor:'pointer', whiteSpace:'nowrap',
+          }}>
+            {lang==='fr' ? '🇩🇿 عربي' : '🇫🇷 FR'}
+          </button>
+          <div style={{ fontSize:17, fontWeight:900, color:'var(--g3)', marginBottom:3 }}>{lang==='ar' ? '🛒 أدخل طلبك' : '🛒 Passer commande'}</div>
+          <div style={{ fontSize:12, color:'var(--g3)' }}>{lang==='ar' ? 'الدفع عند الاستلام ✅ في كل الجزائر 🇩🇿' : 'Paiement à la livraison ✅ Partout en Algérie 🇩🇿'}</div>
         </div>
 
         <div style={{ padding:16 }}>
@@ -558,11 +583,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
             <div>
               <label style={lbl}>{lang==='ar' ? 'الاسم الكامل *' : 'Nom complet *' }</label>
-              <input placeholder="Votre nom" value={form.nom} onChange={e => setF('nom',e.target.value)} style={inp} />
+              <input placeholder="Votre nom" value={form.nom} onChange={e => setF('nom',e.target.value)} onFocus={handleFocusScroll} style={inp} />
             </div>
             <div>
               <label style={lbl}>{lang==='ar' ? 'الهاتف *' : 'Téléphone *' }</label>
-              <input placeholder="0555 00 00 00" value={form.tel} onChange={e => setF('tel',e.target.value)} style={inp} type="tel" />
+              <input placeholder="0555 00 00 00" value={form.tel} onChange={e => setF('tel',e.target.value)} onFocus={handleFocusScroll} style={inp} type="tel" />
             </div>
           </div>
 
@@ -678,7 +703,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {modeLiv==='domicile' && (
             <div style={{ marginBottom:10 }}>
               <label style={lbl}>{lang==='ar' ? 'العنوان' : 'Adresse' }</label>
-              <input placeholder="Rue, quartier, N°..." value={form.adresse} onChange={e => setF('adresse',e.target.value)} style={inp} />
+              <input placeholder="Rue, quartier, N°..." value={form.adresse} onChange={e => setF('adresse',e.target.value)} onFocus={handleFocusScroll} style={inp} />
             </div>
           )}
 
