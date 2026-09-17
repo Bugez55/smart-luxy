@@ -171,13 +171,33 @@ export default function App() {
       }
     }
 
-    window.fbq && fbq('track', 'Purchase', {
+    // "Lead" ici, pas "Purchase" — la vraie vente n'est confirmée qu'à la
+    // livraison (voir AdminPanel → changement de statut "Livrée"). Ça évite
+    // que Meta optimise sur des commandes jamais payées au final.
+    window.fbq && fbq('track', 'Lead', {
       value: order.total,
       currency: 'DZD',
       content_ids: order.items.map(i => i.id),
       content_type: 'product',
-      num_items: order.items.reduce((s,i) => s + i.qty, 0),
     })
+
+    // Copie serveur (CAPI) — fonctionne même si le Pixel navigateur est
+    // bloqué ou si le client a refusé les cookies
+    fetch('/api/capi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventName: 'Lead',
+        phone: order.telephone,
+        firstName: order.nom_client?.split(' ')[0],
+        lastName: order.nom_client?.split(' ').slice(1).join(' '),
+        city: order.wilaya,
+        value: order.total,
+        contentIds: order.items.map(i => i.id),
+        eventSourceUrl: window.location.href,
+      }),
+    }).catch(() => {}) // best-effort, ne bloque jamais le tunnel de commande
+
     notifyTelegram(order)
     setLastOrder(order)
     setOrderItems(null)
