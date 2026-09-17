@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     const userData = {
       ph: sha256hex(normalisePhone(phone)),
-      country: ('dz'),
+      country: sha256hex('dz'),
     }
     if (firstName) userData.fn = sha256hex(normaliseName(firstName))
     if (lastName) userData.ln = sha256hex(normaliseName(lastName))
