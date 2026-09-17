@@ -1477,12 +1477,37 @@ export default function AdminPanel({ onLogout, onToast }) {
     if (selectedOrders.size === 0) return
     if (!window.confirm(`Confirmer ${selectedOrders.size} commandes ?`)) return
     setBulkLoading(true)
+
+    // Capturer les commandes concernées AVANT la mise à jour du state,
+    // pour pouvoir envoyer les événements Purchase si besoin
+    const ordersToUpdate = orders.filter(o => selectedOrders.has(o.id))
+
     await supabase.from('orders')
       .update({ statut })
       .in('id', Array.from(selectedOrders))
     setOrders(prev => prev.map(o =>
       selectedOrders.has(o.id) ? { ...o, statut } : o
     ))
+
+    if (statut === 'delivered') {
+      for (const order of ordersToUpdate) {
+        const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
+        fetch('/api/capi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventName: 'Purchase',
+            phone: order.telephone,
+            firstName: order.nom_client?.split(' ')[0],
+            lastName: order.nom_client?.split(' ').slice(1).join(' '),
+            city: order.wilaya,
+            value: order.total,
+            contentIds: items.map(i => i.id),
+          }),
+        }).catch(() => {})
+      }
+    }
+
     onToast && onToast(`✅ ${selectedOrders.size} commandes ${statut === 'confirmed' ? 'confirmées' : statut === 'delivered' ? 'livrées' : 'mises à jour'}`, 'default')
     setSelectedOrders(new Set())
     setBulkLoading(false)
@@ -1571,6 +1596,28 @@ export default function AdminPanel({ onLogout, onToast }) {
   async function setStatus(id, statut) {
     await supabase.from('orders').update({ statut }).eq('id', id)
     setOrders(prev => prev.map(o => o.id === id ? { ...o, statut } : o))
+
+    // "Purchase" envoyé à Meta seulement ici — à la vraie livraison confirmée,
+    // pas à la simple commande. C'est ça qui rend le ciblage pub plus rentable.
+    if (statut === 'delivered') {
+      const order = orders.find(o => o.id === id)
+      if (order) {
+        const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
+        fetch('/api/capi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventName: 'Purchase',
+            phone: order.telephone,
+            firstName: order.nom_client?.split(' ')[0],
+            lastName: order.nom_client?.split(' ').slice(1).join(' '),
+            city: order.wilaya,
+            value: order.total,
+            contentIds: items.map(i => i.id),
+          }),
+        }).catch(() => {})
+      }
+    }
   }
 
   async function delOrder(id) {
