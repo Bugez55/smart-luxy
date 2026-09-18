@@ -107,6 +107,7 @@ const T = {
     delaiBur: '1–3 jours, retrait au bureau',
     aucun: 'Aucun résultat',
     communes: 'communes',
+    telErr: '⚠️ Numéro invalide — 10 chiffres, ex: 0555 00 00 00',
   },
   ar: {
     title: 'تأكيد الطلب',
@@ -139,6 +140,7 @@ const T = {
     delaiBur: '1–3 أيام، استلام من المكتب',
     aucun: 'لا توجد نتائج',
     communes: 'بلدية',
+    telErr: '⚠️ رقم غير صحيح — 10 أرقام، مثال: 0555 00 00 00',
   }
 }
 
@@ -277,6 +279,8 @@ export default function OrderModal({ items, onClose, onSubmit }) {
   const [modeLiv, setModeLiv] = useState('domicile')
   const [form, setForm] = useState({ nom: '', tel: '', wilaya: '', commune: '', adresse: '', note: '' })
   const [loading, setLoading] = useState(false)
+  const [telError, setTelError] = useState(false)
+  const [telShake, setTelShake] = useState(false)
 
   const t = T[lang]
   const rtl = lang === 'ar'
@@ -292,21 +296,39 @@ export default function OrderModal({ items, onClose, onSubmit }) {
 
   function set(k, v) {
     setForm(f => ({ ...f, [k]: v, ...(k === 'wilaya' ? { commune: '' } : {}) }))
+    if (k === 'tel' && telError) setTelError(false)
   }
 
   function switchLang() { setLang(l => l === 'fr' ? 'ar' : 'fr') }
 
+  // Téléphone algérien : 10 chiffres, commence par 0 (ex: 05/06/07 mobile,
+  // 02/03/04 fixe). On nettoie les espaces/tirets avant de vérifier.
+  function isValidTel(v) {
+    const digits = (v || '').replace(/[^\d]/g, '')
+    return /^0\d{9}$/.test(digits)
+  }
+
+  function triggerTelError() {
+    setTelError(true)
+    setTelShake(true)
+    setTimeout(() => setTelShake(false), 500)
+  }
+
   async function handleSubmit() {
     if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
+    if (!isValidTel(form.tel)) { triggerTelError(); return }
     setLoading(true)
-    await onSubmit({
-      ...form,
-      items,
-      mode_livraison: modeLiv,
-      frais_livraison: fraisLiv || 0,
-      total: totalFinal,
-    })
-    setLoading(false)
+    try {
+      await onSubmit({
+        ...form,
+        items,
+        mode_livraison: modeLiv,
+        frais_livraison: fraisLiv || 0,
+        total: totalFinal,
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   function waOrder() {
@@ -479,9 +501,24 @@ export default function OrderModal({ items, onClose, onSubmit }) {
             </div>
             <div>
               <label style={labelStyle}>{t.tel} <span style={{ color:'var(--br)' }}>*</span></label>
-              <input placeholder={t.telPh} value={form.tel} onChange={e => set('tel', e.target.value)} style={inputStyle} type="tel" />
+              <input
+                placeholder={t.telPh}
+                value={form.tel}
+                onChange={e => set('tel', e.target.value)}
+                style={{
+                  ...inputStyle,
+                  border: `1px solid ${telError ? '#ef4444' : '#333'}`,
+                  animation: telShake ? 'omTelShake .5s' : 'none',
+                }}
+                type="tel"
+              />
             </div>
           </div>
+          {telError && (
+            <div style={{ color: '#fca5a5', fontSize: 12, marginTop: -4, marginBottom: 10, textAlign: rtl ? 'right' : 'left' }}>
+              {t.telErr}
+            </div>
+          )}
 
           {/* Adresse */}
           {modeLiv === 'domicile' && (
@@ -539,6 +576,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
 
       <style>{`
         @keyframes omSlide { from{transform:translateY(50px);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes omTelShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
         input:focus, textarea:focus { border-color: #C9A84C !important; }
         input::placeholder, textarea::placeholder { color: #444; }
       `}</style>
