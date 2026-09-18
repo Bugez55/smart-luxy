@@ -45,6 +45,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [paiementInfo, setPaiementInfo] = useState({ ccp:'', ccp_nom:'', baridimob:'', ccp_actif:false, baridimob_actif:false })
   const [preuvePaiement, setPreuvePaiement] = useState('')
   const [ordering, setOrdering] = useState(false)
+  const [telError, setTelError] = useState(false)
+  const [telShake, setTelShake] = useState(false)
   const [wilayaOpen, setWilayaOpen] = useState(false)
   const [communeOpen, setCommuneOpen] = useState(false)
   const [stickyVisible, setStickyVisible] = useState(false)
@@ -130,7 +132,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     return { type:'external', src: url }
   }
 
-  function setF(k, v) { setForm(f => ({ ...f, [k]:v, ...(k==='wilaya'?{commune:''}:{}) })) }
+  function setF(k, v) {
+    setForm(f => ({ ...f, [k]:v, ...(k==='wilaya'?{commune:''}:{}) }))
+    if (k === 'tel' && telError) setTelError(false)
+  }
+  function isValidTel(v) {
+    const digits = (v || '').replace(/[^\d]/g, '')
+    return /^0\d{9}$/.test(digits)
+  }
 
   // Sur mobile, le clavier + sa barre d'outils cachent souvent le champ en cours
   // de saisie. On recentre le champ à l'écran juste après l'ouverture du clavier.
@@ -187,21 +196,25 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
   async function handleOrder() {
     if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
+    if (!isValidTel(form.tel)) { setTelError(true); setTelShake(true); setTimeout(() => setTelShake(false), 500); return }
     // Anti-bot honeypot — si ce champ caché est rempli, c'est un robot
     if (form.website) { console.warn('Bot détecté'); return }
     if (hasBundles && selectedBundle === null) return
     setOrdering(true)
     const prixUnit = activeBundle ? Math.round(activeBundle.prix / activeBundle.qty) : p.prix
-    await onSubmitOrder({
-      ...form,
-      items: [{ ...p, qty: currentQty, prix: prixUnit }],
-      mode_livraison: modeLiv,
-      mode_paiement:  modePaiement,
-      preuve_paiement: preuvePaiement || null,
-      frais_livraison: fraisLiv || 0,
-      total: totalFinal,
-    })
-    setOrdering(false)
+    try {
+      await onSubmitOrder({
+        ...form,
+        items: [{ ...p, qty: currentQty, prix: prixUnit }],
+        mode_livraison: modeLiv,
+        mode_paiement:  modePaiement,
+        preuve_paiement: preuvePaiement || null,
+        frais_livraison: fraisLiv || 0,
+        total: totalFinal,
+      })
+    } finally {
+      setOrdering(false)
+    }
   }
 
   const inp = {
@@ -587,9 +600,23 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             </div>
             <div>
               <label style={lbl}>{lang==='ar' ? 'الهاتف *' : 'Téléphone *' }</label>
-              <input placeholder="0555 00 00 00" value={form.tel} onChange={e => setF('tel',e.target.value)} onFocus={handleFocusScroll} style={inp} type="tel" />
+              <input
+                placeholder="0555 00 00 00"
+                value={form.tel}
+                onChange={e => setF('tel',e.target.value)}
+                onFocus={handleFocusScroll}
+                style={{ ...inp, border: `1px solid ${telError ? '#ef4444' : '#2a2a2a'}`, animation: telShake ? 'ppTelShake .5s' : 'none' }}
+                type="tel"
+              />
+              {telError && (
+                <div style={{ color:'#fca5a5', fontSize:11, marginTop:5 }}>
+                  {lang==='ar' ? '⚠️ رقم غير صحيح — 10 أرقام' : '⚠️ Numéro invalide — 10 chiffres'}
+                </div>
+              )}
             </div>
           </div>
+
+          <style>{`@keyframes ppTelShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }`}</style>
 
           {/* Adresse */}
           {/* ── Mode de paiement ── */}
