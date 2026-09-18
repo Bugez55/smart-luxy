@@ -1503,6 +1503,8 @@ export default function AdminPanel({ onLogout, onToast }) {
             city: order.wilaya,
             value: order.total,
             contentIds: items.map(i => i.id),
+            fbc: order.fbc || undefined,
+            fbp: order.fbp || undefined,
           }),
         })
           .then(async r => {
@@ -1621,6 +1623,8 @@ export default function AdminPanel({ onLogout, onToast }) {
             city: order.wilaya,
             value: order.total,
             contentIds: items.map(i => i.id),
+            fbc: order.fbc || undefined,
+            fbp: order.fbp || undefined,
           }),
         })
           .then(async r => {
