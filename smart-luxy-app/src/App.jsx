@@ -144,68 +144,82 @@ export default function App() {
     // Le prix est recalculé côté serveur (fonction create_order) — le total
     // envoyé par le navigateur n'est plus jamais utilisé tel quel, ça bloque
     // toute tentative de manipulation de prix côté client.
-    const { data: order, error } = await supabase.rpc('create_order', {
-      p_nom_client: form.nom,
-      p_telephone: form.tel,
-      p_wilaya: form.wilaya,
-      p_commune: form.commune,
-      p_adresse: form.adresse || '',
-      p_note: form.note || '',
-      p_items: form.items,
-      p_mode_livraison: form.mode_livraison || 'domicile',
-      p_frais_livraison: form.frais_livraison || 0,
-      p_mode_paiement: form.mode_paiement || 'livraison',
-    })
-    if (error) { toast('❌ Erreur. Veuillez réessayer.', 'error'); return }
+    try {
+      const { data: order, error } = await supabase.rpc('create_order', {
+        p_nom_client: form.nom,
+        p_telephone: form.tel,
+        p_wilaya: form.wilaya,
+        p_commune: form.commune,
+        p_adresse: form.adresse || '',
+        p_note: form.note || '',
+        p_items: form.items,
+        p_mode_livraison: form.mode_livraison || 'domicile',
+        p_frais_livraison: form.frais_livraison || 0,
+        p_mode_paiement: form.mode_paiement || 'livraison',
+      })
+      // Si erreur OU si le serveur n'a rien renvoyé (cas silencieux), on
+      // s'arrête ici proprement — jamais de plantage, jamais de fermeture
+      // du formulaire : le client reste dessus et peut réessayer.
+      if (error || !order) {
+        toast('❌ Erreur. Vérifie tes informations et réessaie.', 'error')
+        return
+      }
 
-    // ── Déduire le stock + alerter si stock bas ──
-    for (const item of form.items) {
-      const prod = products.find(p => p.id === item.id)
-      if (prod && prod.stock !== null && prod.stock !== undefined) {
-        const newStock = Math.max(0, prod.stock - item.qty)
-        await supabase.from('products').update({ stock: newStock }).eq('id', item.id)
-        // Alerte Telegram si stock devient bas (≤5) ou épuisé
-        if (newStock <= 5) {
-          alertStockBas(prod, newStock)
+      // ── Déduire le stock + alerter si stock bas ──
+      for (const item of form.items) {
+        const prod = products.find(p => p.id === item.id)
+        if (prod && prod.stock !== null && prod.stock !== undefined) {
+          const newStock = Math.max(0, prod.stock - item.qty)
+          await supabase.from('products').update({ stock: newStock }).eq('id', item.id)
+          // Alerte Telegram si stock devient bas (≤5) ou épuisé
+          if (newStock <= 5) {
+            alertStockBas(prod, newStock)
+          }
         }
       }
-    }
 
-    // "Lead" ici, pas "Purchase" — la vraie vente n'est confirmée qu'à la
-    // livraison (voir AdminPanel → changement de statut "Livrée"). Ça évite
-    // que Meta optimise sur des commandes jamais payées au final.
-    window.fbq && fbq('track', 'Lead', {
-      value: order.total,
-      currency: 'DZD',
-      content_ids: order.items.map(i => i.id),
-      content_type: 'product',
-    })
-
-    // Copie serveur (CAPI) — fonctionne même si le Pixel navigateur est
-    // bloqué ou si le client a refusé les cookies
-    fetch('/api/capi', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        eventName: 'Lead',
-        phone: order.telephone,
-        firstName: order.nom_client?.split(' ')[0],
-        lastName: order.nom_client?.split(' ').slice(1).join(' '),
-        city: order.wilaya,
+      // "Lead" ici, pas "Purchase" — la vraie vente n'est confirmée qu'à la
+      // livraison (voir AdminPanel → changement de statut "Livrée"). Ça évite
+      // que Meta optimise sur des commandes jamais payées au final.
+      window.fbq && fbq('track', 'Lead', {
         value: order.total,
-        contentIds: order.items.map(i => i.id),
-        eventSourceUrl: window.location.href,
-      }),
-    }).catch(() => {}) // best-effort, ne bloque jamais le tunnel de commande
+        currency: 'DZD',
+        content_ids: (order.items || []).map(i => i.id),
+        content_type: 'product',
+      })
 
-    notifyTelegram(order)
-    setLastOrder(order)
-    setOrderItems(null)
-    setCart([])
-    setCartOpen(false)
-    setPromoInfo(null)
-    // Recharger les produits pour afficher le nouveau stock
-    loadProducts()
+      // Copie serveur (CAPI) — fonctionne même si le Pixel navigateur est
+      // bloqué ou si le client a refusé les cookies
+      fetch('/api/capi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventName: 'Lead',
+          phone: order.telephone,
+          firstName: order.nom_client?.split(' ')[0],
+          lastName: order.nom_client?.split(' ').slice(1).join(' '),
+          city: order.wilaya,
+          value: order.total,
+          contentIds: (order.items || []).map(i => i.id),
+          eventSourceUrl: window.location.href,
+        }),
+      }).catch(() => {}) // best-effort, ne bloque jamais le tunnel de commande
+
+      notifyTelegram(order)
+      setLastOrder(order)
+      setOrderItems(null)
+      setCart([])
+      setCartOpen(false)
+      setPromoInfo(null)
+      // Recharger les produits pour afficher le nouveau stock
+      loadProducts()
+    } catch (e) {
+      // Filet de sécurité final : quoi qu'il arrive, le client ne voit
+      // jamais un écran cassé — juste un message clair, et il reste sur
+      // le formulaire pour corriger et réessayer.
+      console.error('Erreur soumission commande:', e)
+      toast('❌ Une erreur est survenue. Vérifie tes informations et réessaie.', 'error')
+    }
   }
 
   // ── Vraie authentification Supabase Auth (remplace le mdp en clair) ──
