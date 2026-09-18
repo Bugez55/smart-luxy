@@ -14,6 +14,18 @@ function getAllMeta(html, prop) {
   return [...new Set(results)]
 }
 
+// Les URLs d'images capturées dans du JSON embarqué (window.runParams côté
+// AliExpress) contiennent souvent des slashs échappés ("https:\/\/...") —
+// non nettoyés, ça produit des <img src> invalides → icône image cassée.
+function cleanImageUrl(str) {
+  if (!str) return str
+  return str
+    .replace(/^"|"$/g, '')
+    .replace(/\\\//g, '/')
+    .replace(/\\u([\dA-Fa-f]{4})/g, (_, code) => String.fromCharCode(parseInt(code, 16)))
+    .trim()
+}
+
 function decodeEntities(str) {
   if (!str) return str
   return str
@@ -51,7 +63,7 @@ function extractAliExpress(html) {
       html.match(/"imageList"\s*:\s*\[([^\]]+)\]/)
   if (m) {
     const urls = m[1].match(/"(https?:\/\/[^"]+)"/g)
-    if (urls) result.images = urls.map(u => u.replace(/^"|"$/g, ''))
+    if (urls) result.images = urls.map(cleanImageUrl)
   }
 
   // Description — plusieurs emplacements possibles + fallback meta description standard
@@ -76,7 +88,7 @@ function extractGeneric(html) {
   let description = getAllMeta(html, 'og:description')[0] || getAllMeta(html, 'description')[0] || null
   if (description) description = decodeEntities(description).trim()
 
-  let images = getAllMeta(html, 'og:image')
+  let images = getAllMeta(html, 'og:image').map(cleanImageUrl)
   let prix = null
 
   const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)
@@ -102,7 +114,7 @@ function extractGeneric(html) {
     const galleryMatch = html.match(/"images?"\s*:\s*\[([^\]]{20,2000})\]/)
     if (galleryMatch) {
       const found = galleryMatch[1].match(/"(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/gi)
-      if (found) images = [...new Set([...images, ...found.map(f => f.replace(/^"|"$/g, ''))])]
+      if (found) images = [...new Set([...images, ...found.map(cleanImageUrl)])]
     }
   }
 
