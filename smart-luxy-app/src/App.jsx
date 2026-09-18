@@ -141,6 +141,16 @@ export default function App() {
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
 
   async function submitOrder(form) {
+    // Cookies Facebook (posés automatiquement par le Pixel navigateur quand
+    // le client arrive via une pub ou visite le site) — on les récupère ici
+    // pour les envoyer à Meta, ça améliore la qualité de correspondance.
+    function getCookie(name) {
+      const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
+      return m ? decodeURIComponent(m[1]) : null
+    }
+    const fbc = getCookie('_fbc')
+    const fbp = getCookie('_fbp')
+
     // Le prix est recalculé côté serveur (fonction create_order) — le total
     // envoyé par le navigateur n'est plus jamais utilisé tel quel, ça bloque
     // toute tentative de manipulation de prix côté client.
@@ -156,6 +166,8 @@ export default function App() {
         p_mode_livraison: form.mode_livraison || 'domicile',
         p_frais_livraison: form.frais_livraison || 0,
         p_mode_paiement: form.mode_paiement || 'livraison',
+        p_fbc: fbc,
+        p_fbp: fbp,
       })
       // Si erreur OU si le serveur n'a rien renvoyé (cas silencieux), on
       // s'arrête ici proprement — jamais de plantage, jamais de fermeture
@@ -202,6 +214,7 @@ export default function App() {
           value: order.total,
           contentIds: (order.items || []).map(i => i.id),
           eventSourceUrl: window.location.href,
+          fbc, fbp,
         }),
       }).catch(() => {}) // best-effort, ne bloque jamais le tunnel de commande
 
