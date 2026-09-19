@@ -165,7 +165,7 @@ function printInvoice(order) {
           <div class="article-name">${escapeHtml(item.nom)}</div>
           ${item.categorie ? `<div class="article-prix">${escapeHtml(item.categorie)}</div>` : ''}
         </td>
-        <td style="text-align:center;font-weight:700">${item.qty}</td>
+        <td style="text-align:center;font-weight:700">${escapeHtml(String(item.qty))}</td>
         <td style="text-align:right;color:#666">${fmtDA(item.prix)}</td>
         <td>${fmtDA(Number(item.prix) * item.qty)}</td>
       </tr>`).join('')}
@@ -667,8 +667,8 @@ function LivraisonManager({ orders, onToast }) {
 
       onToast && onToast(`✅ Colis créé ! Tracking: ${data.tracking}`, 'default')
 
-      if (data.label_url) window.open(data.label_url, '_blank')
-      else window.open(`https://yalidine.app/app/particulier/bordereau.php?tracking=${encodeURIComponent(data.tracking)}`, '_blank')
+      if (data.label_url) window.open(data.label_url, '_blank', 'noopener,noreferrer')
+      else window.open(`https://yalidine.app/app/particulier/bordereau.php?tracking=${encodeURIComponent(data.tracking)}`, '_blank', 'noopener,noreferrer')
     } catch(e) {
       onToast && onToast('❌ Yalidine: ' + e.message, 'error')
     }
@@ -686,7 +686,7 @@ function LivraisonManager({ orders, onToast }) {
       `adresse=${encodeURIComponent(order.adresse || '')}&` +
       `montant=${order.total}&` +
       `reference=${order.id}`
-    window.open(url, '_blank')
+    window.open(url, '_blank', 'noopener,noreferrer')
     onToast && onToast('✅ Noest DZ ouvert avec les données', 'default')
   }
 
@@ -700,7 +700,7 @@ function LivraisonManager({ orders, onToast }) {
       `address=${encodeURIComponent(order.adresse || order.commune || '')}&` +
       `price=${order.total}&` +
       `ref=${order.id}`
-    window.open(url, '_blank')
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   // ── Télécharger bordereau PDF maison ──
@@ -745,7 +745,7 @@ function LivraisonManager({ orders, onToast }) {
     <div class="box">
       <div class="label" style="margin-bottom:8px;font-size:14px">🛍️ Articles</div>
       <table><thead><tr><th>Produit</th><th>Qté</th><th>Prix</th></tr></thead><tbody>
-      ${items.map(it => `<tr><td>${escapeHtml(it.nom)}</td><td>${it.qty}</td><td>${(it.prix*it.qty).toLocaleString()} DA</td></tr>`).join('')}
+      ${items.map(it => `<tr><td>${escapeHtml(it.nom)}</td><td>${escapeHtml(String(it.qty))}</td><td>${(it.prix*it.qty).toLocaleString()} DA</td></tr>`).join('')}
       </tbody></table>
       <div class="total">Total à percevoir: ${Number(order.total).toLocaleString()} DA</div>
     </div>
@@ -871,7 +871,7 @@ function LivraisonManager({ orders, onToast }) {
                 )}
 
                 {selectedCompany === 'worldex' && (
-                  <button onClick={() => window.open('https://www.world-express.dz', '_blank')} style={{
+                  <button onClick={() => window.open('https://www.world-express.dz', '_blank', 'noopener,noreferrer')} style={{
                     flex:1, background:'rgba(34,197,94,.1)', border:'1px solid rgba(34,197,94,.25)',
                     borderRadius:8, padding:'8px 12px', color:'#86efac', fontSize:11, fontWeight:800, cursor:'pointer',
                   }}>🟢 Ouvrir World Express</button>
@@ -1413,9 +1413,16 @@ export default function AdminPanel({ onLogout, onToast }) {
     // pour pouvoir envoyer les événements Purchase si besoin
     const ordersToUpdate = orders.filter(o => selectedOrders.has(o.id))
 
-    await supabase.from('orders')
+    const { error } = await supabase.from('orders')
       .update({ statut })
       .in('id', Array.from(selectedOrders))
+
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
+      setBulkLoading(false)
+      return
+    }
+
     setOrders(prev => prev.map(o =>
       selectedOrders.has(o.id) ? { ...o, statut } : o
     ))
@@ -1439,7 +1446,12 @@ export default function AdminPanel({ onLogout, onToast }) {
     if (selectedOrders.size === 0) return
     if (!window.confirm(`Supprimer ${selectedOrders.size} commandes définitivement ?`)) return
     setBulkLoading(true)
-    await supabase.from('orders').delete().in('id', Array.from(selectedOrders))
+    const { error } = await supabase.from('orders').delete().in('id', Array.from(selectedOrders))
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
+      setBulkLoading(false)
+      return
+    }
     setOrders(prev => prev.filter(o => !selectedOrders.has(o.id)))
     onToast && onToast(`🗑️ ${selectedOrders.size} commandes supprimées`, 'default')
     setSelectedOrders(new Set())
@@ -1480,7 +1492,7 @@ export default function AdminPanel({ onLogout, onToast }) {
             ${items.map((it, i) => `
               <tr style="background:${i%2?'#f5f5f5':'white'}">
                 <td style="padding:7px; border-bottom:1px solid #eee;">${escapeHtml(it.nom)}</td>
-                <td style="padding:7px; text-align:center; border-bottom:1px solid #eee;">×${it.qty}</td>
+                <td style="padding:7px; text-align:center; border-bottom:1px solid #eee;">×${escapeHtml(String(it.qty))}</td>
                 <td style="padding:7px; text-align:right; border-bottom:1px solid #eee; font-weight:700;">${(it.prix * it.qty).toLocaleString()} DA</td>
               </tr>
             `).join('')}
@@ -1516,7 +1528,8 @@ export default function AdminPanel({ onLogout, onToast }) {
   }
 
   async function setStatus(id, statut) {
-    await supabase.from('orders').update({ statut }).eq('id', id)
+    const { error } = await supabase.from('orders').update({ statut }).eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setOrders(prev => prev.map(o => o.id === id ? { ...o, statut } : o))
 
     // "Purchase" envoyé à Meta seulement ici — à la vraie livraison confirmée,
@@ -1535,7 +1548,8 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   async function delOrder(id) {
     if (!confirm('Supprimer cette commande ?')) return
-    await supabase.from('orders').delete().eq('id', id)
+    const { error } = await supabase.from('orders').delete().eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setOrders(prev => prev.filter(o => o.id !== id))
     onToast('🗑️ Commande supprimée')
   }
