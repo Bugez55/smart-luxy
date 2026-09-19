@@ -11,79 +11,81 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
       fr: {
         title: 'Politique de Confidentialité',
         emoji: '🔒',
-        date: 'Dernière mise à jour : Mars 2025',
+        date: 'Dernière mise à jour : Septembre 2026',
         sections: [
           {
             title: '1. Informations collectées',
-            text: `Dans le cadre de votre commande, Wazyo collecte uniquement les informations suivantes :\n• Nom et prénom\n• Numéro de téléphone\n• Wilaya et commune de livraison\n• Adresse de livraison (optionnel)\n• Note de commande (optionnel)\n\nCes informations sont strictement nécessaires au traitement et à la livraison de votre commande.`
+            text: `Lors d'une commande, Wazyo collecte les informations nécessaires au traitement et à la livraison : nom, téléphone, wilaya, commune, adresse et éventuelle note de commande. Des données techniques peuvent aussi être enregistrées pour le fonctionnement du site (panier et préférences).`
           },
           {
             title: '2. Utilisation des données',
-            text: `Vos données personnelles sont utilisées exclusivement pour :\n• Traiter et confirmer votre commande\n• Organiser la livraison à votre adresse\n• Vous contacter en cas de besoin concernant votre commande\n• Améliorer nos services\n\nNous ne vendons, ne louons et ne partageons jamais vos données avec des tiers à des fins commerciales.`
+            text: `Les données servent à traiter et confirmer la commande, organiser la livraison, contacter le client lorsque nécessaire et améliorer le fonctionnement de la boutique. Certaines données peuvent être transmises à un prestataire de livraison lorsqu'elles sont nécessaires à l'expédition.`
           },
           {
-            title: '3. Conservation des données',
-            text: `Vos données sont conservées uniquement pendant la durée nécessaire au traitement de votre commande, et pendant une période maximale de 12 mois après la livraison, conformément aux obligations légales algériennes.`
+            title: '3. Conservation',
+            text: `Les données sont conservées pendant la durée nécessaire au traitement des commandes et au service client, puis supprimées ou archivées selon les besoins de l'activité et les obligations légales applicables.`
           },
           {
             title: '4. Sécurité',
-            text: `Wazyo met en place toutes les mesures techniques nécessaires pour protéger vos données contre tout accès non autorisé, modification, divulgation ou destruction. Vos informations sont stockées de manière sécurisée via des services certifiés.`
+            text: `Wazyo applique des mesures techniques raisonnables pour limiter les accès non autorisés et protéger les données de commande. Les accès administratifs et les données sensibles du serveur sont séparés du navigateur client.`
           },
           {
             title: '5. Vos droits',
-            text: `Conformément à la loi algérienne n°18-07 relative à la protection des données personnelles, vous disposez des droits suivants :\n• Droit d'accès à vos données\n• Droit de rectification de vos données\n• Droit de suppression de vos données\n• Droit d'opposition au traitement\n\nPour exercer ces droits, contactez-nous via WhatsApp : +' + CONFIG.telephone + '.replace('${CONFIG.telephone}', CONFIG.telephone)`
+            text: `Selon la réglementation applicable, vous pouvez demander l'accès, la rectification ou la suppression de vos données, ou vous opposer à certains traitements. Pour toute demande : WhatsApp +${CONFIG.telephone} ou ${CONFIG.email}.`
           },
           {
-            title: '6. Cookies',
-            text: `Notre site utilise uniquement des données de session techniques nécessaires au bon fonctionnement de la boutique (panier, préférences). Aucun cookie publicitaire ou de traçage tiers n'est utilisé.`
+            title: '6. Cookies et traceurs',
+            text: `Le site utilise des données locales nécessaires au fonctionnement de la boutique, notamment pour le panier et certaines préférences. Après avoir appuyé sur « OK » dans le bandeau cookies, l'outil Meta peut être activé afin de mesurer l'efficacité des campagnes publicitaires. Sans cette action, le Pixel Meta n'est pas chargé.`
           },
           {
             title: '7. Modifications',
-            text: `Wazyo se réserve le droit de modifier cette politique à tout moment. Les modifications entrent en vigueur dès leur publication sur le site. Nous vous encourageons à consulter régulièrement cette page.`
+            text: `Cette politique peut être mise à jour lorsque le fonctionnement de la boutique ou les services utilisés évoluent.`
           },
           {
             title: '8. Contact',
-            text: `Pour toute question relative à votre vie privée :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : contact@wazyo.com`
+            text: `📱 WhatsApp : +${CONFIG.telephone}
+📧 Email : ${CONFIG.email}`
           }
         ]
       },
       ar: {
         title: 'سياسة الخصوصية',
         emoji: '🔒',
-        date: 'آخر تحديث: مارس 2025',
+        date: 'آخر تحديث: سبتمبر 2026',
         dir: 'rtl',
         sections: [
           {
-            title: '١. المعلومات التي نجمعها',
-            text: `عند تقديم طلبك، تقوم Wazyo بجمع المعلومات التالية فقط:\n• الاسم واللقب\n• رقم الهاتف\n• الولاية والبلدية للتوصيل\n• عنوان التوصيل (اختياري)\n• ملاحظة الطلب (اختياري)\n\nهذه المعلومات ضرورية فقط لمعالجة طلبك وتسليمه.`
+            title: '١. المعلومات التي يتم جمعها',
+            text: `عند تقديم طلب، تجمع Wazyo المعلومات اللازمة لمعالجة الطلب وتوصيله: الاسم، رقم الهاتف، الولاية، البلدية، العنوان وأي ملاحظة خاصة بالطلب. كما يمكن حفظ بعض البيانات التقنية اللازمة لعمل الموقع مثل السلة والتفضيلات.`
           },
           {
             title: '٢. استخدام البيانات',
-            text: `تُستخدم بياناتك الشخصية حصريًا من أجل:\n• معالجة طلبك وتأكيده\n• تنظيم التوصيل إلى عنوانك\n• التواصل معك عند الحاجة بخصوص طلبك\n• تحسين خدماتنا\n\nنحن لا نبيع أو نؤجر أو نشارك بياناتك مع أطراف ثالثة لأغراض تجارية أبدًا.`
+            text: `تُستخدم البيانات لمعالجة الطلب وتأكيده وتنظيم التوصيل والتواصل مع العميل عند الحاجة وتحسين عمل المتجر. ويمكن مشاركة البيانات الضرورية مع شركة التوصيل عند الحاجة لإرسال الطلب.`
           },
           {
             title: '٣. الاحتفاظ بالبيانات',
-            text: `يتم الاحتفاظ ببياناتك فقط طوال المدة اللازمة لمعالجة طلبك، وبعد ذلك لمدة لا تتجاوز 12 شهرًا من تاريخ التسليم، وفقًا للالتزامات القانونية الجزائرية.`
+            text: `يتم الاحتفاظ بالبيانات طوال المدة اللازمة لمعالجة الطلبات وخدمة العملاء، ثم حذفها أو أرشفتها بحسب احتياجات النشاط والمتطلبات القانونية السارية.`
           },
           {
             title: '٤. الأمان',
-            text: `تتخذ Wazyo جميع التدابير التقنية اللازمة لحماية بياناتك من أي وصول غير مصرح به أو تعديل أو إفصاح أو تدمير. يتم تخزين معلوماتك بشكل آمن عبر خدمات معتمدة.`
+            text: `تطبق Wazyo إجراءات تقنية للحد من الوصول غير المصرح به وحماية بيانات الطلبات. كما يتم فصل الوصول الإداري والبيانات الحساسة الخاصة بالخادم عن متصفح العميل.`
           },
           {
             title: '٥. حقوقك',
-            text: `وفقًا للقانون الجزائري رقم 18-07 المتعلق بحماية البيانات الشخصية، تتمتع بالحقوق التالية:\n• الحق في الوصول إلى بياناتك\n• الحق في تصحيح بياناتك\n• الحق في حذف بياناتك\n• الحق في الاعتراض على المعالجة\n\nلممارسة هذه الحقوق، تواصل معنا عبر واتساب: 213 556 688 810+`
+            text: `وفقًا للتنظيم المعمول به، يمكنك طلب الوصول إلى بياناتك أو تصحيحها أو حذفها، أو الاعتراض على بعض عمليات المعالجة. للتواصل: واتساب +${CONFIG.telephone} أو ${CONFIG.email}.`
           },
           {
-            title: '٦. ملفات تعريف الارتباط',
-            text: `يستخدم موقعنا فقط البيانات التقنية الضرورية لحسن سير المتجر (سلة التسوق، التفضيلات). لا يتم استخدام أي ملفات تتبع أو إعلانات خارجية.`
+            title: '٦. ملفات الارتباط وأدوات التتبع',
+            text: `يستخدم الموقع بيانات محلية ضرورية لعمل المتجر، مثل السلة وبعض التفضيلات. بعد الضغط على «موافق / OK» في إشعار ملفات الارتباط، يمكن تفعيل أداة Meta لقياس فعالية الحملات الإعلانية. قبل ذلك لا يتم تحميل Pixel Meta.`
           },
           {
             title: '٧. التعديلات',
-            text: `تحتفظ Wazyo بحق تعديل هذه السياسة في أي وقت. تدخل التعديلات حيز التنفيذ فور نشرها على الموقع. نشجعك على مراجعة هذه الصفحة بانتظام.`
+            text: `يمكن تحديث هذه السياسة عندما يتغير تشغيل المتجر أو الخدمات المستخدمة.`
           },
           {
             title: '٨. التواصل',
-            text: `لأي سؤال يتعلق بخصوصيتك:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: contact@wazyo.com`
+            text: `📱 واتساب: +${CONFIG.telephone}
+📧 البريد الإلكتروني: ${CONFIG.email}`
           }
         ]
       }
@@ -92,7 +94,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
       fr: {
         title: 'Politique de Retour & Remboursement',
         emoji: '🔄',
-        date: 'Dernière mise à jour : Mars 2025',
+        date: 'Dernière mise à jour : Septembre 2026',
         sections: [
           {
             title: '1. Délai de retour',
@@ -128,14 +130,14 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '9. Contact SAV',
-            text: `Pour toute réclamation ou question :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : contact@wazyo.com\n🕐 Disponible 7j/7 de 8h à 22h`
+            text: `Pour toute réclamation ou question :\n📱 WhatsApp : ${CONFIG.telephone}\n📧 Email : ${CONFIG.email}\n🕐 Disponible 7j/7 de 8h à 22h`
           }
         ]
       },
       ar: {
         title: 'سياسة الإرجاع والاسترداد',
         emoji: '🔄',
-        date: 'آخر تحديث: مارس 2025',
+        date: 'آخر تحديث: سبتمبر 2026',
         dir: 'rtl',
         sections: [
           {
@@ -172,7 +174,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '٩. خدمة ما بعد البيع',
-            text: `لأي شكوى أو سؤال:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: contact@wazyo.com\n🕐 متاح 7 أيام/7 من 8 صباحًا إلى 10 مساءً`
+            text: `لأي شكوى أو سؤال:\n📱 واتساب: 213 556 688 810+\n📧 البريد الإلكتروني: ${CONFIG.email}\n🕐 متاح 7 أيام/7 من 8 صباحًا إلى 10 مساءً`
           }
         ]
       }

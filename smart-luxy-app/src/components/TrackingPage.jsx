@@ -4,13 +4,13 @@ import { supabase } from '../supabase'
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
 const STEPS = [
-  { key: 'new',       icon: '📋', label: 'Commande reçue',    desc: 'Votre commande a été enregistrée' },
-  { key: 'confirmed', icon: '✅', label: 'Confirmée',         desc: 'Nous avons confirmé votre commande' },
-  { key: 'delivered', icon: '📦', label: 'En livraison',      desc: 'Votre colis est en route' },
-  { key: 'done',      icon: '🎉', label: 'Livrée',            desc: 'Commande reçue avec succès' },
+  { key: 'new',       icon: '📋', label: 'Commande reçue', desc: 'Votre commande a été enregistrée' },
+  { key: 'confirmed', icon: '✅', label: 'Confirmée',      desc: 'Nous avons confirmé votre commande' },
+  { key: 'shipped',   icon: '🚚', label: 'Expédiée',       desc: 'Votre colis a été remis au transporteur' },
+  { key: 'delivered', icon: '🎉', label: 'Livrée',         desc: 'Commande reçue avec succès' },
 ]
 
-const STATUS_IDX = { new: 0, confirmed: 1, delivered: 2, done: 3 }
+const STATUS_IDX = { new: 0, confirmed: 1, shipped: 2, delivered: 3 }
 
 export default function TrackingPage({ onClose }) {
   const [input, setInput] = useState('')
@@ -23,14 +23,17 @@ export default function TrackingPage({ onClose }) {
     const q = input.trim().toUpperCase()
     if (!q) return
     setLoading(true); setError(''); setOrder(null)
-    const { data } = await supabase
-      .from('orders')
-      .select('*')
-      .or(`id.eq.${q},id.ilike.%${q}%`)
-      .limit(1)
-      .single()
+    if (!/^SL-[A-Z0-9]+$/.test(q)) {
+      setLoading(false)
+      setError('Numéro de commande invalide.')
+      return
+    }
+
+    const { data, error: rpcError } = await supabase.rpc('get_order_tracking', {
+      p_order_id: q,
+    })
     setLoading(false)
-    if (!data) { setError('Aucune commande trouvée avec ce numéro.'); return }
+    if (rpcError || !data) { setError('Aucune commande trouvée avec ce numéro.'); return }
     setOrder(data)
   }
 
@@ -213,6 +216,12 @@ export default function TrackingPage({ onClose }) {
                   <span style={{ color:'var(--g4)' }}>Destination</span>
                   <span style={{ color:'var(--g3)' }}>{order.wilaya} — {order.commune}</span>
                 </div>
+                {order.tracking_code && (
+                  <div style={{ display:'flex', justifyContent:'space-between', marginTop:5 }}>
+                    <span style={{ color:'var(--g4)' }}>Tracking</span>
+                    <span style={{ color:'var(--g3)', fontWeight:700 }}>{order.tracking_code}</span>
+                  </div>
+                )}
               </div>
 
               {/* Articles */}

@@ -8,9 +8,9 @@ import { supabase } from '../supabase'
 const DEFAULT_MSGS = [
   '🚚 Livraison rapide partout en Algérie',
   '✅ Paiement à la livraison disponible',
-  '📦 Stock limité — Commandez vite !',
-  '⭐ +500 clients satisfaits en Algérie',
-  '🎁 Produits premium à prix imbattables',
+  '🔥 Offres du moment — selon disponibilité',
+  '⭐ Produits populaires sélectionnés pour toi',
+  '🎁 Découvrez nos nouveautés et offres',
 ]
 
 export default function AnnouncementBar() {

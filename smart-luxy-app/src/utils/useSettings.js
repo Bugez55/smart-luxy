@@ -8,11 +8,10 @@ const CACHE_TTL = 2 * 60 * 1000 // 2 minutes seulement
 const DEFAULTS = {
   shop_name:      'Wazyo',
   shop_phone:     '213556688810',
-  shop_email:     'nabilmohellebi2@gmail.com',
+  shop_email:     'smartluxydz@gmail.com',
   shop_address:   'Tizi Ouzou, Algérie',
   free_ship:      '',
   maintenance:    'false',
-  admin_password: '',
 }
 
 export async function getSettings() {

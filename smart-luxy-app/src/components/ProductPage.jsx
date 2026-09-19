@@ -30,7 +30,6 @@ const LIVRAISON = {
 
 export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique }) {
   const [openFaq, setOpenFaq] = useState(null)
-  const [viewers] = useState(() => Math.floor(Math.random() * 8) + 3)
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('ar')
   const rtl = lang === 'ar'
@@ -43,6 +42,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [modeLiv, setModeLiv] = useState('domicile')
   const [modePaiement, setModePaiement] = useState('livraison')
   const [paiementInfo, setPaiementInfo] = useState({ ccp:'', ccp_nom:'', baridimob:'', ccp_actif:false, baridimob_actif:false })
+  const [freeShip, setFreeShip] = useState(null)
   const [preuvePaiement, setPreuvePaiement] = useState('')
   const [ordering, setOrdering] = useState(false)
   const [telError, setTelError] = useState(false)
@@ -62,6 +62,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         ccp_actif:       s.ccp_actif === 'true',
         baridimob_actif: s.baridimob_actif === 'true',
       })
+      const value = Number(s.free_ship)
+      setFreeShip(Number.isFinite(value) && value > 0 ? value : null)
     }).catch(() => {})
   }, [])
 
@@ -84,7 +86,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
   const prixLiv = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][modeLiv] : null
-  const fraisLiv = prixLiv !== null ? prixLiv : null
+  const fraisLivBase = prixLiv !== null ? prixLiv : null
+  const fraisLiv = freeShip !== null && currentPrix >= freeShip ? 0 : fraisLivBase
   const totalFinal = currentPrix + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
@@ -393,20 +396,17 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
 
 
-        {/* Viewers en temps réel */}
-        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
-          <div style={{ display:'flex' }}>
-            {[...Array(Math.min(viewers,5))].map((_,i) => (
-              <div key={i} style={{ width:18, height:18, borderRadius:'50%', background:`hsl(${i*40},60%,55%)`, border:'2px solid #0a0a0a', marginLeft: i>0 ? -6 : 0, fontSize:9, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--g3)', fontWeight:800 }}>
-                {['👤','👤','👤','👤','👤'][i]}
-              </div>
-            ))}
+        {/* Signal de demande — basé sur les données réelles du produit */}
+        {(Number(p.ventes || 0) > 0 || lowStock) && (
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+            <span style={{ fontSize:15 }}>🔥</span>
+            <span style={{ fontSize:11, color:'var(--g3)', fontWeight:700 }}>
+              {lowStock
+                ? (lang==='ar' ? `متوفر ${p.stock} فقط` : `Plus que ${p.stock} exemplaire${p.stock > 1 ? 's' : ''} disponible${p.stock > 1 ? 's' : ''}`)
+                : (lang==='ar' ? 'منتج مطلوب' : 'Produit très demandé')}
+            </span>
           </div>
-          <span style={{ fontSize:11, color:'var(--g3)', fontWeight:600 }}>
-            {viewers} {lang==='ar' ? 'أشخاص يتصفحون هذا المنتج الآن' : `personnes regardent ce produit`}
-          </span>
-          <span style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e', animation:'pulse 1.5s infinite', flexShrink:0 }} />
-        </div>
+        )}
       </div>
 
       {/* ── Description ── */}

@@ -5,11 +5,14 @@ import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
 import ClientsCRM from './ClientsCRM'
+import { sendCapiEvent } from '../../utils/api'
+import CONFIG from '../../config'
 
 const STATUTS = [
   { key: 'all',       label: 'Toutes' },
   { key: 'new',       label: '🆕 Nouvelles' },
   { key: 'confirmed', label: '✅ Confirmées' },
+  { key: 'shipped',   label: '🚚 Expédiées' },
   { key: 'delivered', label: '📦 Livrées' },
   { key: 'cancelled', label: '❌ Annulées' },
 ]
@@ -17,8 +20,19 @@ const STATUTS = [
 const STATUT_COLORS = {
   new:       { bg: 'rgba(147,197,253,.15)', color: '#93c5fd', label: '🆕 Nouvelle' },
   confirmed: { bg: 'rgba(134,239,172,.15)', color: '#86efac', label: '✅ Confirmée' },
+  shipped:   { bg: 'rgba(167,139,250,.15)', color: '#c4b5fd', label: '🚚 Expédiée' },
   delivered: { bg: 'rgba(201,168,76,.15)',  color: '#C9A84C', label: '📦 Livrée' },
   cancelled: { bg: 'rgba(252,165,165,.15)', color: '#fca5a5', label: '❌ Annulée' },
+}
+
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 // ── Impression facture ────────────────────────────────────
@@ -40,7 +54,7 @@ function printInvoice(order) {
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Facture — Wazyo #${order.id?.slice(0,8).toUpperCase()}</title>
+  <title>Facture — Wazyo #${escapeHtml(order.id?.slice(0,8).toUpperCase())}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; background: white; }
@@ -111,7 +125,7 @@ function printInvoice(order) {
     </div>
     <div class="inv-meta">
       <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Bon de commande</div>
-      <div class="inv-num">#${order.id?.slice(0,8).toUpperCase()}</div>
+      <div class="inv-num">#${escapeHtml(order.id?.slice(0,8).toUpperCase())}</div>
       <div class="inv-date">${date}</div>
       <span class="badge badge-${order.statut}">${STATUT_COLORS[order.statut]?.label || order.statut}</span>
     </div>
@@ -121,15 +135,15 @@ function printInvoice(order) {
   <div class="info-grid">
     <div class="info-box">
       <div class="label">👤 Client</div>
-      <div class="row"><strong>${order.nom_client}</strong></div>
-      <div class="row">📞 ${order.telephone}</div>
-      ${order.note ? `<div class="row" style="margin-top:6px;color:#888;font-size:12px">📝 ${order.note}</div>` : ''}
+      <div class="row"><strong>${escapeHtml(order.nom_client)}</strong></div>
+      <div class="row">📞 ${escapeHtml(order.telephone)}</div>
+      ${order.note ? `<div class="row" style="margin-top:6px;color:#888;font-size:12px">📝 ${escapeHtml(order.note)}</div>` : ''}
     </div>
     <div class="info-box">
       <div class="label">🚚 Livraison</div>
       <div class="row"><strong>${modeLiv === 'bureau' ? '📦 Retrait bureau' : '🏠 À domicile'}</strong></div>
-      <div class="row">📍 ${order.wilaya}${order.commune ? ` — ${order.commune}` : ''}</div>
-      ${order.adresse ? `<div class="row" style="font-size:12px;color:#666">${order.adresse}</div>` : ''}
+      <div class="row">📍 ${escapeHtml(order.wilaya)}${order.commune ? ` — ${escapeHtml(order.commune)}` : ''}</div>
+      ${order.adresse ? `<div class="row" style="font-size:12px;color:#666">${escapeHtml(order.adresse)}</div>` : ''}
     </div>
   </div>
 
@@ -148,8 +162,8 @@ function printInvoice(order) {
       ${items.map(item => `
       <tr>
         <td>
-          <div class="article-name">${item.nom}</div>
-          ${item.categorie ? `<div class="article-prix">${item.categorie}</div>` : ''}
+          <div class="article-name">${escapeHtml(item.nom)}</div>
+          ${item.categorie ? `<div class="article-prix">${escapeHtml(item.categorie)}</div>` : ''}
         </td>
         <td style="text-align:center;font-weight:700">${item.qty}</td>
         <td style="text-align:right;color:#666">${fmtDA(item.prix)}</td>
@@ -178,7 +192,7 @@ function printInvoice(order) {
   <div class="inv-footer">
     <div class="inv-footer-left">
       Wazyo · Boutique en ligne · Algérie<br>
-      📱 +213 556 688 810 · contact@wazyo.com<br>
+      📱 +213 556 688 810 · ${escapeHtml(CONFIG.email)}<br>
       Paiement à la livraison (COD)
     </div>
     <div class="inv-footer-right">
@@ -207,10 +221,12 @@ function printInvoice(order) {
 //  ADMIN SETTINGS — Paramètres complets
 // ═══════════════════════════════════════════════════
 function AdminSettings({ onLogout, onToast }) {
-  // ── Mot de passe ──
-  const [pwForm, setPwForm] = useState({ current: '', new1: '', new2: '' })
-  const [pwSaving, setPwSaving] = useState(false)
-  const [showPw, setShowPw] = useState(false)
+  const [adminEmail, setAdminEmail] = useState('')
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAdminEmail(data?.user?.email || '')
+    })
+  }, [])
 
   // ── Infos boutique ──
   const [shop, setShop] = useState({
@@ -270,45 +286,6 @@ function AdminSettings({ onLogout, onToast }) {
   })
   const [paiementSaving, setPaiementSaving] = useState(false)
 
-  // ── Changer mot de passe ──
-  async function changePw() {
-    if (pwForm.new1.length < 8) {
-      onToast && onToast('❌ Nouveau mot de passe trop court (min 8 caractères)', 'error'); return
-    }
-    if (pwForm.new1 !== pwForm.new2) {
-      onToast && onToast('❌ Les deux mots de passe ne correspondent pas', 'error'); return
-    }
-
-    setPwSaving(true)
-    try {
-      // Vérification sécurisée — le mot de passe stocké n'est jamais lu directement
-      const pwEnVercel = import.meta.env.VITE_ADMIN_PASSWORD || 'Wazyo2026Secure!'
-      let validSupabase = false
-      try {
-        const res = await supabase.rpc('verify_admin_password', { input_password: pwForm.current })
-        validSupabase = res.data === true
-      } catch(e) { /* fonction pas encore migrée */ }
-
-      const pwOk = pwForm.current === pwEnVercel || validSupabase
-
-      if (!pwOk) {
-        onToast && onToast('❌ Mot de passe actuel incorrect', 'error')
-        setPwSaving(false)
-        return
-      }
-
-      // Sauvegarder le nouveau mot de passe dans Supabase
-      await saveSetting('admin_password', pwForm.new1)
-      localStorage.setItem('sl_admin_pw_override', pwForm.new1)
-      setPwForm({ current: '', new1: '', new2: '' })
-      onToast && onToast('✅ Mot de passe changé ! Reconnecte-toi avec le nouveau.', 'default')
-    } catch(e) {
-      console.error('changePw:', e)
-      onToast && onToast('❌ Erreur : ' + (e?.message || 'vérifier Supabase'), 'error')
-    }
-    setPwSaving(false)
-  }
-
   // ── Sauvegarder infos boutique ──
   async function saveShop() {
     setShopSaving(true)
@@ -366,87 +343,24 @@ function AdminSettings({ onLogout, onToast }) {
     <div>
       <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:20 }}>⚙️ Paramètres</h3>
 
-      {/* ── MOT DE PASSE ── */}
+      {/* ── COMPTE ADMIN ── */}
       <div style={section}>
-        <div style={sectionTitle}>🔐 Changer le mot de passe admin</div>
-
-        <div style={{ marginBottom: 10 }}>
-          <label style={lbl}>Mot de passe actuel</label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showPw ? 'text' : 'password'}
-              placeholder="••••••••"
-              value={pwForm.current}
-              onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
-              style={inp}
-            />
-            <button onClick={() => setShowPw(s => !s)} style={{
-              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16,
-            }}>{showPw ? '🙈' : '👁'}</button>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-          <div>
-            <label style={lbl}>Nouveau mot de passe</label>
-            <input
-              type={showPw ? 'text' : 'password'}
-              placeholder="Min. 8 caractères"
-              value={pwForm.new1}
-              onChange={e => setPwForm(f => ({ ...f, new1: e.target.value }))}
-              style={inp}
-            />
-          </div>
-          <div>
-            <label style={lbl}>Confirmer</label>
-            <input
-              type={showPw ? 'text' : 'password'}
-              placeholder="Répéter"
-              value={pwForm.new2}
-              onChange={e => setPwForm(f => ({ ...f, new2: e.target.value }))}
-              style={{ ...inp, borderColor: pwForm.new2 && pwForm.new1 !== pwForm.new2 ? '#ef4444' : '#333' }}
-            />
-          </div>
-        </div>
-
-        {/* Indicateur force mdp */}
-        {pwForm.new1 && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
-              {[1,2,3,4].map(i => {
-                const strength = pwForm.new1.length >= 12 && /[A-Z]/.test(pwForm.new1) && /[0-9]/.test(pwForm.new1) && /[^a-zA-Z0-9]/.test(pwForm.new1) ? 4
-                  : pwForm.new1.length >= 10 && (/[A-Z]/.test(pwForm.new1) || /[0-9]/.test(pwForm.new1)) ? 3
-                  : pwForm.new1.length >= 8 ? 2 : 1
-                return <div key={i} style={{
-                  flex: 1, height: 4, borderRadius: 2,
-                  background: i <= strength
-                    ? strength === 1 ? '#ef4444' : strength === 2 ? '#f59e0b' : strength === 3 ? '#84cc16' : '#22c55e'
-                    : 'rgba(255,255,255,.1)',
-                  transition: 'background .2s',
-                }} />
-              })}
-            </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)' }}>
-              {pwForm.new1.length < 8 ? '❌ Trop court' : pwForm.new1.length < 10 ? '⚠️ Faible — ajoute chiffres et majuscules' : '✅ Bon mot de passe'}
-            </div>
-          </div>
-        )}
-
-        <button
-          onClick={changePw}
-          disabled={pwSaving || !pwForm.current || !pwForm.new1 || !pwForm.new2}
-          style={{
-            width: '100%', padding: '11px',
-            background: pwForm.current && pwForm.new1 && pwForm.new2 ? 'linear-gradient(135deg,#C9A84C,#E9C46A)' : '#222',
-            border: 'none', borderRadius: 10,
-            color: pwForm.current && pwForm.new1 && pwForm.new2 ? '#000' : '#444',
-            fontSize: 13, fontWeight: 800, cursor: 'pointer',
-          }}
-        >{pwSaving ? '⏳ Sauvegarde…' : '🔐 Changer le mot de passe'}</button>
-
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.25)', marginTop: 8, lineHeight: 1.5 }}>
-          ⚠️ Après le changement, va aussi dans <strong style={{ color:'rgba(255,255,255,.4)' }}>Vercel → Settings → Environment Variables → VITE_ADMIN_PASSWORD</strong> pour mettre à jour le vrai mot de passe en production.
+        <div style={sectionTitle}>🔐 Compte administrateur</div>
+        <div style={{
+          background:'rgba(34,197,94,.08)',
+          border:'1px solid rgba(34,197,94,.2)',
+          borderRadius:10,
+          padding:'10px 12px',
+          fontSize:12,
+          lineHeight:1.5,
+          color:'rgba(255,255,255,.65)'
+        }}>
+          <strong style={{color:'#86efac'}}>Session Supabase Auth active</strong><br />
+          {adminEmail ? `Compte : ${adminEmail}` : 'Compte administrateur authentifié'}<br />
+          <span style={{color:'rgba(255,255,255,.35)'}}>
+            Le mot de passe n'est pas stocké dans le site, le navigateur ou localStorage.
+            Pour le modifier, utilise « Mot de passe oublié » / la gestion du compte dans Supabase Authentication.
+          </span>
         </div>
       </div>
 
@@ -639,13 +553,6 @@ function AdminSettings({ onLogout, onToast }) {
 //  LIVRAISON MANAGER — Yalidine + Noest + World Express
 // ═══════════════════════════════════════════════════
 function LivraisonManager({ orders, onToast }) {
-  const [apiKeys, setApiKeys] = useState({
-    yalidine_id:     localStorage.getItem('sl_yalidine_id')     || '',
-    yalidine_token:  localStorage.getItem('sl_yalidine_token')  || '',
-    noest_token:     localStorage.getItem('sl_noest_token')     || '',
-    worldex_token:   localStorage.getItem('sl_worldex_token')   || '',
-  })
-  const [savingKeys, setSavingKeys] = useState(false)
   const [selectedCompany, setSelectedCompany] = useState('yalidine')
   const [sending, setSending] = useState({})
   const [search, setSearch] = useState('')
@@ -658,80 +565,38 @@ function LivraisonManager({ orders, onToast }) {
     o.telephone?.includes(search) || o.wilaya?.toLowerCase().includes(search.toLowerCase())
   )
 
-  function saveApiKeys() {
-    setSavingKeys(true)
-    Object.entries(apiKeys).forEach(([k, v]) => localStorage.setItem(`sl_${k}`, v))
-    setTimeout(() => {
-      setSavingKeys(false)
-      onToast && onToast('✅ Clés API sauvegardées', 'default')
-    }, 500)
-  }
-
-  // ── Envoyer vers Yalidine via API ──
+  // ── Envoyer vers Yalidine via API serveur ──
   async function sendToYalidine(order) {
-    if (!apiKeys.yalidine_id || !apiKeys.yalidine_token) {
-      onToast && onToast("❌ Configure ta clé Yalidine d\'abord", 'error')
-      return
-    }
     setSending(p => ({ ...p, [order.id]: true }))
-
-    const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
-    const description = items.map(i => `${i.nom} x${i.qty}`).join(', ')
-
     try {
-      const res = await fetch('https://api.yalidine.app/v1/parcels/', {
+      const data = await fetch('/api/shipping', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-ID': apiKeys.yalidine_id,
-          'X-API-TOKEN': apiKeys.yalidine_token,
-        },
-        body: JSON.stringify({
-          order_id:        order.id,
-          firstname:       order.nom_client?.split(' ')[0] || order.nom_client,
-          familyname:      order.nom_client?.split(' ').slice(1).join(' ') || '',
-          contact_phone:   order.telephone?.replace(/^0/, '213'),
-          address:         order.adresse || order.commune || '',
-          to_wilaya_id:    getWilayaId(order.wilaya),
-          to_commune_id:   0, // Auto-détecté
-          product_list:    description,
-          price:           order.total,
-          do_insurance:    0,
-          declared_value:  0,
-          length:          0,
-          width:           0,
-          height:          0,
-          weight:          0,
-          freeshipping:    order.frais_livraison === 0 ? 1 : 0,
-          is_stopdesk:     order.mode_livraison === 'bureau' ? 1 : 0,
-          has_exchange:    0,
-        })
+        headers: await (async () => {
+          const { data: sessionData } = await supabase.auth.getSession()
+          return {
+            'Content-Type': 'application/json',
+            ...(sessionData?.session?.access_token
+              ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+              : {}),
+          }
+        })(),
+        body: JSON.stringify({ provider: 'yalidine', orderId: order.id }),
+      }).then(async response => {
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(body?.error || `HTTP ${response.status}`)
+        return body
       })
 
-      const data = await res.json()
+      onToast && onToast(`✅ Colis créé ! Tracking: ${data.tracking}`, 'default')
 
-      if (res.ok && data.tracking) {
-        // Sauvegarder le tracking dans Supabase
-        await supabase.from('orders').update({
-          statut: 'shipped',
-          tracking_code: data.tracking,
-          livraison_company: 'yalidine'
-        }).eq('id', order.id)
-
-        onToast && onToast(`✅ Colis créé ! Tracking: ${data.tracking}`, 'default')
-
-        // Ouvrir le bordereau PDF
-        if (data.label_url) window.open(data.label_url, '_blank')
-        else window.open(`https://yalidine.app/app/particulier/bordereau.php?tracking=${data.tracking}`, '_blank')
-      } else {
-        const errMsg = data?.message || data?.detail || JSON.stringify(data)
-        onToast && onToast('❌ Erreur Yalidine: ' + errMsg, 'error')
-      }
+      if (data.label_url) window.open(data.label_url, '_blank')
+      else window.open(`https://yalidine.app/app/particulier/bordereau.php?tracking=${encodeURIComponent(data.tracking)}`, '_blank')
     } catch(e) {
-      onToast && onToast('❌ Erreur réseau: ' + e.message, 'error')
+      onToast && onToast('❌ Yalidine: ' + e.message, 'error')
     }
     setSending(p => ({ ...p, [order.id]: false }))
   }
+
 
   // ── Ouvrir Noest DZ avec données pré-remplies ──
   function sendToNoest(order) {
@@ -764,7 +629,7 @@ function LivraisonManager({ orders, onToast }) {
   function printBordereau(order) {
     const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
     const win = window.open('', '_blank')
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bordereau ${order.id}</title>
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bordereau ${escapeHtml(order.id)}</title>
     <style>
       * { margin:0; padding:0; box-sizing:border-box; }
       body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; }
@@ -787,26 +652,26 @@ function LivraisonManager({ orders, onToast }) {
     <div class="title">Wazyo</div>
     <div class="sub">Bordereau de livraison · Algérie 🇩🇿</div>
     <div class="box">
-      <div class="row"><span class="label">N° Commande:</span><span class="val" style="font-weight:900;font-size:15px">${order.id}</span></div>
+      <div class="row"><span class="label">N° Commande:</span><span class="val" style="font-weight:900;font-size:15px">${escapeHtml(order.id)}</span></div>
       <div class="row"><span class="label">Date:</span><span class="val">${new Date(order.created_at).toLocaleDateString('fr-DZ')}</span></div>
       <div class="row"><span class="label">Mode:</span><span class="val">${order.mode_livraison === 'bureau' ? '📦 Retrait bureau' : '🏠 Livraison à domicile'}</span></div>
     </div>
     <div class="box">
       <div class="label" style="margin-bottom:8px;font-size:14px">📍 Destinataire</div>
-      <div class="row"><span class="label">Nom:</span><span class="val">${order.nom_client}</span></div>
-      <div class="row"><span class="label">Téléphone:</span><span class="val">${order.telephone}</span></div>
-      <div class="row"><span class="label">Wilaya:</span><span class="val">${order.wilaya}</span></div>
-      <div class="row"><span class="label">Commune:</span><span class="val">${order.commune}</span></div>
-      ${order.adresse ? `<div class="row"><span class="label">Adresse:</span><span class="val">${order.adresse}</span></div>` : ''}
+      <div class="row"><span class="label">Nom:</span><span class="val">${escapeHtml(order.nom_client)}</span></div>
+      <div class="row"><span class="label">Téléphone:</span><span class="val">${escapeHtml(order.telephone)}</span></div>
+      <div class="row"><span class="label">Wilaya:</span><span class="val">${escapeHtml(order.wilaya)}</span></div>
+      <div class="row"><span class="label">Commune:</span><span class="val">${escapeHtml(order.commune)}</span></div>
+      ${order.adresse ? `<div class="row"><span class="label">Adresse:</span><span class="val">${escapeHtml(order.adresse)}</span></div>` : ''}
     </div>
     <div class="box">
       <div class="label" style="margin-bottom:8px;font-size:14px">🛍️ Articles</div>
       <table><thead><tr><th>Produit</th><th>Qté</th><th>Prix</th></tr></thead><tbody>
-      ${items.map(it => `<tr><td>${it.nom}</td><td>${it.qty}</td><td>${(it.prix*it.qty).toLocaleString()} DA</td></tr>`).join('')}
+      ${items.map(it => `<tr><td>${escapeHtml(it.nom)}</td><td>${it.qty}</td><td>${(it.prix*it.qty).toLocaleString()} DA</td></tr>`).join('')}
       </tbody></table>
       <div class="total">Total à percevoir: ${Number(order.total).toLocaleString()} DA</div>
     </div>
-    <div class="barcode">${order.id}</div>
+    <div class="barcode">${escapeHtml(order.id)}</div>
     <div class="company">Société de livraison: ${selectedCompany === 'yalidine' ? 'Yalidine' : selectedCompany === 'noest' ? 'Noest DZ' : 'World Express'}</div>
     </body></html>`)
     win.document.close()
@@ -853,29 +718,16 @@ function LivraisonManager({ orders, onToast }) {
         </div>
       </div>
 
-      {/* ── Clés API Yalidine ── */}
+      {/* ── Configuration Yalidine ── */}
       {selectedCompany === 'yalidine' && (
         <div style={sec}>
-          <div style={{ fontSize:12, fontWeight:800, color:'#f59e0b', marginBottom:10 }}>🔑 Clés API Yalidine</div>
-          <p style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginBottom:10, lineHeight:1.5 }}>
-            Va sur <strong style={{color:'#f59e0b'}}>yalidine.app → Paramètres → API</strong> pour obtenir ton ID et token.
+          <div style={{ fontSize:12, fontWeight:800, color:'#f59e0b', marginBottom:10 }}>🔐 Yalidine — configuration serveur</div>
+          <p style={{ fontSize:11, color:'rgba(255,255,255,.45)', margin:0, lineHeight:1.6 }}>
+            Les identifiants Yalidine ne sont plus stockés dans le navigateur.
+            Configure <strong style={{color:'#f59e0b'}}>YALIDINE_API_ID</strong> et
+            <strong style={{color:'#f59e0b'}}> YALIDINE_API_TOKEN</strong> dans
+            <strong> Vercel → Settings → Environment Variables</strong>.
           </p>
-          <div style={{ marginBottom:8 }}>
-            <label style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:800, display:'block', marginBottom:4 }}>API ID</label>
-            <input value={apiKeys.yalidine_id} onChange={e => setApiKeys(p => ({...p, yalidine_id:e.target.value}))} placeholder="Ton ID Yalidine" style={inp} />
-          </div>
-          <div style={{ marginBottom:10 }}>
-            <label style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:800, display:'block', marginBottom:4 }}>API TOKEN</label>
-            <input type="password" value={apiKeys.yalidine_token} onChange={e => setApiKeys(p => ({...p, yalidine_token:e.target.value}))} placeholder="Ton token Yalidine" style={inp} />
-          </div>
-          <button onClick={saveApiKeys} style={{ background:'rgba(245,158,11,.15)', border:'1px solid rgba(245,158,11,.3)', borderRadius:10, padding:'9px 18px', color:'#f59e0b', fontSize:12, fontWeight:800, cursor:'pointer' }}>
-            {savingKeys ? '⏳...' : '💾 Sauvegarder les clés'}
-          </button>
-          {!apiKeys.yalidine_id && (
-            <div style={{ marginTop:10, background:'rgba(245,158,11,.08)', border:'1px solid rgba(245,158,11,.2)', borderRadius:8, padding:'8px 12px', fontSize:11, color:'rgba(245,158,11,.7)', lineHeight:1.5 }}>
-              💡 Sans clé API, tu peux quand même utiliser <strong>Yalidine Web</strong> — le site s'ouvre avec les données pré-remplies.
-            </div>
-          )}
         </div>
       )}
 
@@ -917,19 +769,18 @@ function LivraisonManager({ orders, onToast }) {
               <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                 {/* Bouton principal selon la société */}
                 {selectedCompany === 'yalidine' && (
-                  apiKeys.yalidine_id ? (
+                  <>
                     <button onClick={() => sendToYalidine(order)} disabled={isSending} style={{
                       flex:1, background:isSending?'#222':'rgba(245,158,11,.15)', border:'1px solid rgba(245,158,11,.3)',
                       borderRadius:8, padding:'8px 12px', color:'#f59e0b', fontSize:11, fontWeight:800, cursor:isSending?'default':'pointer',
                     }}>
                       {isSending ? '⏳ Envoi...' : '🟡 Créer colis Yalidine'}
                     </button>
-                  ) : (
                     <button onClick={() => openYalidineWeb(order)} style={{
-                      flex:1, background:'rgba(245,158,11,.12)', border:'1px solid rgba(245,158,11,.25)',
+                      background:'rgba(245,158,11,.12)', border:'1px solid rgba(245,158,11,.25)',
                       borderRadius:8, padding:'8px 12px', color:'#f59e0b', fontSize:11, fontWeight:800, cursor:'pointer',
-                    }}>🌐 Ouvrir Yalidine Web</button>
-                  )
+                    }}>🌐 Web</button>
+                  </>
                 )}
 
                 {selectedCompany === 'noest' && (
@@ -1491,29 +1342,11 @@ export default function AdminPanel({ onLogout, onToast }) {
 
     if (statut === 'delivered') {
       for (const order of ordersToUpdate) {
-        const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
-        fetch('/api/capi', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            eventName: 'Purchase',
-            phone: order.telephone,
-            firstName: order.nom_client?.split(' ')[0],
-            lastName: order.nom_client?.split(' ').slice(1).join(' '),
-            city: order.wilaya,
-            value: order.total,
-            contentIds: items.map(i => i.id),
-            fbc: order.fbc || undefined,
-            fbp: order.fbp || undefined,
-          }),
-        })
-          .then(async r => {
-            if (!r.ok) {
-              const body = await r.json().catch(() => ({}))
-              console.error(`❌ CAPI Purchase (${order.id}) refusé par le serveur :`, body.error || r.status)
-            }
-          })
-          .catch(e => console.error(`❌ CAPI Purchase (${order.id}) — requête réseau échouée :`, e))
+        sendCapiEvent({
+          eventName: 'Purchase',
+          orderId: order.id,
+          eventId: `${order.id}-purchase`,
+        }, true).catch(e => console.error(`❌ CAPI Purchase (${order.id}):`, e))
       }
     }
 
@@ -1546,16 +1379,16 @@ export default function AdminPanel({ onLogout, onToast }) {
               <div style="font-size:11px; color:#666;">Boutique en ligne · Algérie</div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:13px; font-weight:700;">N° ${order.id}</div>
+              <div style="font-size:13px; font-weight:700;">N° ${escapeHtml(order.id)}</div>
               <div style="font-size:11px; color:#666;">${new Date(order.created_at).toLocaleDateString('fr-DZ')}</div>
             </div>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; background:#f9f9f9; padding:12px; border-radius:8px;">
-            <div><strong>Client :</strong> ${order.nom_client}</div>
-            <div><strong>Tél :</strong> ${order.telephone}</div>
-            <div><strong>Wilaya :</strong> ${order.wilaya}</div>
-            <div><strong>Commune :</strong> ${order.commune}</div>
-            <div><strong>Adresse :</strong> ${order.adresse || '—'}</div>
+            <div><strong>Client :</strong> ${escapeHtml(order.nom_client)}</div>
+            <div><strong>Tél :</strong> ${escapeHtml(order.telephone)}</div>
+            <div><strong>Wilaya :</strong> ${escapeHtml(order.wilaya)}</div>
+            <div><strong>Commune :</strong> ${escapeHtml(order.commune)}</div>
+            <div><strong>Adresse :</strong> ${escapeHtml(order.adresse || '—')}</div>
             <div><strong>Livraison :</strong> ${order.mode_livraison === 'bureau' ? '📦 Bureau' : '🏠 Domicile'}</div>
           </div>
           <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
@@ -1566,7 +1399,7 @@ export default function AdminPanel({ onLogout, onToast }) {
             </tr>
             ${items.map((it, i) => `
               <tr style="background:${i%2?'#f5f5f5':'white'}">
-                <td style="padding:7px; border-bottom:1px solid #eee;">${it.nom}</td>
+                <td style="padding:7px; border-bottom:1px solid #eee;">${escapeHtml(it.nom)}</td>
                 <td style="padding:7px; text-align:center; border-bottom:1px solid #eee;">×${it.qty}</td>
                 <td style="padding:7px; text-align:right; border-bottom:1px solid #eee; font-weight:700;">${(it.prix * it.qty).toLocaleString()} DA</td>
               </tr>
@@ -1576,7 +1409,7 @@ export default function AdminPanel({ onLogout, onToast }) {
             <div style="font-size:12px; color:#666;">Frais livraison : ${(order.frais_livraison || 0).toLocaleString()} DA</div>
             <div style="font-size:18px; font-weight:900; color:#000;">TOTAL : ${Number(order.total).toLocaleString()} DA</div>
           </div>
-          ${order.note ? `<div style="margin-top:8px; font-size:12px; color:#666;">📝 Note : ${order.note}</div>` : ''}
+          ${order.note ? `<div style="margin-top:8px; font-size:12px; color:#666;">📝 Note : ${escapeHtml(order.note)}</div>` : ''}
         </div>
       `
     }).join('')
@@ -1611,29 +1444,11 @@ export default function AdminPanel({ onLogout, onToast }) {
     if (statut === 'delivered') {
       const order = orders.find(o => o.id === id)
       if (order) {
-        const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
-        fetch('/api/capi', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            eventName: 'Purchase',
-            phone: order.telephone,
-            firstName: order.nom_client?.split(' ')[0],
-            lastName: order.nom_client?.split(' ').slice(1).join(' '),
-            city: order.wilaya,
-            value: order.total,
-            contentIds: items.map(i => i.id),
-            fbc: order.fbc || undefined,
-            fbp: order.fbp || undefined,
-          }),
-        })
-          .then(async r => {
-            if (!r.ok) {
-              const body = await r.json().catch(() => ({}))
-              console.error(`❌ CAPI Purchase (${order.id}) refusé par le serveur :`, body.error || r.status)
-            }
-          })
-          .catch(e => console.error(`❌ CAPI Purchase (${order.id}) — requête réseau échouée :`, e))
+        sendCapiEvent({
+          eventName: 'Purchase',
+          orderId: order.id,
+          eventId: `${order.id}-purchase`,
+        }, true).catch(e => console.error(`❌ CAPI Purchase (${order.id}):`, e))
       }
     }
   }

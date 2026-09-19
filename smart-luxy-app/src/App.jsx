@@ -20,6 +20,7 @@ import NotFound from './components/NotFound'
 import WAButton from './components/WAButton'
 import ProductGallery from './components/ProductGallery'
 import CookieConsent from './components/CookieConsent'
+import { sendCapiEvent } from './utils/api'
 
 // ── Facebook Pixel — Tracking événements ──
 function fbq(...args) {
@@ -141,19 +142,14 @@ export default function App() {
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
 
   async function submitOrder(form) {
-    // Cookies Facebook (posés automatiquement par le Pixel navigateur quand
-    // le client arrive via une pub ou visite le site) — on les récupère ici
-    // pour les envoyer à Meta, ça améliore la qualité de correspondance.
     function getCookie(name) {
       const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
       return m ? decodeURIComponent(m[1]) : null
     }
+
     const fbc = getCookie('_fbc')
     const fbp = getCookie('_fbp')
 
-    // Le prix est recalculé côté serveur (fonction create_order) — le total
-    // envoyé par le navigateur n'est plus jamais utilisé tel quel, ça bloque
-    // toute tentative de manipulation de prix côté client.
     try {
       const { data: order, error } = await supabase.rpc('create_order', {
         p_nom_client: form.nom,
@@ -164,59 +160,50 @@ export default function App() {
         p_note: form.note || '',
         p_items: form.items,
         p_mode_livraison: form.mode_livraison || 'domicile',
+        // Kept for backward compatibility; the SQL RPC ignores this
+        // client-controlled amount and calculates the real tariff itself.
         p_frais_livraison: form.frais_livraison || 0,
         p_mode_paiement: form.mode_paiement || 'livraison',
+        p_promo_code: form.promo_code || null,
         p_fbc: fbc,
         p_fbp: fbp,
       })
-      // Si erreur OU si le serveur n'a rien renvoyé (cas silencieux), on
-      // s'arrête ici proprement — jamais de plantage, jamais de fermeture
-      // du formulaire : le client reste dessus et peut réessayer.
+
       if (error || !order) {
+        console.error('create_order:', error)
         toast('❌ Erreur. Vérifie tes informations et réessaie.', 'error')
-        return
+        return false
       }
 
-      // ── Déduire le stock + alerter si stock bas ──
-      for (const item of form.items) {
-        const prod = products.find(p => p.id === item.id)
-        if (prod && prod.stock !== null && prod.stock !== undefined) {
-          const newStock = Math.max(0, prod.stock - item.qty)
-          await supabase.from('products').update({ stock: newStock }).eq('id', item.id)
-          // Alerte Telegram si stock devient bas (≤5) ou épuisé
-          if (newStock <= 5) {
-            alertStockBas(prod, newStock)
-          }
-        }
+      // Stock is decremented atomically inside create_order().
+      for (const alert of order.stock_alerts || []) {
+        alertStockBas({ nom: alert.nom }, Number(alert.stock))
       }
 
-      // "Lead" ici, pas "Purchase" — la vraie vente n'est confirmée qu'à la
-      // livraison (voir AdminPanel → changement de statut "Livrée"). Ça évite
-      // que Meta optimise sur des commandes jamais payées au final.
+      const contentIds = (order.items || []).map(i => i.id)
+
+      // Browser Pixel: same event_id as CAPI Lead for deduplication.
       window.fbq && fbq('track', 'Lead', {
         value: order.total,
         currency: 'DZD',
-        content_ids: (order.items || []).map(i => i.id),
+        content_ids: contentIds,
         content_type: 'product',
-      })
+      }, { eventID: order.id })
 
-      // Copie serveur (CAPI) — fonctionne même si le Pixel navigateur est
-      // bloqué ou si le client a refusé les cookies
-      fetch('/api/capi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventName: 'Lead',
-          phone: order.telephone,
-          firstName: order.nom_client?.split(' ')[0],
-          lastName: order.nom_client?.split(' ').slice(1).join(' '),
-          city: order.wilaya,
-          value: order.total,
-          contentIds: (order.items || []).map(i => i.id),
-          eventSourceUrl: window.location.href,
-          fbc, fbp,
-        }),
-      }).catch(() => {}) // best-effort, ne bloque jamais le tunnel de commande
+      // Server-side Meta event. Best effort: never block the customer flow.
+      sendCapiEvent({
+        eventName: 'Lead',
+        eventId: order.id,
+        phone: order.telephone,
+        firstName: order.nom_client?.split(' ')[0],
+        lastName: order.nom_client?.split(' ').slice(1).join(' '),
+        city: order.wilaya,
+        value: order.total,
+        contentIds,
+        eventSourceUrl: window.location.href,
+        fbc,
+        fbp,
+      }).catch(e => console.error('CAPI Lead:', e))
 
       notifyTelegram(order)
       setLastOrder(order)
@@ -224,28 +211,43 @@ export default function App() {
       setCart([])
       setCartOpen(false)
       setPromoInfo(null)
-      // Recharger les produits pour afficher le nouveau stock
       loadProducts()
+      return true
     } catch (e) {
-      // Filet de sécurité final : quoi qu'il arrive, le client ne voit
-      // jamais un écran cassé — juste un message clair, et il reste sur
-      // le formulaire pour corriger et réessayer.
       console.error('Erreur soumission commande:', e)
       toast('❌ Une erreur est survenue. Vérifie tes informations et réessaie.', 'error')
+      return false
     }
   }
 
   // ── Vraie authentification Supabase Auth (remplace le mdp en clair) ──
   useEffect(() => {
     if (!isAdmin) { setAuthLoading(false); return }
-    supabase.auth.getSession().then(({ data }) => {
-      setAdminAuth(!!data.session)
-      setAuthLoading(false)
-    })
+    let mounted = true
+
+    const refreshAdminAuth = async (session) => {
+      if (!session) {
+        if (mounted) { setAdminAuth(false); setAuthLoading(false) }
+        return
+      }
+
+      const { data: admin, error } = await supabase.rpc('is_admin')
+      if (mounted) {
+        setAdminAuth(!error && !!admin)
+        setAuthLoading(false)
+      }
+    }
+
+    supabase.auth.getSession().then(({ data }) => refreshAdminAuth(data.session))
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAdminAuth(!!session)
+      refreshAdminAuth(session)
     })
-    return () => sub.subscription.unsubscribe()
+
+    return () => {
+      mounted = false
+      sub.subscription.unsubscribe()
+    }
   }, [isAdmin])
 
   async function handleLogin(email, pw) {
@@ -440,9 +442,12 @@ export default function App() {
             window.history.pushState({}, '', window.location.pathname)
           }}
           onSubmitOrder={async (form) => {
-            await submitOrder(form)
-            setOpenProduct(null)
-            window.history.pushState({}, '', window.location.pathname)
+            const ok = await submitOrder(form)
+            if (ok) {
+              setOpenProduct(null)
+              window.history.pushState({}, '', window.location.pathname)
+            }
+            return ok
           }}
           onPolitique={(tab) => setPolitiqueTab(tab)}
         />
@@ -469,7 +474,8 @@ export default function App() {
       {orderItems && (
         <OrderModal
           items={orderItems}
-          onClose={() => setOrderItems(null)}
+          promo={promoInfo}
+          onClose={() => { setOrderItems(null); setPromoInfo(null) }}
           onSubmit={submitOrder}
         />
       )}

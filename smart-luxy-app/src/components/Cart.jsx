@@ -15,13 +15,26 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
   async function applyPromo() {
     const code = promoCode.trim().toUpperCase()
     if (!code) return
-    setPromoLoading(true); setPromoError(''); setPromoData(null)
-    const { data } = await supabase.from('promos').select('*').eq('code', code).eq('actif', true).single()
+    setPromoLoading(true)
+    setPromoError('')
+    setPromoData(null)
+
+    const { data, error } = await supabase.rpc('validate_promo', {
+      p_code: code,
+      p_subtotal: total,
+    })
+
     setPromoLoading(false)
-    if (!data) { setPromoError('Code invalide ou expiré.'); return }
-    if (data.max_uses && data.uses >= data.max_uses) { setPromoError("Ce code a atteint sa limite d'utilisation."); return }
-    setPromoData({ code: data.code, reduction: data.reduction })
-    await supabase.from('promos').update({ uses: (data.uses || 0) + 1 }).eq('id', data.id)
+
+    if (error || !data) {
+      setPromoError('Code invalide ou expiré.')
+      return
+    }
+
+    setPromoData({
+      code: data.code,
+      reduction: Number(data.reduction),
+    })
   }
 
   function removePromo() { setPromoData(null); setPromoCode(''); setPromoError('') }
@@ -166,7 +179,7 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
             </button>
 
             <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: 'var(--g3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              🔒 Paiement à la livraison — 100% sécurisé
+              🔒 Paiement à la livraison — sans paiement en ligne
             </div>
           </div>
         </>

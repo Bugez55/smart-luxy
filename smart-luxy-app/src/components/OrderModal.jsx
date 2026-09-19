@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
+import { getSettings } from '../utils/useSettings'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
@@ -258,7 +259,7 @@ function ConfirmButton({ loading, disabled, onClick, label, labelLoading }) {
   )
 }
 
-export default function OrderModal({ items, onClose, onSubmit }) {
+export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
   const [lang, setLang] = useState('fr')
 
   useEffect(() => {
@@ -281,6 +282,14 @@ export default function OrderModal({ items, onClose, onSubmit }) {
   const [loading, setLoading] = useState(false)
   const [telError, setTelError] = useState(false)
   const [telShake, setTelShake] = useState(false)
+  const [freeShip, setFreeShip] = useState(null)
+
+  useEffect(() => {
+    getSettings().then(s => {
+      const value = Number(s.free_ship)
+      setFreeShip(Number.isFinite(value) && value > 0 ? value : null)
+    }).catch(() => {})
+  }, [])
 
   const t = T[lang]
   const rtl = lang === 'ar'
@@ -288,7 +297,8 @@ export default function OrderModal({ items, onClose, onSubmit }) {
   const totalProduits = items.reduce((s, i) => s + Number(i.prix) * i.qty, 0)
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
   const prixLiv = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][modeLiv] : null
-  const fraisLiv = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
+  const fraisLivBase = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
+  const fraisLiv = freeShip !== null && totalProduits >= freeShip ? 0 : fraisLivBase
   const totalFinal = totalProduits + (fraisLiv || 0)
 
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
@@ -324,6 +334,7 @@ export default function OrderModal({ items, onClose, onSubmit }) {
         items,
         mode_livraison: modeLiv,
         frais_livraison: fraisLiv || 0,
+        promo_code: promo?.code || null,
         total: totalFinal,
       })
     } finally {

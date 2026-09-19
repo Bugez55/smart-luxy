@@ -2,7 +2,120 @@
 // Support : Open Graph + JSON-LD + extraction spécifique AliExpress
 // + fallback "coller le code source" quand le fetch serveur est bloqué (anti-robot)
 
-const ALLOWED_ORIGIN = 'https://wazyo.vercel.app'
+import dns from 'dns/promises'
+import net from 'net'
+import { requireAdmin } from './_auth.js'
+
+const BASE_ALLOWED_ORIGINS = ['https://wazyo.com', 'https://www.wazyo.com', 'https://wazyo.vercel.app']
+
+function isAllowedOrigin(origin) {
+  if (!origin) return false
+  if (BASE_ALLOWED_ORIGINS.includes(origin)) return true
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)
+}
+
+function setCors(req, res) {
+  const origin = req.headers.origin || ''
+  const allowed = isAllowedOrigin(origin)
+  res.setHeader('Access-Control-Allow-Origin', allowed ? origin : BASE_ALLOWED_ORIGINS[0])
+  res.setHeader('Vary', 'Origin')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  return allowed
+}
+
+function isPrivateIpv4(ip) {
+  const parts = ip.split('.').map(Number)
+  if (parts.length !== 4 || parts.some(n => !Number.isInteger(n))) return true
+  const [a,b] = parts
+  return (
+    a === 0 || a === 10 || a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 198 && b >= 18 && b <= 19) ||
+    (a === 198 && b === 51) && parts[2] === 100 ||
+    (a === 203 && b === 0 && parts[2] === 113) ||
+    a >= 224
+  )
+}
+
+function isPrivateIpv6(ip) {
+  const value = ip.toLowerCase()
+  return value === '::1' ||
+    value.startsWith('fc') ||
+    value.startsWith('fd') ||
+    value.startsWith('fe8') ||
+    value.startsWith('fe9') ||
+    value.startsWith('fea') ||
+    value.startsWith('feb')
+}
+
+async function assertSafeUrl(rawUrl) {
+  let u
+  try {
+    u = new URL(rawUrl)
+  } catch {
+    throw new Error('URL invalide')
+  }
+
+  if (!['http:', 'https:'].includes(u.protocol)) throw new Error('Protocole non autorisé')
+  if (u.username || u.password) throw new Error('URL avec identifiants non autorisée')
+
+  const hostname = u.hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  if (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname === 'local' ||
+    hostname.endsWith('.local') ||
+    hostname === 'metadata.google.internal' ||
+    hostname === '169.254.169.254'
+  ) {
+    throw new Error('Destination non autorisée')
+  }
+
+  if (net.isIP(hostname)) {
+    if ((net.isIP(hostname) === 4 && isPrivateIpv4(hostname)) ||
+        (net.isIP(hostname) === 6 && isPrivateIpv6(hostname))) {
+      throw new Error('Destination réseau privée non autorisée')
+    }
+    return u.href
+  }
+
+  const resolved = await dns.lookup(hostname)
+  if ((net.isIP(resolved.address) === 4 && isPrivateIpv4(resolved.address)) ||
+      (net.isIP(resolved.address) === 6 && isPrivateIpv6(resolved.address))) {
+    throw new Error('Destination réseau privée non autorisée')
+  }
+
+  return u.href
+}
+
+async function safeFetchHtml(rawUrl, options = {}) {
+  let currentUrl = await assertSafeUrl(rawUrl)
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const response = await fetch(currentUrl, {
+      ...options,
+      redirect: 'manual',
+    })
+
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location')
+      if (!location) throw new Error('Redirection invalide')
+      currentUrl = await assertSafeUrl(new URL(location, currentUrl).href)
+      continue
+    }
+
+    const contentLength = Number(response.headers.get('content-length') || 0)
+    if (contentLength > 6 * 1024 * 1024) throw new Error('Page trop volumineuse')
+
+    return response
+  }
+
+  throw new Error('Trop de redirections')
+}
 
 function getAllMeta(html, prop) {
   const results = []
@@ -131,16 +244,15 @@ function finalizeResult(extracted, isAliExpress) {
 }
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || ''
-  const isAllowedOrigin = origin === ALLOWED_ORIGIN || origin.endsWith('.vercel.app')
-  res.setHeader('Access-Control-Allow-Origin', isAllowedOrigin ? origin : ALLOWED_ORIGIN)
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  const isAllowedOrigin = setCors(req, res)
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   if (!isAllowedOrigin) return res.status(403).json({ error: 'Origine non autorisée' })
 
-  const { url, html: pastedHtml } = req.body
+  const auth = await requireAdmin(req, res)
+  if (!auth.ok) return auth.response
+
+  const { url, html: pastedHtml } = req.body || {}
 
   // ── Cas 1 : HTML collé directement (fallback anti-blocage) ──
   // Le navigateur de l'ADMIN a déjà chargé la page normalement, donc aucune
@@ -172,20 +284,26 @@ export default async function handler(req, res) {
   }
 
   // ── Cas 2 : lien fourni — le serveur va chercher la page lui-même ──
-  if (!url || typeof url !== 'string' || !url.startsWith('http')) {
+  if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'Lien invalide' })
   }
 
-  const isAliExpress = /aliexpress\./i.test(url)
+  let safeUrl
+  try {
+    safeUrl = await assertSafeUrl(url.trim())
+  } catch (e) {
+    return res.status(400).json({ error: e.message || 'Lien non autorisé' })
+  }
+
+  const isAliExpress = /aliexpress\./i.test(safeUrl)
 
   try {
-    const response = await fetch(url, {
+    const response = await safeFetchHtml(safeUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': isAliExpress ? 'fr-FR,fr;q=0.9,en;q=0.8' : 'fr-FR,fr;q=0.9',
       },
-      redirect: 'follow',
     })
 
     if (!response.ok) {
@@ -193,6 +311,9 @@ export default async function handler(req, res) {
     }
 
     const html = await response.text()
+    if (html.length > MAX_RESPONSE_BYTES) {
+      return res.status(413).json({ error: 'Réponse distante trop volumineuse.' })
+    }
     const aliResult = isAliExpress ? extractAliExpress(html) : { nom:null, prix:null, description:null, images:[] }
     const genResult = extractGeneric(html)
     const merged = {
