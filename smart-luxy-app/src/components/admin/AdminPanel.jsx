@@ -552,6 +552,84 @@ function AdminSettings({ onLogout, onToast }) {
 // ═══════════════════════════════════════════════════
 //  LIVRAISON MANAGER — Yalidine + Noest + World Express
 // ═══════════════════════════════════════════════════
+function ShippingRatesEditor({ onToast }) {
+  const [rates, setRates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [savingId, setSavingId] = useState(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    let mounted = true
+    supabase.from('shipping_rates').select('*').order('wilaya').then(({ data, error }) => {
+      if (!mounted) return
+      if (error) { onToast && onToast('❌ Impossible de charger les tarifs', 'error'); setLoading(false); return }
+      setRates(data || [])
+      setLoading(false)
+    })
+    return () => { mounted = false }
+  }, [open])
+
+  function setField(wilaya, field, value) {
+    setRates(prev => prev.map(r => r.wilaya === wilaya ? { ...r, [field]: value } : r))
+  }
+
+  async function saveRow(wilaya) {
+    const row = rates.find(r => r.wilaya === wilaya)
+    if (!row) return
+    setSavingId(wilaya)
+    const { error } = await supabase.from('shipping_rates')
+      .update({ bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 })
+      .eq('wilaya', wilaya)
+    setSavingId(null)
+    if (error) onToast && onToast(`❌ Erreur pour ${wilaya}`, 'error')
+    else onToast && onToast(`✅ ${wilaya} mis à jour`, 'default')
+  }
+
+  const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
+  const inp = { background:'#111', border:'1px solid #333', borderRadius:8, padding:'7px 9px', color:'white', fontSize:13, outline:'none', width:80, boxSizing:'border-box', fontFamily:'inherit' }
+
+  return (
+    <div style={sec}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ background:'none', border:'none', cursor:'pointer', width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', padding:0 }}
+      >
+        <span style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', letterSpacing:'.06em' }}>💰 TARIFS DE LIVRAISON PAR WILAYA</span>
+        <span style={{ color:'rgba(255,255,255,.4)', fontSize:14 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{ marginTop:14 }}>
+          {loading && <div style={{ color:'rgba(255,255,255,.4)', fontSize:13 }}>Chargement…</div>}
+          {!loading && rates.length === 0 && (
+            <div style={{ color:'rgba(255,255,255,.4)', fontSize:13 }}>Aucun tarif trouvé — vérifie que le schema.sql a bien été exécuté.</div>
+          )}
+          {!loading && rates.length > 0 && (
+            <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:420, overflowY:'auto' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 90px 90px 70px', gap:8, fontSize:10, fontWeight:800, color:'rgba(255,255,255,.3)', letterSpacing:'.05em', padding:'0 2px' }}>
+                <span>WILAYA</span><span>BUREAU</span><span>DOMICILE</span><span></span>
+              </div>
+              {rates.map(r => (
+                <div key={r.wilaya} style={{ display:'grid', gridTemplateColumns:'1fr 90px 90px 70px', gap:8, alignItems:'center' }}>
+                  <span style={{ fontSize:13, color:'white' }}>{r.wilaya}</span>
+                  <input type="number" value={r.bureau} onChange={e => setField(r.wilaya, 'bureau', e.target.value)} style={inp} />
+                  <input type="number" value={r.domicile} onChange={e => setField(r.wilaya, 'domicile', e.target.value)} style={inp} />
+                  <button
+                    onClick={() => saveRow(r.wilaya)}
+                    disabled={savingId === r.wilaya}
+                    style={{ background:'rgba(201,168,76,.15)', border:'1px solid rgba(201,168,76,.3)', borderRadius:8, padding:'7px 0', color:'#e5c158', fontSize:12, fontWeight:700, cursor:'pointer' }}
+                  >{savingId === r.wilaya ? '…' : '💾'}</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LivraisonManager({ orders, onToast }) {
   const [selectedCompany, setSelectedCompany] = useState('yalidine')
   const [sending, setSending] = useState({})
@@ -699,6 +777,8 @@ function LivraisonManager({ orders, onToast }) {
       <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:20, lineHeight:1.5 }}>
         Envoie tes commandes vers ta société de livraison et génère les bordereaux.
       </p>
+
+      <ShippingRatesEditor onToast={onToast} />
 
       {/* ── Choix société ── */}
       <div style={sec}>
@@ -2045,12 +2125,6 @@ export default function AdminPanel({ onLogout, onToast }) {
           <ImageOptimizer products={products} supabase={supabase} />
         )}
 
-
-        {/* ── LIVRAISON TAB ── */}
-        {tab === 'livraison' && <LivraisonManager orders={orders} onToast={onToast} />}
-
-        {/* ── THEME TAB ── */}
-        {tab === 'theme' && <ThemeEditor />}
 
         {/* ── LIVRAISON TAB ── */}
         {tab === 'livraison' && <LivraisonManager orders={orders} onToast={onToast} />}
