@@ -170,8 +170,22 @@ export default function App() {
       })
 
       if (error || !order) {
-        console.error('create_order:', error)
-        toast('❌ Erreur. Vérifie tes informations et réessaie.', 'error')
+        const message = [
+          error?.message,
+          error?.details,
+          error?.hint,
+          error?.code ? `Code ${error.code}` : null,
+        ].filter(Boolean).join(' — ') || 'Erreur inconnue lors de la création de la commande.'
+
+        console.error('❌ create_order RPC:', {
+          message: error?.message,
+          details: error?.details,
+          hint: error?.hint,
+          code: error?.code,
+          error,
+        })
+
+        toast(`❌ ${message}`, 'error')
         return false
       }
 
@@ -214,8 +228,13 @@ export default function App() {
       loadProducts()
       return true
     } catch (e) {
-      console.error('Erreur soumission commande:', e)
-      toast('❌ Une erreur est survenue. Vérifie tes informations et réessaie.', 'error')
+      console.error('❌ Erreur soumission commande:', e)
+      const message = [
+        e?.message,
+        e?.details,
+        e?.hint,
+      ].filter(Boolean).join(' — ') || 'Erreur inconnue lors de la soumission.'
+      toast(`❌ ${message}`, 'error')
       return false
     }
   }
