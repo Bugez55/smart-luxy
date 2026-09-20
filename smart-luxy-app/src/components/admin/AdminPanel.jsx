@@ -25,6 +25,19 @@ const STATUT_COLORS = {
   cancelled: { bg: 'rgba(252,165,165,.15)', color: '#fca5a5', label: '❌ Annulée' },
 }
 
+// Transitions autorisées : le même workflow est aussi contrôlé côté Supabase.
+const ORDER_STATUS_TRANSITIONS = {
+  new:       ['confirmed', 'cancelled'],
+  confirmed: ['shipped', 'cancelled'],
+  shipped:   ['delivered', 'cancelled'],
+  delivered: [],
+  cancelled: [],
+}
+
+function canTransitionOrderStatus(from, to) {
+  return from === to || Boolean(ORDER_STATUS_TRANSITIONS[from]?.includes(to))
+}
+
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -1387,6 +1400,12 @@ export default function AdminPanel({ onLogout, onToast }) {
     return true
   })
 
+  const selectedOrderRows = orders.filter(o => selectedOrders.has(o.id))
+  const canBulkConfirm = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'confirmed'))
+  const canBulkShip = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'shipped'))
+  const canBulkDeliver = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'delivered'))
+  const canBulkCancel = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'cancelled'))
+
   // ── Actions groupées ──
   function toggleSelect(id) {
     setSelectedOrders(prev => {
@@ -1406,12 +1425,19 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   async function bulkSetStatus(statut) {
     if (selectedOrders.size === 0) return
-    if (!window.confirm(`Confirmer ${selectedOrders.size} commandes ?`)) return
-    setBulkLoading(true)
 
-    // Capturer les commandes concernées AVANT la mise à jour du state,
-    // pour pouvoir envoyer les événements Purchase si besoin
     const ordersToUpdate = orders.filter(o => selectedOrders.has(o.id))
+    const invalidOrders = ordersToUpdate.filter(o => !canTransitionOrderStatus(o.statut, statut))
+
+    if (invalidOrders.length > 0) {
+      const names = invalidOrders.slice(0, 3).map(o => `#${o.id?.slice(0, 8).toUpperCase()}`).join(', ')
+      const suffix = invalidOrders.length > 3 ? ` +${invalidOrders.length - 3}` : ''
+      onToast && onToast(`⚠️ Transition impossible pour ${names}${suffix}`, 'error')
+      return
+    }
+
+    if (!window.confirm(`Passer ${selectedOrders.size} commande${selectedOrders.size > 1 ? 's' : ''} à « ${STATUT_COLORS[statut]?.label || statut} » ?`)) return
+    setBulkLoading(true)
 
     const { error } = await supabase.from('orders')
       .update({ statut })
@@ -1437,7 +1463,14 @@ export default function AdminPanel({ onLogout, onToast }) {
       }
     }
 
-    onToast && onToast(`✅ ${selectedOrders.size} commandes ${statut === 'confirmed' ? 'confirmées' : statut === 'delivered' ? 'livrées' : 'mises à jour'}`, 'default')
+    const successLabel = {
+      confirmed: 'confirmées',
+      shipped: 'expédiées',
+      delivered: 'livrées',
+      cancelled: 'annulées',
+    }[statut] || 'mises à jour'
+
+    onToast && onToast(`✅ ${selectedOrders.size} commande${selectedOrders.size > 1 ? 's' : ''} ${successLabel}`, 'default')
     setSelectedOrders(new Set())
     setBulkLoading(false)
   }
@@ -1528,22 +1561,35 @@ export default function AdminPanel({ onLogout, onToast }) {
   }
 
   async function setStatus(id, statut) {
+    const order = orders.find(o => o.id === id)
+    if (!order) return
+
+    if (!canTransitionOrderStatus(order.statut, statut)) {
+      onToast && onToast(`⚠️ Impossible : ${STATUT_COLORS[order.statut]?.label || order.statut} → ${STATUT_COLORS[statut]?.label || statut}`, 'error')
+      return
+    }
+
     const { error } = await supabase.from('orders').update({ statut }).eq('id', id)
     if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setOrders(prev => prev.map(o => o.id === id ? { ...o, statut } : o))
 
     // "Purchase" envoyé à Meta seulement ici — à la vraie livraison confirmée,
-    // pas à la simple commande. C'est ça qui rend le ciblage pub plus rentable.
+    // pas à la simple commande.
     if (statut === 'delivered') {
-      const order = orders.find(o => o.id === id)
-      if (order) {
-        sendCapiEvent({
-          eventName: 'Purchase',
-          orderId: order.id,
-          eventId: `${order.id}-purchase`,
-        }, true).catch(e => console.error(`❌ CAPI Purchase (${order.id}):`, e))
-      }
+      sendCapiEvent({
+        eventName: 'Purchase',
+        orderId: order.id,
+        eventId: `${order.id}-purchase`,
+      }, true).catch(e => console.error(`❌ CAPI Purchase (${order.id}):`, e))
     }
+
+    const successLabel = {
+      confirmed: 'confirmée',
+      shipped: 'expédiée',
+      delivered: 'livrée',
+      cancelled: 'annulée',
+    }[statut] || 'mise à jour'
+    onToast && onToast(`✅ Commande ${successLabel}`, 'default')
   }
 
   async function delOrder(id) {
@@ -1840,17 +1886,37 @@ export default function AdminPanel({ onLogout, onToast }) {
                     {selectedOrders.size} sélectionnée{selectedOrders.size > 1 ? 's' : ''}
                   </div>
 
-                  <button onClick={() => bulkSetStatus('confirmed')} disabled={bulkLoading} style={{
-                    background: 'rgba(34,197,94,.15)', border: '1px solid rgba(34,197,94,.3)',
-                    borderRadius: 8, padding: '5px 12px',
-                    color: '#86efac', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}>✅ Confirmer tout</button>
+                  {canBulkConfirm && (
+                    <button onClick={() => bulkSetStatus('confirmed')} disabled={bulkLoading} style={{
+                      background: 'rgba(34,197,94,.15)', border: '1px solid rgba(34,197,94,.3)',
+                      borderRadius: 8, padding: '5px 12px',
+                      color: '#86efac', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>✅ Confirmer tout</button>
+                  )}
 
-                  <button onClick={() => bulkSetStatus('delivered')} disabled={bulkLoading} style={{
-                    background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.25)',
-                    borderRadius: 8, padding: '5px 12px',
-                    color: '#93c5fd', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}>📦 Marquer livrée</button>
+                  {canBulkShip && (
+                    <button onClick={() => bulkSetStatus('shipped')} disabled={bulkLoading} style={{
+                      background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.25)',
+                      borderRadius: 8, padding: '5px 12px',
+                      color: '#c4b5fd', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>🚚 Expédier tout</button>
+                  )}
+
+                  {canBulkDeliver && (
+                    <button onClick={() => bulkSetStatus('delivered')} disabled={bulkLoading} style={{
+                      background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.25)',
+                      borderRadius: 8, padding: '5px 12px',
+                      color: '#93c5fd', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>📦 Livrer tout</button>
+                  )}
+
+                  {canBulkCancel && (
+                    <button onClick={() => bulkSetStatus('cancelled')} disabled={bulkLoading} style={{
+                      background: 'rgba(252,165,165,.10)', border: '1px solid rgba(252,165,165,.22)',
+                      borderRadius: 8, padding: '5px 12px',
+                      color: '#fca5a5', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>❌ Annuler tout</button>
+                  )}
 
                   <button onClick={printSelected} style={{
                     background: 'rgba(201,168,76,.12)', border: '1px solid rgba(201,168,76,.25)',
@@ -1968,13 +2034,16 @@ export default function AdminPanel({ onLogout, onToast }) {
 
                         <button className="act-btn wa" onClick={() => openWA(o)}>💬 WhatsApp</button>
 
-                        {o.statut !== 'confirmed' && (
+                        {canTransitionOrderStatus(o.statut, 'confirmed') && o.statut === 'new' && (
                           <button className="act-btn" onClick={() => setStatus(o.id,'confirmed')}>✅ Confirmer</button>
                         )}
-                        {o.statut !== 'delivered' && (
-                          <button className="act-btn" onClick={() => setStatus(o.id,'delivered')}>📦 Livré</button>
+                        {canTransitionOrderStatus(o.statut, 'shipped') && (
+                          <button className="act-btn" onClick={() => setStatus(o.id,'shipped')}>🚚 Expédier</button>
                         )}
-                        {o.statut !== 'cancelled' && (
+                        {canTransitionOrderStatus(o.statut, 'delivered') && (
+                          <button className="act-btn" onClick={() => setStatus(o.id,'delivered')}>📦 Livrer</button>
+                        )}
+                        {canTransitionOrderStatus(o.statut, 'cancelled') && (
                           <button className="act-btn" onClick={() => setStatus(o.id,'cancelled')}>❌ Annuler</button>
                         )}
                         <button className="act-btn danger" onClick={() => delOrder(o.id)}>🗑️ Supprimer</button>
