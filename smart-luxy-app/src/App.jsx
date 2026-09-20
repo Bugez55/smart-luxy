@@ -27,6 +27,35 @@ function fbq(...args) {
   if (typeof window !== 'undefined' && window.fbq) window.fbq(...args)
 }
 
+// ── Meta Ads : capturer le fbclid pour construire le fbc ──
+function captureMetaClickId() {
+  if (typeof window === 'undefined') return
+
+  const params = new URLSearchParams(window.location.search)
+  const fbclid = params.get('fbclid')
+
+  // Aucun clic Meta : ne rien créer.
+  if (!fbclid) return
+
+  // Ne pas écraser un _fbc déjà présent.
+  const hasFbc = document.cookie
+    .split('; ')
+    .some(cookie => cookie.startsWith('_fbc='))
+
+  if (hasFbc) return
+
+  const fbc = `fb.1.${Date.now()}.${fbclid}`
+
+  document.cookie =
+    `_fbc=${encodeURIComponent(fbc)}; ` +
+    `Max-Age=${60 * 60 * 24 * 90}; ` +
+    `Path=/; ` +
+    `Secure; ` +
+    `SameSite=Lax`
+}
+
+captureMetaClickId()
+
 export default function App() {
 
   const [isNotFound] = useState(() => {
@@ -170,22 +199,8 @@ export default function App() {
       })
 
       if (error || !order) {
-        const message = [
-          error?.message,
-          error?.details,
-          error?.hint,
-          error?.code ? `Code ${error.code}` : null,
-        ].filter(Boolean).join(' — ') || 'Erreur inconnue lors de la création de la commande.'
-
-        console.error('❌ create_order RPC:', {
-          message: error?.message,
-          details: error?.details,
-          hint: error?.hint,
-          code: error?.code,
-          error,
-        })
-
-        toast(`❌ ${message}`, 'error')
+        console.error('create_order:', error)
+        toast('❌ Erreur. Vérifie tes informations et réessaie.', 'error')
         return false
       }
 
@@ -228,13 +243,8 @@ export default function App() {
       loadProducts()
       return true
     } catch (e) {
-      console.error('❌ Erreur soumission commande:', e)
-      const message = [
-        e?.message,
-        e?.details,
-        e?.hint,
-      ].filter(Boolean).join(' — ') || 'Erreur inconnue lors de la soumission.'
-      toast(`❌ ${message}`, 'error')
+      console.error('Erreur soumission commande:', e)
+      toast('❌ Une erreur est survenue. Vérifie tes informations et réessaie.', 'error')
       return false
     }
   }
