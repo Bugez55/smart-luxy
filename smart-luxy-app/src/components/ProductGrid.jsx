@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
-function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
+function fmt(n) {
+  return Number(n || 0).toLocaleString('fr-DZ') + ' DA'
+}
 
 function SkeletonCard() {
   return (
@@ -11,7 +13,7 @@ function SkeletonCard() {
       </div>
       <div className="pcard-body" style={{ gap: 10 }}>
         <div className="skeleton" style={{ height: 14, borderRadius: 6, width: '85%' }} />
-        <div className="skeleton" style={{ height: 14, borderRadius: 6, width: '60%' }} />
+        <div className="skeleton" style={{ height: 12, borderRadius: 6, width: '42%' }} />
         <div className="skeleton" style={{ height: 24, borderRadius: 6, width: '50%', marginTop: 4 }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
           <div className="skeleton" style={{ height: 36, borderRadius: 10 }} />
@@ -23,54 +25,82 @@ function SkeletonCard() {
 }
 
 function Stars({ avg, count }) {
-  if (!avg) return null
+  if (!avg || !count) return null
+
   const full = Math.floor(avg)
   const half = avg - full >= 0.5
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <div style={{ display: 'flex', gap: 1 }}>
-        {[1,2,3,4,5].map(i => (
-          <span key={i} style={{
-            fontSize: 12,
-            color: i <= full ? '#F9A825' : (i === full + 1 && half) ? '#F9A825' : 'var(--g3)',
-          }}>★</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }} aria-label={`Note ${avg.toFixed(1)} sur 5, ${count} avis`}>
+      <div style={{ display: 'flex', gap: 1 }} aria-hidden="true">
+        {[1, 2, 3, 4, 5].map(i => (
+          <span
+            key={i}
+            style={{
+              fontSize: 11,
+              color: i <= full || (i === full + 1 && half) ? '#F9A825' : 'var(--g5)',
+            }}
+          >
+            ★
+          </span>
         ))}
       </div>
-      {count !== null && count !== undefined && (
-        <span style={{ fontSize: 10, color: 'var(--g3)', fontWeight: 700 }}>
-          ({count > 0 ? count.toLocaleString() : avg.toFixed(1)})
-        </span>
-      )}
+      <span style={{ fontSize: 10, color: 'var(--g4)', fontWeight: 700 }}>
+        {avg.toFixed(1)} ({count})
+      </span>
     </div>
   )
 }
 
-export default function ProductGrid({ products, categories, activeCat, onCatChange, loading, onProductClick, onAddToCart, onBuyNow }) {
+export default function ProductGrid({
+  products,
+  categories,
+  activeCat,
+  onCatChange,
+  loading,
+  onProductClick,
+  onAddToCart,
+  onBuyNow,
+}) {
   const [reviews, setReviews] = useState({})
 
   useEffect(() => {
     if (products.length === 0) return
-    supabase.from('reviews').select('product_id, note').then(({ data }) => {
-      if (!data) return
-      const map = {}
-      data.forEach(r => {
-        if (!map[r.product_id]) map[r.product_id] = []
-        map[r.product_id].push(r.note)
+
+    supabase
+      .from('reviews')
+      .select('product_id, note')
+      .then(({ data }) => {
+        if (!data) return
+
+        const map = {}
+        data.forEach(r => {
+          if (!map[r.product_id]) map[r.product_id] = []
+          map[r.product_id].push(Number(r.note))
+        })
+
+        const avgs = {}
+        Object.entries(map).forEach(([id, notes]) => {
+          if (!notes.length) return
+          avgs[id] = {
+            avg: notes.reduce((a, b) => a + b, 0) / notes.length,
+            count: notes.length,
+          }
+        })
+
+        setReviews(avgs)
       })
-      const avgs = {}
-      Object.entries(map).forEach(([id, notes]) => {
-        avgs[id] = { avg: notes.reduce((a, b) => a + b, 0) / notes.length, count: notes.length }
-      })
-      setReviews(avgs)
-    })
   }, [products])
 
   return (
     <>
       <div className="cats">
         {categories.map(cat => (
-          <button key={cat} className={`cat-btn ${activeCat === cat ? 'active' : ''}`}
-            onClick={() => onCatChange(cat)}>
+          <button
+            key={cat}
+            className={`cat-btn ${activeCat === cat ? 'active' : ''}`}
+            onClick={() => onCatChange(cat)}
+          >
             {cat}
           </button>
         ))}
@@ -105,130 +135,274 @@ export default function ProductGrid({ products, categories, activeCat, onCatChan
 
 function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) {
   const imgs = (() => {
-    try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []) }
-    catch { return [] }
+    try {
+      return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || [])
+    } catch {
+      return []
+    }
   })()
 
   const mainImg = imgs[0]?.url || p.img
-  const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100 - (p.prix / p.prix_old) * 100) : 0
+  const hasDiscount = Number(p.prix_old) > Number(p.prix)
+  const discount = hasDiscount
+    ? Math.round(100 - (Number(p.prix) / Number(p.prix_old)) * 100)
+    : 0
+  const saving = hasDiscount ? Math.max(0, Number(p.prix_old) - Number(p.prix)) : 0
   const outOfStock = p.stock !== null && p.stock !== undefined && p.stock <= 0
-  const lowStock   = p.stock !== null && p.stock !== undefined && p.stock > 0 && p.stock <= 5
-  const cardBg     = p.card_color || 'var(--card)'
+  const lowStock = p.stock !== null && p.stock !== undefined && p.stock > 0 && p.stock <= 5
+  const cardBg = p.card_color || 'var(--card)'
 
   return (
-    <div className="pcard" style={{ opacity: outOfStock ? 0.65 : 1, background: cardBg }}>
-
+    <article
+      className="pcard"
+      style={{ opacity: outOfStock ? 0.68 : 1, background: cardBg }}
+    >
       {/* Image */}
       <div className="pcard-img" onClick={() => onOpen(p)}>
-        {mainImg
-          ? <img src={mainImg} alt={p.nom} loading="lazy" />
-          : <span className="pcard-emoji">{p.emoji || '📦'}</span>
-        }
+        {mainImg ? (
+          <img src={mainImg} alt={p.nom} loading="lazy" />
+        ) : (
+          <span className="pcard-emoji">{p.emoji || '📦'}</span>
+        )}
 
         {p.badge && <div className="pcard-badge">{p.badge}</div>}
-        {p.video_url && (
-          <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,.7)', borderRadius:6, padding:'2px 7px', fontSize:10, fontWeight:800, color:'var(--g3)', zIndex:2, display:'flex', alignItems:'center', gap:3 }}>
-            ▶️ Vidéo
+
+        {discount > 0 && (
+          <div
+            className="pcard-badge"
+            style={{ left: 'auto', right: 10, background: '#ef4444', color: 'white' }}
+          >
+            -{discount}%
           </div>
         )}
-        {disc > 0 && (
-          <div className="pcard-badge" style={{ left: 'auto', right: 10, background: '#ef4444' }}>
-            -{disc}%
+
+        {p.video_url && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              background: 'rgba(0,0,0,.68)',
+              border: '1px solid rgba(255,255,255,.12)',
+              borderRadius: 999,
+              padding: '4px 8px',
+              fontSize: 10,
+              fontWeight: 800,
+              color: 'white',
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            ▶ Vidéo
           </div>
         )}
 
         {outOfStock && (
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'rgba(0,0,0,.8)', color: '#fca5a5',
-            fontSize: 11, fontWeight: 800, padding: '5px 0',
-            textAlign: 'center', letterSpacing: '.06em',
-          }}>ÉPUISÉ</div>
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: 'rgba(0,0,0,.82)',
+              color: '#fecaca',
+              fontSize: 10,
+              fontWeight: 900,
+              padding: '6px 0',
+              textAlign: 'center',
+              letterSpacing: '.1em',
+              zIndex: 4,
+            }}
+          >
+            ÉPUISÉ
+          </div>
         )}
 
         {lowStock && !outOfStock && (
-          <div style={{
-            position: 'absolute', bottom: 8, left: 8,
-            background: 'rgba(239,68,68,.92)', color: 'var(--g3)',
-            fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6,
-            animation: 'stockPulse 1.5s ease-in-out infinite',
-          }}>🔥 Plus que {p.stock}</div>
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              background: 'rgba(239,68,68,.94)',
+              color: 'white',
+              fontSize: 10,
+              fontWeight: 900,
+              padding: '4px 9px',
+              borderRadius: 999,
+              animation: 'stockPulse 1.5s ease-in-out infinite',
+              zIndex: 4,
+              boxShadow: '0 6px 18px rgba(239,68,68,.25)',
+            }}
+          >
+            🔥 Plus que {p.stock}
+          </div>
         )}
 
-        {/* Miniatures en bas */}
         {imgs.length > 1 && (
-          <div style={{
-            position: 'absolute', bottom: outOfStock ? 30 : lowStock ? 36 : 6,
-            right: 6, display: 'flex', gap: 3, zIndex: 3,
-          }}>
+          <div
+            style={{
+              position: 'absolute',
+              bottom: outOfStock ? 32 : lowStock ? 40 : 8,
+              right: 8,
+              display: 'flex',
+              gap: 4,
+              zIndex: 4,
+              padding: 3,
+              borderRadius: 7,
+              background: 'rgba(0,0,0,.35)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
             {imgs.slice(0, 4).map((img, i) => (
-              <div key={i} style={{
-                width: 18, height: 18, borderRadius: 3, overflow: 'hidden',
-                border: '1px solid var(--g3)',
-                opacity: i === 0 ? 1 : 0.7,
-              }}>
+              <div
+                key={i}
+                style={{
+                  width: 19,
+                  height: 19,
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                  border: i === 0 ? '1px solid white' : '1px solid rgba(255,255,255,.35)',
+                  opacity: i === 0 ? 1 : 0.75,
+                }}
+              >
                 <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             ))}
             {imgs.length > 4 && (
-              <div style={{
-                width: 18, height: 18, borderRadius: 3,
-                background: 'rgba(0,0,0,.7)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 8, color: 'var(--g3)', fontWeight: 800,
-              }}>+{imgs.length - 4}</div>
+              <div
+                style={{
+                  width: 19,
+                  height: 19,
+                  borderRadius: 4,
+                  background: 'rgba(0,0,0,.72)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 8,
+                  color: 'white',
+                  fontWeight: 900,
+                }}
+              >
+                +{imgs.length - 4}
+              </div>
             )}
           </div>
         )}
 
-        <div className="pcard-quickview">👁 Voir</div>
+        <div className="pcard-quickview">Voir le produit</div>
       </div>
 
       {/* Body */}
       <div className="pcard-body">
-        <div className="pcard-name" onClick={() => onOpen(p)}>{p.nom}</div>
+        <div className="pcard-name" onClick={() => onOpen(p)}>
+          {p.nom}
+        </div>
 
-        {/* Étoiles + ventes */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: 16 }}>
-          {reviewData
-            ? <Stars avg={reviewData.avg} count={reviewData.count} />
-            : (
-              <div style={{ display: 'flex', gap: 1 }}>
-                {[1,2,3,4,5].map(i => (
-                  <span key={i} style={{ fontSize: 11, color: 'var(--g3)' }}>★</span>
-                ))}
-              </div>
-            )
-          }
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 6,
+            minHeight: 16,
+          }}
+        >
+          {reviewData ? (
+            <Stars avg={reviewData.avg} count={reviewData.count} />
+          ) : (
+            <span
+              style={{
+                fontSize: 10,
+                color: 'var(--g4)',
+                fontWeight: 600,
+              }}
+            >
+              Pas encore d’avis
+            </span>
+          )}
+
           {p.ventes > 0 && (
-            <span style={{ fontSize: 10, color: 'var(--g3)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-              ⚡ {p.ventes} vendus
+            <span
+              style={{
+                fontSize: 10,
+                color: 'var(--g4)',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {p.ventes} vendu{p.ventes > 1 ? 's' : ''}
             </span>
           )}
         </div>
 
         {/* Prix */}
-        <div className="pcard-prices">
+        <div className="pcard-prices" style={{ gap: 9, flexWrap: 'wrap' }}>
           <span className="pcard-prix">{fmt(p.prix)}</span>
-          {p.prix_old > p.prix && <span className="pcard-old">{fmt(p.prix_old)}</span>}
+          {hasDiscount && <span className="pcard-old">{fmt(p.prix_old)}</span>}
         </div>
+
+        {saving > 0 && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              alignSelf: 'flex-start',
+              gap: 5,
+              padding: '4px 8px',
+              borderRadius: 999,
+              background: 'rgba(34,197,94,.09)',
+              border: '1px solid rgba(34,197,94,.18)',
+              color: '#86efac',
+              fontSize: 10,
+              fontWeight: 800,
+              marginTop: -2,
+            }}
+          >
+            Économisez {fmt(saving)}
+          </div>
+        )}
 
         {/* Boutons */}
         <div className="pcard-actions">
-          <button className="btn-cart" disabled={outOfStock}
-            onClick={e => { e.stopPropagation(); onAddToCart(p) }}
-            style={{ opacity: outOfStock ? 0.4 : 1, cursor: outOfStock ? 'not-allowed' : 'pointer' }}>
+          <button
+            className="btn-cart"
+            disabled={outOfStock}
+            aria-label={`Ajouter ${p.nom} au panier`}
+            onClick={e => {
+              e.stopPropagation()
+              onAddToCart(p)
+            }}
+            style={{
+              opacity: outOfStock ? 0.42 : 1,
+              cursor: outOfStock ? 'not-allowed' : 'pointer',
+            }}
+          >
             🛒 Panier
           </button>
-          <button className="btn-buy" disabled={outOfStock}
-            onClick={e => { e.stopPropagation(); onBuyNow(p) }}
-            style={{ opacity: outOfStock ? 0.4 : 1, cursor: outOfStock ? 'not-allowed' : 'pointer' }}>
-            ⚡ Acheter
+
+          <button
+            className="btn-buy"
+            disabled={outOfStock}
+            aria-label={`Acheter ${p.nom}`}
+            onClick={e => {
+              e.stopPropagation()
+              onBuyNow(p)
+            }}
+            style={{
+              opacity: outOfStock ? 0.42 : 1,
+              cursor: outOfStock ? 'not-allowed' : 'pointer',
+            }}
+          >
+            ⚡ Commander
           </button>
         </div>
       </div>
 
-      <style>{`@keyframes stockPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }`}</style>
-    </div>
+      <style>{`@keyframes stockPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }`}</style>
+    </article>
   )
 }
