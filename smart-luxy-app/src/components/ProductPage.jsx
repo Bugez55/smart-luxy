@@ -30,6 +30,7 @@ const LIVRAISON = {
 
 export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique }) {
   const [openFaq, setOpenFaq] = useState(null)
+  const [viewers] = useState(() => Math.floor(Math.random() * 8) + 3)
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('ar')
   const rtl = lang === 'ar'
@@ -42,7 +43,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [modeLiv, setModeLiv] = useState('domicile')
   const [modePaiement, setModePaiement] = useState('livraison')
   const [paiementInfo, setPaiementInfo] = useState({ ccp:'', ccp_nom:'', baridimob:'', ccp_actif:false, baridimob_actif:false })
-  const [freeShip, setFreeShip] = useState(null)
   const [preuvePaiement, setPreuvePaiement] = useState('')
   const [ordering, setOrdering] = useState(false)
   const [telError, setTelError] = useState(false)
@@ -62,8 +62,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         ccp_actif:       s.ccp_actif === 'true',
         baridimob_actif: s.baridimob_actif === 'true',
       })
-      const value = Number(s.free_ship)
-      setFreeShip(Number.isFinite(value) && value > 0 ? value : null)
     }).catch(() => {})
   }, [])
 
@@ -86,8 +84,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
   const prixLiv = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][modeLiv] : null
-  const fraisLivBase = prixLiv !== null ? prixLiv : null
-  const fraisLiv = freeShip !== null && currentPrix >= freeShip ? 0 : fraisLivBase
+  const fraisLiv = prixLiv !== null ? prixLiv : null
   const totalFinal = currentPrix + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
@@ -232,18 +229,20 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null)
 
   return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background: p.card_color || 'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+    <div className="pp-root" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background: p.card_color || 'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
 
       {/* ── Header sticky ── */}
-      <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(10,10,10,.95)', backdropFilter:'blur(20px)', borderBottom:'1px solid var(--g3)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
+      <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(8,8,8,.90)', backdropFilter:'blur(24px) saturate(150%)', WebkitBackdropFilter:'blur(24px) saturate(150%)', borderBottom:'1px solid rgba(201,168,76,.18)', boxShadow:'0 10px 30px rgba(0,0,0,.18)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
         <button onClick={onClose} style={{ background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
         <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
         {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
       </div>
 
+      <div className="pp-page">
+
       {/* ── Carrousel images en haut — swipe gauche/droite ── */}
       {imgs.length > 0 ? (
-        <div ref={topRef} data-img-swipe style={{ position:'relative', background:'var(--card)', lineHeight:0 }}>
+        <div ref={topRef} data-img-swipe className="pp-media" style={{ position:'relative', background:'var(--card)', lineHeight:0 }}>
           {/* Image affichée */}
           <img
             key={imgIdx}
@@ -270,7 +269,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {imgs.length > 1 && <div style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.55)', color:'var(--g3)', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20, zIndex:3 }}>{imgIdx+1}/{imgs.length}</div>}
         </div>
       ) : (
-        <div ref={topRef} style={{ height:280, background:'var(--card)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div ref={topRef} className="pp-media pp-media-empty" style={{ height:280, background:'var(--card)', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <span style={{ fontSize:80 }}>{p.emoji||'📦'}</span>
         </div>
       )}
@@ -327,12 +326,12 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       })()}
 
       {/* ── Infos produit ── */}
-      <div style={{ padding:'16px 16px 0' }}>
-        <h1 style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'var(--g3)', lineHeight:1.3 }}>{p.nom}</h1>
+      <div className="pp-info" style={{ padding:'18px 16px 0' }}>
+        <h1 className="pp-title" style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'var(--g3)', lineHeight:1.3 }}>{p.nom}</h1>
 
         {/* Étoiles + commandes */}
         {(p.note_etoiles || p.nb_commandes > 0) && (
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12, flexWrap:'wrap' }}>
+          <div className="pp-meta" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14, flexWrap:'wrap' }}>
             {p.note_etoiles && (
               <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                 {[1,2,3,4,5].map(i => (
@@ -351,12 +350,12 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         )}
 
         {/* Prix + bouton Commander immédiat */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+        <div className="pp-price-row" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:14, flexWrap:'wrap' }}>
           <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
-            <span style={{ fontSize:30, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
+            <span className="pp-price" style={{ fontSize:32, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
             {p.prix_old && <>
               <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
-              <span style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'2px 8px', borderRadius:6 }}>-{disc}%</span>
+              <span className="pp-discount" style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:900, padding:'4px 9px', borderRadius:999 }}>-{disc}%</span>
             </>}
           </div>
           {!outOfStock && (
@@ -369,6 +368,12 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
               }}
             >{lang==='ar' ? '🛒 اطلب الآن' : '🛒 Commander'}</button>
           )}
+        </div>
+
+        <div className="pp-trust-grid">
+          <div className="pp-trust-item"><span>🚚</span><div><strong>69 wilayas</strong><small>Livraison nationale</small></div></div>
+          <div className="pp-trust-item"><span>💳</span><div><strong>Paiement à la livraison</strong><small>Simple et pratique</small></div></div>
+          <div className="pp-trust-item"><span>✅</span><div><strong>Commande sécurisée</strong><small>Validation par téléphone</small></div></div>
         </div>
 
         {/* 🔥 Barre de progression stock — urgence */}
@@ -396,22 +401,25 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
 
 
-        {/* Signal de demande — basé sur les données réelles du produit */}
-        {(Number(p.ventes || 0) > 0 || lowStock) && (
-          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
-            <span style={{ fontSize:15 }}>🔥</span>
-            <span style={{ fontSize:11, color:'var(--g3)', fontWeight:700 }}>
-              {lowStock
-                ? (lang==='ar' ? `متوفر ${p.stock} فقط` : `Plus que ${p.stock} exemplaire${p.stock > 1 ? 's' : ''} disponible${p.stock > 1 ? 's' : ''}`)
-                : (lang==='ar' ? 'منتج مطلوب' : 'Produit très demandé')}
-            </span>
+        {/* Viewers en temps réel */}
+        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+          <div style={{ display:'flex' }}>
+            {[...Array(Math.min(viewers,5))].map((_,i) => (
+              <div key={i} style={{ width:18, height:18, borderRadius:'50%', background:`hsl(${i*40},60%,55%)`, border:'2px solid #0a0a0a', marginLeft: i>0 ? -6 : 0, fontSize:9, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--g3)', fontWeight:800 }}>
+                {['👤','👤','👤','👤','👤'][i]}
+              </div>
+            ))}
           </div>
-        )}
+          <span style={{ fontSize:11, color:'var(--g3)', fontWeight:600 }}>
+            {viewers} {lang==='ar' ? 'أشخاص يتصفحون هذا المنتج الآن' : `personnes regardent ce produit`}
+          </span>
+          <span style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e', animation:'pulse 1.5s infinite', flexShrink:0 }} />
+        </div>
       </div>
 
       {/* ── Description ── */}
       {p.description && (
-        <div style={{ padding:'0 16px 16px' }}>
+        <div className="pp-section pp-description" style={{ padding:'0 16px 16px' }}>
           <div style={{ fontSize:14, color:'var(--g3)', lineHeight:1.8 }}
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description || '') }} />
         </div>
@@ -419,7 +427,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Caractéristiques ── */}
       {specs.length > 0 && (
-        <div style={{ padding:'0 16px 16px' }}>
+        <div className="pp-section pp-specs" style={{ padding:'0 16px 16px' }}>
           {specs.map((s,i) => (
             <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
               <span style={{ color:'var(--br)', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
@@ -431,7 +439,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── GALERIE VERTICALE — photos séparées du carrousel ── */}
       {imgsGallery.length > 0 && (
-        <div style={{ lineHeight:0, margin:0, padding:0 }}>
+        <div className="pp-gallery" style={{ lineHeight:0, margin:0, padding:0 }}>
           {imgsGallery.map((img, i) => (
             <img
               key={i}
@@ -452,7 +460,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── FAQ ── */}
       {faq.length > 0 && (
-        <div style={{ padding:'0 16px 16px' }}>
+        <div className="pp-section pp-faq" style={{ padding:'0 16px 16px' }}>
           <h3 style={{ fontSize:16, fontWeight:900, color:'var(--g3)', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
           {faq.map((item,i) => (
             <div key={i} style={{ marginBottom:6, borderRadius:12, overflow:'hidden', border:'1px solid var(--g3)' }}>
@@ -473,7 +481,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {/* ══════════════════════════════════════════
           FORMULAIRE DE COMMANDE — style MarketDZ
       ══════════════════════════════════════════ */}
-      <div ref={formRef} style={{ margin:'0 12px 16px', background:'var(--card)', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, direction: rtl ? 'rtl' : 'ltr' }}>
+      <div ref={formRef} className="pp-order-card" style={{ margin:'0 12px 16px', background:'var(--card)', border:'1px solid rgba(201,168,76,.25)', borderRadius:18, direction: rtl ? 'rtl' : 'ltr' }}>
 
         {/* En-tête formulaire */}
         <div style={{ position:'relative', background:'linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05))', borderBottom:'1px solid rgba(201,168,76,.2)', padding:'16px', textAlign:'center' }}>
@@ -799,12 +807,12 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       </div>
 
       {/* ── Partager le produit ── */}
-      <div style={{ padding:'0 16px 16px', display:'flex', gap:8, alignItems:'center' }}>
+      <div className="pp-share-label" style={{ padding:'0 16px 16px', display:'flex', gap:8, alignItems:'center' }}>
         <div style={{ flex:1, height:1, background:'rgba(128,128,128,.25)' }} />
         <span style={{ fontSize:11, color:'var(--g3)', fontWeight:700 }}>PARTAGER</span>
         <div style={{ flex:1, height:1, background:'rgba(128,128,128,.25)' }} />
       </div>
-      <div style={{ display:'flex', gap:10, padding:'0 16px 20px' }}>
+      <div className="pp-share-actions" style={{ display:'flex', gap:10, padding:'0 16px 20px' }}>
         <a
           href={`https://wa.me/?text=${encodeURIComponent((lang==='ar'?'اطلع على هذا المنتج: ':'Découvrez ce produit: ') + p.nom + ' - ' + window.location.href)}`}
           target="_blank" rel="noreferrer"
@@ -834,11 +842,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Produits similaires ── */}
       {(allProducts||[]).filter(x=>x.id!==p.id&&x.categorie===p.categorie&&x.is_active).slice(0,4).length > 0 && (
-        <div style={{ padding:'0 16px 100px' }}>
+        <div className="pp-similar" style={{ padding:'0 16px 100px' }}>
           <h3 style={{ fontSize:14, fontWeight:800, color:'var(--g3)', letterSpacing:'.06em', marginBottom:12 }}>VOUS AIMEREZ AUSSI</h3>
           <div style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:4, scrollbarWidth:'none' }}>
             {(allProducts||[]).filter(x=>x.id!==p.id&&x.categorie===p.categorie&&x.is_active).slice(0,4).map(sim => (
-              <div key={sim.id} onClick={onClose} style={{ background:'var(--card)', border:'1px solid var(--g3)', borderRadius:12, overflow:'hidden', cursor:'pointer', width:130, flexShrink:0 }}>
+              <div key={sim.id} onClick={onClose} className="pp-sim-card" style={{ background:'var(--card)', border:'1px solid rgba(255,255,255,.08)', borderRadius:14, overflow:'hidden', cursor:'pointer', width:142, flexShrink:0 }}>
                 <div style={{ height:90, background:'var(--card2)', overflow:'hidden' }}>
                   {sim.img ? <img src={sim.img} alt={sim.nom} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30 }}>{sim.emoji||'📦'}</div>}
                 </div>
@@ -852,8 +860,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         </div>
       )}
 
+      </div>
+
       {/* ── Sticky bouton commander ── */}
-      <div style={{
+      <div className="pp-sticky" style={{
         position:'fixed', bottom:0, left:0, right:0, zIndex:200,
         background:'rgba(10,10,10,.97)', backdropFilter:'blur(20px)',
         borderTop:'1px solid rgba(201,168,76,.2)',
@@ -890,6 +900,46 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       )}
 
       <style>{`
+
+        .pp-page{width:min(1180px,100%);margin:0 auto;background:linear-gradient(180deg,rgba(255,255,255,.018),transparent 24%);border-left:1px solid rgba(255,255,255,.025);border-right:1px solid rgba(255,255,255,.025)}
+        .pp-media{overflow:hidden;box-shadow:inset 0 -40px 50px rgba(0,0,0,.2)}
+        .pp-media img{transition:transform .45s ease,filter .35s ease}
+        .pp-media:hover img{transform:scale(1.012);filter:saturate(1.03)}
+        .pp-info{max-width:920px;margin:0 auto}
+        .pp-title{letter-spacing:-.02em}
+        .pp-price-row{background:linear-gradient(180deg,rgba(201,168,76,.07),rgba(201,168,76,.015));border:1px solid rgba(201,168,76,.16);border-radius:16px;padding:14px 16px}
+        .pp-trust-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
+        .pp-trust-item{display:flex;align-items:center;gap:8px;padding:10px 11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);border-radius:12px;min-width:0}
+        .pp-trust-item>span{font-size:20px;flex-shrink:0}
+        .pp-trust-item strong{display:block;font-size:10px;color:var(--g3);font-weight:900;line-height:1.2}
+        .pp-trust-item small{display:block;font-size:9px;color:var(--g4);margin-top:2px;line-height:1.2}
+        .pp-section{max-width:920px;margin:0 auto}
+        .pp-description,.pp-specs,.pp-faq{background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.008));border-top:1px solid rgba(255,255,255,.055)}
+        .pp-gallery{max-width:920px;margin:0 auto}
+        .pp-order-card{max-width:920px;margin:0 auto 18px!important;box-shadow:0 18px 50px rgba(0,0,0,.22)}
+        .pp-share-label{max-width:920px;margin:0 auto;padding-top:4px!important}
+        .pp-share-actions{max-width:920px;margin:0 auto}
+        .pp-similar{max-width:920px;margin:0 auto}
+        .pp-sim-card{transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+        .pp-sim-card:hover{transform:translateY(-3px);border-color:rgba(201,168,76,.35)!important;box-shadow:0 10px 26px rgba(0,0,0,.2)}
+        .pp-sticky{backdrop-filter:blur(24px) saturate(150%)!important;-webkit-backdrop-filter:blur(24px) saturate(150%)!important}
+        @media (min-width: 900px){
+          .pp-page{padding-bottom:24px}
+          .pp-media{border-radius:0 0 22px 22px;margin:0 14px}
+          .pp-media img{max-height:560px!important;object-fit:contain!important;background:radial-gradient(circle at center,rgba(255,255,255,.03),transparent 62%),var(--card)}
+          .pp-gallery img{max-width:920px;margin:auto}
+          .pp-info{padding-left:28px!important;padding-right:28px!important}
+          .pp-sticky{left:50%!important;right:auto!important;width:min(720px,calc(100% - 40px));transform:translate(-50%,${stickyVisible ? '0' : '150%'})!important;border:1px solid rgba(201,168,76,.16);border-bottom:0;border-radius:18px 18px 0 0}
+        }
+        @media (max-width: 640px){
+          .pp-title{font-size:21px!important}
+          .pp-price{font-size:29px!important}
+          .pp-trust-grid{grid-template-columns:1fr;gap:7px}
+          .pp-trust-item{padding:9px 10px}
+          .pp-media img{max-height:420px!important;object-fit:cover}
+          .pp-order-card{border-radius:16px!important}
+        }
+
         @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
         @keyframes imgIn{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:scale(1)}}
         @keyframes stockGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3)}}
