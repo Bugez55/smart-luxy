@@ -6,7 +6,10 @@ const META_API_VERSION = 'v21.0'
 const DZ_COUNTRY_CODE = '213'
 
 function sha256hex(value) {
-  return crypto.createHash('sha256').update(String(value).toLowerCase().replace(/\s+/g, '')).digest('hex')
+  return crypto
+    .createHash('sha256')
+    .update(String(value).toLowerCase().replace(/\s+/g, ''))
+    .digest('hex')
 }
 
 function normalisePhone(raw) {
@@ -37,6 +40,7 @@ function allowedOrigins() {
 function isAllowedOrigin(origin) {
   if (!origin) return false
   if (allowedOrigins().includes(origin)) return true
+
   // Preview deployments on Vercel can still be used during admin testing.
   return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)
 }
@@ -44,55 +48,97 @@ function isAllowedOrigin(origin) {
 function sendCors(req, res) {
   const origin = req.headers.origin || ''
   const allowed = isAllowedOrigin(origin)
-  res.setHeader('Access-Control-Allow-Origin', allowed ? origin : allowedOrigins()[0])
+
+  res.setHeader(
+    'Access-Control-Allow-Origin',
+    allowed ? origin : allowedOrigins()[0]
+  )
   res.setHeader('Vary', 'Origin')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization'
+  )
+
   return allowed
 }
 
 export default async function handler(req, res) {
   const allowed = sendCors(req, res)
-  if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-  if (!allowed) return res.status(403).json({ error: 'Origine non autorisée' })
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  if (!allowed) {
+    return res.status(403).json({ error: 'Origine non autorisée' })
+  }
 
   const pixelId = process.env.FB_PIXEL_ID
   const accessToken = process.env.FB_CAPI_ACCESS_TOKEN
+
   if (!pixelId || !accessToken) {
-    return res.status(500).json({ error: 'CAPI non configuré côté serveur' })
+    return res.status(500).json({
+      error: 'CAPI non configuré côté serveur',
+    })
   }
 
   const body = req.body || {}
+
   const eventName = body.eventName
   const eventId = String(body.eventId || '').trim().slice(0, 120)
 
   if (!['Lead', 'Purchase'].includes(eventName)) {
-    return res.status(400).json({ error: 'eventName doit être Lead ou Purchase' })
+    return res.status(400).json({
+      error: 'eventName doit être Lead ou Purchase',
+    })
   }
 
+  // ============================================================
+  // PURCHASE
+  // ============================================================
   if (eventName === 'Purchase') {
     const auth = await requireAdmin(req, res)
-    if (!auth.ok) return auth.response
 
-    const orderId = String(body.orderId || '').trim().toUpperCase()
+    if (!auth.ok) {
+      return auth.response
+    }
+
+    const orderId = String(body.orderId || '')
+      .trim()
+      .toUpperCase()
+
     if (!orderId || !/^SL-[A-Z0-9]+$/.test(orderId)) {
-      return res.status(400).json({ error: 'orderId invalide' })
+      return res.status(400).json({
+        error: 'orderId invalide',
+      })
     }
 
     const { data: order, error } = await auth.client
       .from('orders')
-      .select('id,nom_client,telephone,wilaya,total,items,status:statut,fbc,fbp,purchase_event_sent_at')
+      .select(
+        'id,nom_client,telephone,wilaya,total,items,status:statut,fbc,fbp,client_id,purchase_event_sent_at'
+      )
       .eq('id', orderId)
       .eq('statut', 'delivered')
       .maybeSingle()
 
     if (error || !order) {
-      return res.status(404).json({ error: 'Commande livrée introuvable' })
+      return res.status(404).json({
+        error: 'Commande livrée introuvable',
+      })
     }
 
+    // Protection contre les doublons.
     if (order.purchase_event_sent_at) {
-      return res.status(200).json({ success: true, duplicate: true })
+      return res.status(200).json({
+        success: true,
+        duplicate: true,
+      })
     }
 
     const purchaseId = `${order.id}-purchase`
@@ -103,37 +149,85 @@ export default async function handler(req, res) {
       accessToken,
       eventName: 'Purchase',
       eventId: bodyEventId,
+
       phone: order.telephone,
+
       firstName: order.nom_client?.split(' ')[0],
-      lastName: order.nom_client?.split(' ').slice(1).join(' '),
+
+      lastName: order.nom_client
+        ?.split(' ')
+        .slice(1)
+        .join(' '),
+
       city: order.wilaya,
+
       value: order.total,
-      contentIds: Array.isArray(order.items) ? order.items.map(i => i.id) : [],
-      eventSourceUrl: process.env.PUBLIC_APP_URL || 'https://wazyo.com',
+
+      contentIds: Array.isArray(order.items)
+        ? order.items.map(i => i.id)
+        : [],
+
+      eventSourceUrl:
+        process.env.PUBLIC_APP_URL || 'https://wazyo.com',
+
       fbc: order.fbc,
       fbp: order.fbp,
-      ip: req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress,
+
+      // Nouveau : identifiant client stable
+      externalId: order.client_id,
+
+      ip:
+        req.headers['x-forwarded-for']?.split(',')[0] ||
+        req.socket?.remoteAddress,
+
       userAgent: req.headers['user-agent'],
     })
 
+    // On marque l'événement comme envoyé uniquement après
+    // une réponse Meta réussie.
     const { error: markError } = await auth.client
       .from('orders')
-      .update({ purchase_event_sent_at: new Date().toISOString() })
+      .update({
+        purchase_event_sent_at: new Date().toISOString(),
+      })
       .eq('id', order.id)
       .is('purchase_event_sent_at', null)
 
     if (markError) {
-      console.error('Impossible de marquer Purchase comme envoyé:', markError)
+      console.error(
+        'Impossible de marquer Purchase comme envoyé:',
+        markError
+      )
     }
 
     return res.status(200).json(result)
   }
 
-  // Lead : envoyé à la création d'une commande.
-  const { phone, firstName, lastName, city, value, contentIds, eventSourceUrl, fbc, fbp } = body
-  if (!phone) return res.status(400).json({ error: 'phone requis' })
+  // ============================================================
+  // LEAD
+  // ============================================================
+  const {
+    phone,
+    firstName,
+    lastName,
+    city,
+    value,
+    contentIds,
+    eventSourceUrl,
+    fbc,
+    fbp,
+    externalId,
+  } = body
 
-  const leadId = eventId || `lead-${crypto.randomBytes(12).toString('hex')}`
+  if (!phone) {
+    return res.status(400).json({
+      error: 'phone requis',
+    })
+  }
+
+  const leadId =
+    eventId ||
+    `lead-${crypto.randomBytes(12).toString('hex')}`
 
   try {
     const result = await sendMetaEvent({
@@ -141,6 +235,7 @@ export default async function handler(req, res) {
       accessToken,
       eventName: 'Lead',
       eventId: leadId,
+
       phone,
       firstName,
       lastName,
@@ -150,13 +245,25 @@ export default async function handler(req, res) {
       eventSourceUrl,
       fbc,
       fbp,
-      ip: req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress,
+
+      // Compatible avec un éventuel external_id envoyé
+      // ultérieurement depuis le frontend.
+      externalId,
+
+      ip:
+        req.headers['x-forwarded-for']?.split(',')[0] ||
+        req.socket?.remoteAddress,
+
       userAgent: req.headers['user-agent'],
     })
+
     return res.status(200).json(result)
   } catch (error) {
     console.error('Erreur CAPI Lead:', error)
-    return res.status(500).json({ error: 'Erreur Meta CAPI' })
+
+    return res.status(500).json({
+      error: 'Erreur Meta CAPI',
+    })
   }
 }
 
@@ -174,6 +281,7 @@ async function sendMetaEvent({
   eventSourceUrl,
   fbc,
   fbp,
+  externalId,
   ip,
   userAgent,
 }) {
@@ -182,13 +290,38 @@ async function sendMetaEvent({
     country: sha256hex('dz'),
   }
 
-  if (firstName) userData.fn = sha256hex(normaliseName(firstName))
-  if (lastName) userData.ln = sha256hex(normaliseName(lastName))
-  if (city) userData.ct = sha256hex(normaliseName(city))
-  if (fbc) userData.fbc = String(fbc).slice(0, 500)
-  if (fbp) userData.fbp = String(fbp).slice(0, 500)
-  if (ip) userData.client_ip_address = ip
-  if (userAgent) userData.client_user_agent = userAgent
+  if (firstName) {
+    userData.fn = sha256hex(normaliseName(firstName))
+  }
+
+  if (lastName) {
+    userData.ln = sha256hex(normaliseName(lastName))
+  }
+
+  if (city) {
+    userData.ct = sha256hex(normaliseName(city))
+  }
+
+  if (fbc) {
+    userData.fbc = String(fbc).slice(0, 500)
+  }
+
+  if (fbp) {
+    userData.fbp = String(fbp).slice(0, 500)
+  }
+
+  // Nouveau : identifiant externe stable du client.
+  if (externalId) {
+    userData.external_id = String(externalId).slice(0, 500)
+  }
+
+  if (ip) {
+    userData.client_ip_address = ip
+  }
+
+  if (userAgent) {
+    userData.client_user_agent = userAgent
+  }
 
   const eventData = {
     event_name: eventName,
@@ -198,29 +331,55 @@ async function sendMetaEvent({
     user_data: userData,
   }
 
-  if (eventSourceUrl) eventData.event_source_url = String(eventSourceUrl).slice(0, 2000)
+  if (eventSourceUrl) {
+    eventData.event_source_url = String(eventSourceUrl).slice(
+      0,
+      2000
+    )
+  }
 
-  if (value !== undefined && Number.isFinite(Number(value))) {
+  if (
+    value !== undefined &&
+    Number.isFinite(Number(value))
+  ) {
     eventData.custom_data = {
       value: Number(value),
       currency: 'DZD',
+
       ...(Array.isArray(contentIds) && contentIds.length
-        ? { content_ids: contentIds, content_type: 'product' }
+        ? {
+            content_ids: contentIds,
+            content_type: 'product',
+          }
         : {}),
     }
   }
 
-  const url = `https://graph.facebook.com/${META_API_VERSION}/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`
+  const url =
+    `https://graph.facebook.com/${META_API_VERSION}/${pixelId}/events` +
+    `?access_token=${encodeURIComponent(accessToken)}`
+
   const metaRes = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data: [eventData] }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      data: [eventData],
+    }),
   })
 
   const metaJson = await metaRes.json().catch(() => null)
+
   if (!metaRes.ok) {
-    console.error('Erreur Meta CAPI:', JSON.stringify(metaJson))
-    throw new Error(metaJson?.error?.message || 'Erreur Meta')
+    console.error(
+      'Erreur Meta CAPI:',
+      JSON.stringify(metaJson)
+    )
+
+    throw new Error(
+      metaJson?.error?.message || 'Erreur Meta'
+    )
   }
 
   return {
