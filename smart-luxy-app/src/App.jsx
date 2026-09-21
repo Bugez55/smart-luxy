@@ -444,74 +444,68 @@ export default function App() {
         <ProductGallery products={products} onProductClick={setOpenProduct} />
       )}
 
-      <footer className="footer">
-        <div className="fbn">Wazyo</div>
-        <p className="ftag">{CONFIG.slogan}</p>
+      <footer className="footer wz-footer-premium">
+        <style>{`
+          .wz-footer-premium{
+            position:relative;
+            overflow:hidden;
+            padding:58px 20px 26px!important;
+            border-top:1px solid rgba(201,168,76,.14);
+            background:
+              radial-gradient(circle at 50% 0%,rgba(201,168,76,.08),transparent 34%),
+              linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.005));
+          }
+          .wz-footer-premium::before{
+            content:'';
+            position:absolute;
+            left:50%;top:0;transform:translateX(-50%);
+            width:min(420px,70%);height:1px;
+            background:linear-gradient(90deg,transparent,rgba(201,168,76,.7),transparent);
+          }
+          .wz-footer-brand{font-family:Georgia,'Times New Roman',serif;font-size:34px;line-height:1;color:var(--g3);font-weight:700;letter-spacing:-.04em;}
+          .wz-footer-sub{max-width:520px;margin:10px auto 0;color:var(--g4);font-size:12px;line-height:1.7;}
+          .wz-footer-trust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:760px;margin:26px auto 0;}
+          .wz-footer-trust-item{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:8px 10px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.022);color:var(--g3);font-size:10px;font-weight:800;text-align:center;}
+          .wz-footer-links{display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap;margin-top:24px;}
+          .wz-footer-link{border:none;background:none;padding:0;color:var(--g4);font-size:11px;cursor:pointer;text-decoration:none;transition:color .2s ease;}
+          .wz-footer-link:hover{color:var(--br);}
+          .wz-footer-contact{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:20px;}
+          .wz-footer-contact a{display:inline-flex;align-items:center;gap:5px;padding:8px 11px;border:1px solid rgba(255,255,255,.07);border-radius:10px;color:var(--g3);font-size:11px;text-decoration:none;background:rgba(255,255,255,.018);transition:border-color .2s ease,transform .2s ease;}
+          .wz-footer-contact a:hover{border-color:rgba(201,168,76,.35);transform:translateY(-1px);}
+          .wz-footer-bottom{margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);color:var(--g4);font-size:10px;}
+          @media(max-width:640px){
+            .wz-footer-premium{padding:46px 14px 22px!important;}
+            .wz-footer-trust{grid-template-columns:1fr;max-width:420px;}
+            .wz-footer-brand{font-size:31px;}
+            .wz-footer-links{gap:12px 16px;}
+            .wz-footer-contact a{font-size:10px;padding:7px 9px;}
+          }
+        `}</style>
 
-        {/* Infos contact */}
-        <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:10, flexWrap:'wrap' }}>
-          <a href={`tel:+${CONFIG.telephone}`} style={{
-            color:'var(--g3)', fontSize:12, textDecoration:'none',
-            display:'flex', alignItems:'center', gap:4,
-          }}>📞 +{CONFIG.telephone}</a>
-          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
-          <a href={`mailto:${CONFIG.email}`} style={{
-            color:'var(--g3)', fontSize:12, textDecoration:'none',
-            display:'flex', alignItems:'center', gap:4,
-          }}>✉️ {CONFIG.email}</a>
-          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
-          <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noreferrer" style={{
-            color:'rgba(37,211,102,.5)', fontSize:12, textDecoration:'none',
-            display:'flex', alignItems:'center', gap:4,
-          }}>💬 WhatsApp</a>
+        <div className="wz-footer-brand">Wazyo</div>
+        <p className="wz-footer-sub">{CONFIG.slogan}</p>
+
+        <div className="wz-footer-trust" aria-label="Informations de service">
+          <div className="wz-footer-trust-item">🚚 69 wilayas</div>
+          <div className="wz-footer-trust-item">💳 Paiement à la livraison</div>
+          <div className="wz-footer-trust-item">💬 Support WhatsApp</div>
         </div>
 
-        <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:12, flexWrap:'wrap' }}>
-          <button
-            onClick={() => setPolitiqueTab('confidentialite')}
-            style={{
-              background:'none', border:'none',
-              color:'var(--g3)', fontSize:12,
-              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
-              padding:0, transition:'color .2s',
-            }}
-            onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
-          >
-            🔒 Politique de confidentialité
-          </button>
-          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
-          <button
-            onClick={() => setPolitiqueTab('retour')}
-            style={{
-              background:'none', border:'none',
-              color:'var(--g3)', fontSize:12,
-              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
-              padding:0, transition:'color .2s',
-            }}
-            onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
-          >
-            🔄 Politique de retour
-          </button>
-          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
-          <button
-            onClick={() => setTrackingOpen(true)}
-            style={{
-              background:'none', border:'none',
-              color:'var(--g3)', fontSize:12,
-              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
-              padding:0, transition:'color .2s',
-            }}
-            onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
-          >
-            📦 Suivre ma commande
-          </button>
+        <div className="wz-footer-links">
+          <button className="wz-footer-link" onClick={() => setPolitiqueTab('confidentialite')}>🔒 Confidentialité</button>
+          <button className="wz-footer-link" onClick={() => setPolitiqueTab('retour')}>🔄 Politique de retour</button>
+          <button className="wz-footer-link" onClick={() => setTrackingOpen(true)}>📦 Suivre ma commande</button>
         </div>
-        <p style={{ color:'var(--g3)', fontSize:11, marginTop:12 }}>
+
+        <div className="wz-footer-contact">
+          <a href={`tel:+${CONFIG.telephone}`}>📞 +{CONFIG.telephone}</a>
+          <a href={`mailto:${CONFIG.email}`}>✉️ {CONFIG.email}</a>
+          <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noreferrer">💬 WhatsApp</a>
+        </div>
+
+        <div className="wz-footer-bottom">
           © {new Date().getFullYear()} Wazyo · Tous droits réservés
-        </p>
+        </div>
       </footer>
 
       {/* Product detail */}
