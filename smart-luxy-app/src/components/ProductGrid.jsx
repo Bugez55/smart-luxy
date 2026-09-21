@@ -94,17 +94,69 @@ export default function ProductGrid({
 
   return (
     <>
-      <div className="cats">
-        {categories.map(cat => (
-          <button
-            key={cat}
-            className={`cat-btn ${activeCat === cat ? 'active' : ''}`}
-            onClick={() => onCatChange(cat)}
-          >
-            {cat}
-          </button>
-        ))}
+      <div className="wz-categories-wrap">
+        <div className="wz-categories-label">CATÉGORIES</div>
+        <div className="cats wz-categories-scroll">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              className={`cat-btn ${activeCat === cat ? 'active' : ''}`}
+              onClick={() => onCatChange(cat)}
+              aria-pressed={activeCat === cat}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
+
+      <style>{`
+        .wz-categories-wrap{
+          width:100%;
+          box-sizing:border-box;
+          padding:0 20px 20px;
+        }
+        .wz-categories-label{
+          max-width:1180px;
+          margin:0 auto 8px;
+          color:var(--g4);
+          font-size:9px;
+          font-weight:900;
+          letter-spacing:.16em;
+          text-transform:uppercase;
+        }
+        .wz-categories-scroll{
+          max-width:1180px;
+          margin:0 auto;
+          display:flex;
+          gap:8px;
+          overflow-x:auto;
+          overflow-y:hidden;
+          padding:2px 2px 6px;
+          scrollbar-width:none;
+          -webkit-overflow-scrolling:touch;
+          overscroll-behavior-x:contain;
+          scroll-snap-type:x proximity;
+        }
+        .wz-categories-scroll::-webkit-scrollbar{display:none;}
+        .wz-categories-scroll .cat-btn{
+          flex:0 0 auto;
+          scroll-snap-align:start;
+          white-space:nowrap;
+          min-height:38px;
+        }
+        @media(max-width:640px){
+          .wz-categories-wrap{padding:0 14px 16px;}
+          .wz-categories-label{font-size:8px;margin-bottom:7px;}
+          .wz-categories-scroll{gap:7px;padding-bottom:5px;}
+          .wz-categories-scroll .cat-btn{
+            min-height:36px;
+            padding-left:13px!important;
+            padding-right:13px!important;
+            font-size:11px!important;
+          }
+        }
+      `}</style>
 
       {loading ? (
         <div className="pgrid">
