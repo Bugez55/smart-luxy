@@ -373,9 +373,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         <div className="pp-price-row" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:14, flexWrap:'wrap' }}>
           <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
             <span className="pp-price" style={{ fontSize:32, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
-            {p.prix_old && <>
+            {p.prix_old && p.prix_old > p.prix && <>
               <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
               <span className="pp-discount" style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:900, padding:'4px 9px', borderRadius:999 }}>-{disc}%</span>
+              <span className="pp-save" style={{ background:'rgba(34,197,94,.10)', border:'1px solid rgba(34,197,94,.22)', color:'#86efac', fontSize:10, fontWeight:900, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>Économisez {fmt(p.prix_old - p.prix)}</span>
             </>}
           </div>
           {!outOfStock && (
@@ -983,6 +984,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         @media (max-width: 640px){
           .pp-title{font-size:21px!important}
           .pp-price{font-size:29px!important}
+          .pp-save{font-size:9px!important;padding:4px 7px!important}
           .pp-trust-grid{grid-template-columns:1fr;gap:7px}
           .pp-trust-item{padding:9px 10px}
           .pp-media img{max-height:420px!important;object-fit:cover}
