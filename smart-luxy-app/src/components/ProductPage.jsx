@@ -862,28 +862,57 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       </div>
 
-      {/* ── Sticky bouton commander ── */}
+      {/* ── Sticky CTA mobile premium ── */}
       <div className="pp-sticky" style={{
         position:'fixed', bottom:0, left:0, right:0, zIndex:200,
-        background:'rgba(10,10,10,.97)', backdropFilter:'blur(20px)',
-        borderTop:'1px solid rgba(201,168,76,.2)',
-        padding:'10px 16px 14px',
+        background:'linear-gradient(180deg,rgba(14,14,14,.96),rgba(8,8,8,.99))',
+        backdropFilter:'blur(24px) saturate(150%)', WebkitBackdropFilter:'blur(24px) saturate(150%)',
+        borderTop:'1px solid rgba(201,168,76,.22)',
+        padding:'9px 12px calc(10px + env(safe-area-inset-bottom))',
         display:'flex', alignItems:'center', gap:10,
-        transform: stickyVisible ? 'translateY(0)' : 'translateY(100%)',
-        transition:'transform .25s cubic-bezier(.22,1,.36,1)',
-        boxShadow:'0 -8px 32px rgba(0,0,0,.6)',
+        transform: stickyVisible ? 'translateY(0)' : 'translateY(110%)',
+        transition:'transform .28s cubic-bezier(.22,1,.36,1)',
+        boxShadow:'0 -10px 34px rgba(0,0,0,.65)',
       }}>
-        {(p.img||(imgs[0]?.url)) && <img src={p.img||(imgs[0]?.url)} alt="" style={{ width:42, height:42, borderRadius:8, objectFit:'cover', flexShrink:0 }} />}
+        {(p.img||(imgs[0]?.url)) && (
+          <img
+            src={p.img||(imgs[0]?.url)}
+            alt=""
+            style={{ width:44, height:44, borderRadius:10, objectFit:'cover', flexShrink:0, border:'1px solid rgba(255,255,255,.08)' }}
+          />
+        )}
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:12, color:'var(--g3)', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.nom}</div>
-          <div style={{ fontSize:14, color:'var(--br)', fontWeight:900 }}>{fmt(activeBundle?activeBundle.prix:p.prix)}</div>
+          <div style={{ display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+            <span style={{ fontSize:11, color:'var(--g4)', fontWeight:700, whiteSpace:'nowrap' }}>Votre commande</span>
+            <span style={{ width:4, height:4, borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
+            <span style={{ fontSize:11, color:'#86efac', fontWeight:800, whiteSpace:'nowrap' }}>COD</span>
+          </div>
+          <div style={{ display:'flex', alignItems:'baseline', gap:7, minWidth:0, marginTop:1 }}>
+            <span style={{ fontSize:15, color:'var(--g3)', fontWeight:900, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              {p.nom}
+            </span>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:1 }}>
+            <span style={{ fontSize:14, color:'var(--br)', fontWeight:900 }}>
+              {form.wilaya && fraisLiv !== null ? fmt(totalFinal) : fmt(activeBundle ? activeBundle.prix : p.prix)}
+            </span>
+            <span style={{ fontSize:9, color:'var(--g4)', fontWeight:700 }}>
+              {form.wilaya && fraisLiv !== null ? 'total' : 'hors livraison'}
+            </span>
+          </div>
         </div>
         <button
           disabled={outOfStock}
           onClick={() => formRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })}
-          style={{ background:outOfStock?'#333':'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:12, padding:'12px 20px', color:outOfStock?'#666':'#000', fontSize:14, fontWeight:900, cursor:outOfStock?'not-allowed':'pointer', flexShrink:0, whiteSpace:'nowrap' }}
+          style={{
+            minWidth:132, background:outOfStock?'#2a2a2a':'linear-gradient(135deg,#C9A84C,#E9C46A)',
+            border:'none', borderRadius:13, padding:'12px 14px',
+            color:outOfStock?'#666':'#000', fontSize:13, fontWeight:900,
+            cursor:outOfStock?'not-allowed':'pointer', flexShrink:0,
+            whiteSpace:'nowrap', boxShadow:outOfStock?'none':'0 6px 18px rgba(201,168,76,.18)'
+          }}
         >
-          {outOfStock ? '🚫 Épuisé' : '🛒 Commander'}
+          {outOfStock ? '🚫 Épuisé' : '🛒 Commander maintenant'}
         </button>
       </div>
 
@@ -938,6 +967,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           .pp-trust-item{padding:9px 10px}
           .pp-media img{max-height:420px!important;object-fit:cover}
           .pp-order-card{border-radius:16px!important}
+          .pp-sticky{padding-left:10px!important;padding-right:10px!important}
+          .pp-sticky button{min-width:126px!important;font-size:12px!important;padding:12px 10px!important}
         }
 
         @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
