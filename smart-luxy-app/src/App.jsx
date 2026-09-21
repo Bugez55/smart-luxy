@@ -403,16 +403,128 @@ export default function App() {
             <div className="hero-badge">✅ Qualité <span>garantie</span></div>
           </div>
 
-          <div className="search-big">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input
-              placeholder="Rechercher un produit..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+          <div className="wz-search-shell">
+            <div className="wz-search-label">RECHERCHER UN PRODUIT</div>
+            <div className={`search-big wz-search-field${search ? ' has-value' : ''}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                aria-label="Rechercher un produit"
+                placeholder="Ex. : hachoir, écouteurs..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="wz-search-clear"
+                  aria-label="Effacer la recherche"
+                  onClick={() => setSearch('')}
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              )}
+            </div>
+            {search && (
+              <div className="wz-search-meta">
+                <span>{filtered.length} résultat{filtered.length > 1 ? 's' : ''}</span>
+                <button type="button" onClick={() => setSearch('')}>Effacer la recherche</button>
+              </div>
+            )}
           </div>
+
+          <style>{`
+            .wz-search-shell{
+              width:100%;
+              max-width:820px;
+              margin:24px auto 0;
+            }
+            .wz-search-label{
+              margin:0 0 8px 4px;
+              color:var(--g4);
+              font-size:9px;
+              font-weight:900;
+              letter-spacing:.16em;
+              text-transform:uppercase;
+            }
+            .wz-search-field{
+              position:relative;
+              display:flex;
+              align-items:center;
+              min-height:54px;
+              box-sizing:border-box;
+            }
+            .wz-search-field svg{
+              flex:0 0 auto;
+              margin-left:16px;
+              color:var(--g4);
+              opacity:.8;
+            }
+            .wz-search-field input{
+              flex:1;
+              min-width:0;
+              height:54px;
+              padding:0 48px 0 12px;
+              box-sizing:border-box;
+              border:0;
+              outline:none;
+              background:transparent;
+              color:var(--g3);
+              font-size:13px;
+              font-weight:700;
+            }
+            .wz-search-field input::placeholder{color:var(--g4);opacity:.72;}
+            .wz-search-clear{
+              position:absolute;
+              right:10px;
+              top:50%;
+              width:32px;
+              height:32px;
+              transform:translateY(-50%);
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              border:1px solid rgba(255,255,255,.08);
+              border-radius:50%;
+              background:rgba(255,255,255,.035);
+              color:var(--g3);
+              cursor:pointer;
+              transition:transform .18s ease, background .18s ease, border-color .18s ease;
+            }
+            .wz-search-clear:hover{transform:translateY(-50%) scale(1.05);background:rgba(255,255,255,.07);border-color:rgba(201,168,76,.25);}
+            .wz-search-clear:active{transform:translateY(-50%) scale(.96);}
+            .wz-search-clear span{font-size:20px;line-height:1;font-weight:500;margin-top:-1px;}
+            .wz-search-meta{
+              display:flex;
+              justify-content:space-between;
+              align-items:center;
+              gap:12px;
+              margin-top:8px;
+              padding:0 4px;
+              color:var(--g4);
+              font-size:10px;
+              line-height:1.3;
+            }
+            .wz-search-meta button{
+              padding:0;
+              border:0;
+              background:transparent;
+              color:var(--br);
+              font:inherit;
+              font-weight:900;
+              cursor:pointer;
+            }
+            @media(max-width:640px){
+              .wz-search-shell{margin-top:20px;}
+              .wz-search-label{font-size:8px;margin-left:2px;}
+              .wz-search-field{min-height:52px;border-radius:14px;}
+              .wz-search-field input{height:52px;font-size:12px;padding-left:10px;}
+              .wz-search-field svg{margin-left:14px;}
+              .wz-search-clear{right:8px;width:30px;height:30px;}
+              .wz-search-meta{font-size:9px;}
+            }
+          `}</style>
         </section>
 
         {/* ── En-tête de collection ── */}
