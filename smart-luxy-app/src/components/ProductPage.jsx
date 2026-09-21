@@ -43,6 +43,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [modePaiement, setModePaiement] = useState('livraison')
   const [paiementInfo, setPaiementInfo] = useState({ ccp:'', ccp_nom:'', baridimob:'', ccp_actif:false, baridimob_actif:false })
   const [preuvePaiement, setPreuvePaiement] = useState('')
+  const [copiedPayment, setCopiedPayment] = useState('')
   const [ordering, setOrdering] = useState(false)
   const [telError, setTelError] = useState(false)
   const [telShake, setTelShake] = useState(false)
@@ -229,6 +230,17 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     update()
     return () => root.removeEventListener('scroll', update)
   }, [])
+
+  async function copyPaymentNumber(value, type) {
+    if (!value) return
+    try {
+      await navigator.clipboard?.writeText(String(value))
+      setCopiedPayment(type)
+      setTimeout(() => setCopiedPayment(''), 1800)
+    } catch {
+      // Clipboard may be unavailable on older/mobile browsers.
+    }
+  }
 
   async function handleOrder() {
     if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
@@ -945,9 +957,16 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     <div style={{ fontSize:12, fontWeight:800, color:'#93c5fd', marginBottom:8 }}>
                       📱 {lang==='ar' ? 'كيفية الدفع عبر بريدي موب' : 'Comment payer avec BaridiMob'}
                     </div>
-                    <div style={{ fontSize:13, color:'var(--g3)', marginBottom:6 }}>
-                      <strong>{lang==='ar' ? 'رقم الحساب:' : 'Numéro de compte:'}</strong><br/>
-                      <span style={{ fontFamily:'monospace', fontSize:16, color:'#93c5fd', fontWeight:900, letterSpacing:'.02em' }}>{paiementInfo.baridimob}</span>
+                    <div style={{ marginBottom:8 }}>
+                      <div style={{ fontSize:11, color:'var(--g4)', fontWeight:800, marginBottom:5, textTransform:'uppercase', letterSpacing:'.05em' }}>
+                        {lang==='ar' ? 'رقم الحساب' : 'Numéro de compte'}
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(59,130,246,.07)', border:'1px solid rgba(59,130,246,.18)', borderRadius:10, padding:'8px 10px' }}>
+                        <span style={{ flex:1, fontFamily:'monospace', fontSize:16, color:'#93c5fd', fontWeight:900, letterSpacing:'.02em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{paiementInfo.baridimob}</span>
+                        <button type="button" onClick={() => copyPaymentNumber(paiementInfo.baridimob, 'baridimob')} style={{ flexShrink:0, border:'1px solid rgba(147,197,253,.22)', background:'rgba(147,197,253,.08)', color:'#bfdbfe', borderRadius:8, padding:'7px 9px', fontSize:10, fontWeight:800, cursor:'pointer' }}>
+                          {copiedPayment==='baridimob' ? '✓ Copié' : 'Copier'}
+                        </button>
+                      </div>
                     </div>
                     <ol style={{ fontSize:11, color:'var(--g3)', marginBottom:10, paddingLeft:16, lineHeight:1.8 }}>
                       <li>{lang==='ar' ? 'افتح تطبيق بريدي موب' : 'Ouvre l\'application BaridiMob'}</li>
@@ -969,8 +988,16 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     <div style={{ fontSize:12, fontWeight:800, color:'var(--br)', marginBottom:6 }}>
                       🏦 {lang==='ar' ? 'معلومات التحويل' : 'Informations pour le virement'}
                     </div>
-                    <div style={{ fontSize:13, color:'var(--g3)', marginBottom:4 }}>
-                      <strong>{lang==='ar' ? 'رقم CCP:' : 'Numéro CCP:'}</strong> <span style={{ fontFamily:'monospace', fontSize:15, color:'var(--br)', fontWeight:900 }}>{paiementInfo.ccp}</span>
+                    <div style={{ marginBottom:8 }}>
+                      <div style={{ fontSize:11, color:'var(--g4)', fontWeight:800, marginBottom:5, textTransform:'uppercase', letterSpacing:'.05em' }}>
+                        {lang==='ar' ? 'رقم CCP' : 'Numéro CCP'}
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(201,168,76,.06)', border:'1px solid rgba(201,168,76,.16)', borderRadius:10, padding:'8px 10px' }}>
+                        <span style={{ flex:1, fontFamily:'monospace', fontSize:15, color:'var(--br)', fontWeight:900, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{paiementInfo.ccp}</span>
+                        <button type="button" onClick={() => copyPaymentNumber(paiementInfo.ccp, 'ccp')} style={{ flexShrink:0, border:'1px solid rgba(201,168,76,.22)', background:'rgba(201,168,76,.08)', color:'var(--br)', borderRadius:8, padding:'7px 9px', fontSize:10, fontWeight:800, cursor:'pointer' }}>
+                          {copiedPayment==='ccp' ? '✓ Copié' : 'Copier'}
+                        </button>
+                      </div>
                     </div>
                     {paiementInfo.ccp_nom && (
                       <div style={{ fontSize:12, color:'var(--g3)', marginBottom:8 }}>
