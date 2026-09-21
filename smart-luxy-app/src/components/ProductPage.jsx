@@ -50,6 +50,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [wilayaOpen, setWilayaOpen] = useState(false)
   const [communeOpen, setCommuneOpen] = useState(false)
   const [stickyVisible, setStickyVisible] = useState(false)
+  const [scrollProgress, setScrollProgress] = useState(0)
   const formRef = useRef()
   const topRef = useRef()
 
@@ -194,6 +195,22 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     return () => obs.disconnect()
   }, [])
 
+  // Barre de progression de lecture du produit
+  useEffect(() => {
+    const root = document.querySelector('.pp-root')
+    if (!root) return
+
+    const update = () => {
+      const max = root.scrollHeight - root.clientHeight
+      const pct = max > 0 ? Math.min(100, Math.max(0, (root.scrollTop / max) * 100)) : 0
+      setScrollProgress(pct)
+    }
+
+    root.addEventListener('scroll', update, { passive: true })
+    update()
+    return () => root.removeEventListener('scroll', update)
+  }, [])
+
   async function handleOrder() {
     if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
     if (!isValidTel(form.tel)) { setTelError(true); setTelShake(true); setTimeout(() => setTelShake(false), 500); return }
@@ -233,6 +250,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
       {/* ── Header sticky ── */}
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(8,8,8,.90)', backdropFilter:'blur(24px) saturate(150%)', WebkitBackdropFilter:'blur(24px) saturate(150%)', borderBottom:'1px solid rgba(201,168,76,.18)', boxShadow:'0 10px 30px rgba(0,0,0,.18)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
+        <div aria-hidden="true" style={{ position:'absolute', left:0, right:0, bottom:-1, height:2, background:'rgba(255,255,255,.06)', overflow:'hidden' }}>
+          <div style={{ width:`${scrollProgress}%`, height:'100%', background:'linear-gradient(90deg,#C9A84C,#E9C46A)', boxShadow:'0 0 10px rgba(201,168,76,.45)', transition:'width .12s linear' }} />
+        </div>
         <button onClick={onClose} style={{ background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
         <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
         {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
