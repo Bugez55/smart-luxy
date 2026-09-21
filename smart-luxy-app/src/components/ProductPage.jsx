@@ -30,7 +30,6 @@ const LIVRAISON = {
 
 export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique }) {
   const [openFaq, setOpenFaq] = useState(null)
-  const [viewers] = useState(() => Math.floor(Math.random() * 8) + 3)
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('ar')
   const rtl = lang === 'ar'
@@ -440,22 +439,15 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           )
         })()}
 
-
-
-        {/* Viewers en temps réel */}
-        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
-          <div style={{ display:'flex' }}>
-            {[...Array(Math.min(viewers,5))].map((_,i) => (
-              <div key={i} style={{ width:18, height:18, borderRadius:'50%', background:`hsl(${i*40},60%,55%)`, border:'2px solid #0a0a0a', marginLeft: i>0 ? -6 : 0, fontSize:9, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--g3)', fontWeight:800 }}>
-                {['👤','👤','👤','👤','👤'][i]}
-              </div>
-            ))}
+        {/* Disponibilité réelle */}
+        {!outOfStock && (
+          <div style={{ display:'inline-flex', alignItems:'center', gap:7, marginBottom:10, padding:'6px 10px', borderRadius:999, background:'rgba(34,197,94,.08)', border:'1px solid rgba(34,197,94,.2)' }}>
+            <span style={{ width:7, height:7, borderRadius:'50%', background:'#22c55e', boxShadow:'0 0 0 4px rgba(34,197,94,.08)', flexShrink:0 }} />
+            <span style={{ fontSize:11, color:'#86efac', fontWeight:800 }}>
+              {p.stock !== null && p.stock !== undefined ? `Disponible — ${p.stock} en stock` : 'Disponible maintenant'}
+            </span>
           </div>
-          <span style={{ fontSize:11, color:'var(--g3)', fontWeight:600 }}>
-            {viewers} {lang==='ar' ? 'أشخاص يتصفحون هذا المنتج الآن' : `personnes regardent ce produit`}
-          </span>
-          <span style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e', animation:'pulse 1.5s infinite', flexShrink:0 }} />
-        </div>
+        )}
       </div>
 
       {/* ── Description ── */}
