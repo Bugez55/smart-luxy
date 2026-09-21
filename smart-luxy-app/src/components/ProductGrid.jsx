@@ -160,6 +160,71 @@ export default function ProductGrid({
 
       <style>{`
         /* Wazyo premium product-card micro-interactions */
+        .pcard-thumb{
+          appearance:none;
+          border:1px solid rgba(255,255,255,.32);
+          padding:0;
+          margin:0;
+          width:19px;
+          height:19px;
+          border-radius:4px;
+          overflow:hidden;
+          background:transparent;
+          opacity:.72;
+          cursor:pointer;
+          transition:transform .2s ease, opacity .2s ease, border-color .2s ease;
+        }
+        .pcard-thumb img{
+          display:block;
+          width:100%;
+          height:100%;
+          object-fit:cover;
+        }
+        .pcard-thumb.active{
+          opacity:1;
+          border-color:white;
+          transform:scale(1.06);
+        }
+        .pcard-thumb:focus-visible{
+          outline:2px solid white;
+          outline-offset:2px;
+        }
+        .pcard-image-hint{
+          position:absolute;
+          left:10px;
+          right:10px;
+          bottom:8px;
+          padding:4px 7px;
+          border-radius:999px;
+          background:rgba(0,0,0,.48);
+          color:rgba(255,255,255,.9);
+          font-size:9px;
+          font-weight:800;
+          text-align:center;
+          letter-spacing:.02em;
+          opacity:0;
+          transform:translateY(5px);
+          pointer-events:none;
+          transition:opacity .22s ease, transform .22s ease;
+          backdrop-filter:blur(8px);
+          z-index:3;
+        }
+        @media (hover:hover) and (pointer:fine){
+          .pcard:hover .pcard-image-hint{
+            opacity:1;
+            transform:translateY(0);
+          }
+        }
+        @media(max-width:640px){
+          .pcard-image-hint{
+            display:none;
+          }
+          .pcard-thumb{
+            width:22px;
+            height:22px;
+          }
+        }
+
         .pcard{
           position:relative;
           overflow:hidden;
@@ -247,6 +312,7 @@ export default function ProductGrid({
 }
 
 function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) {
+  const [selectedImg, setSelectedImg] = useState('')
   const imgs = (() => {
     try {
       return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || [])
@@ -255,7 +321,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
     }
   })()
 
-  const mainImg = imgs[0]?.url || p.img
+  const mainImg = selectedImg || imgs[0]?.url || p.img
   const hasDiscount = Number(p.prix_old) > Number(p.prix)
   const discount = hasDiscount
     ? Math.round(100 - (Number(p.prix) / Number(p.prix_old)) * 100)
@@ -370,21 +436,23 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
               backdropFilter: 'blur(8px)',
             }}
           >
-            {imgs.slice(0, 4).map((img, i) => (
-              <div
-                key={i}
-                style={{
-                  width: 19,
-                  height: 19,
-                  borderRadius: 4,
-                  overflow: 'hidden',
-                  border: i === 0 ? '1px solid white' : '1px solid rgba(255,255,255,.35)',
-                  opacity: i === 0 ? 1 : 0.75,
-                }}
-              >
-                <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-            ))}
+            {imgs.slice(0, 4).map((img, i) => {
+              const active = (selectedImg || imgs[0]?.url) === img.url
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`pcard-thumb ${active ? 'active' : ''}`}
+                  aria-label={`Voir l’image ${i + 1} de ${imgs.length}`}
+                  onClick={e => {
+                    e.stopPropagation()
+                    setSelectedImg(img.url)
+                  }}
+                >
+                  <img src={img.url} alt="" />
+                </button>
+              )
+            })}
             {imgs.length > 4 && (
               <div
                 style={{
@@ -407,6 +475,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
         )}
 
         <div className="pcard-quickview">Voir le produit</div>
+        <div className="pcard-image-hint">Touchez les miniatures pour voir les autres vues</div>
       </div>
 
       {/* Body */}
