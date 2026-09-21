@@ -48,6 +48,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [telError, setTelError] = useState(false)
   const [telShake, setTelShake] = useState(false)
   const [wilayaOpen, setWilayaOpen] = useState(false)
+  const [wilayaSearch, setWilayaSearch] = useState('')
   const [communeOpen, setCommuneOpen] = useState(false)
   const [stickyVisible, setStickyVisible] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
@@ -89,6 +90,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const totalFinal = currentPrix + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
+  const filteredWilayas = wilayasOptions.filter(opt => {
+    const q = wilayaSearch.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    if (!q) return true
+    return opt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
+  })
 
 
   // Convertir URL vidéo en embed
@@ -636,12 +642,38 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 <span style={{ color:'var(--br)', fontSize:10, flexShrink:0, marginLeft:8 }}>{wilayaOpen?'▲':'▼'}</span>
               </div>
               {wilayaOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'var(--card2)', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
-                  {wilayasOptions.map(opt => (
-                    <div key={opt} onClick={() => { setF('wilaya',opt); setWilayaOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.wilaya?'#C9A84C':'var(--g3)', background:opt===form.wilaya?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid var(--g3)', touchAction:'manipulation' }}>
-                      {opt}
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'var(--card2)', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, overflow:'hidden', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
+                  <div style={{ padding:8, borderBottom:'1px solid rgba(128,128,128,.22)', background:'rgba(255,255,255,.02)' }}>
+                    <div style={{ position:'relative' }}>
+                      <span aria-hidden="true" style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', fontSize:14, opacity:.7 }}>⌕</span>
+                      <input
+                        value={wilayaSearch}
+                        onChange={e => setWilayaSearch(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={e => { if (e.key === 'Escape') { setWilayaSearch(''); setWilayaOpen(false) } }}
+                        autoFocus
+                        placeholder={lang==='ar' ? 'ابحث عن ولاية…' : 'Rechercher une wilaya…'}
+                        style={{ ...inp, height:42, padding:'10px 38px 10px 34px', fontSize:14, background:'rgba(0,0,0,.22)', border:'1px solid rgba(201,168,76,.22)', direction:'ltr' }}
+                      />
+                      {wilayaSearch && (
+                        <button type="button" onClick={() => setWilayaSearch('')} aria-label="Effacer la recherche" style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', width:28, height:28, border:'none', borderRadius:'50%', background:'rgba(128,128,128,.16)', color:'var(--g3)', cursor:'pointer', fontSize:15 }}>×</button>
+                      )}
                     </div>
-                  ))}
+                    <div style={{ marginTop:6, padding:'0 3px', fontSize:10, color:'var(--g4)', fontWeight:700 }}>
+                      {filteredWilayas.length} / {wilayasOptions.length} wilayas
+                    </div>
+                  </div>
+                  <div style={{ maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+                    {filteredWilayas.length > 0 ? filteredWilayas.map(opt => (
+                      <div key={opt} onClick={() => { setF('wilaya',opt); setWilayaOpen(false); setWilayaSearch('') }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.wilaya?'#C9A84C':'var(--g3)', background:opt===form.wilaya?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid var(--g3)', touchAction:'manipulation' }}>
+                        {opt}
+                      </div>
+                    )) : (
+                      <div style={{ padding:'18px 14px', textAlign:'center', fontSize:12, color:'var(--g4)', fontWeight:700 }}>
+                        {lang==='ar' ? 'لا توجد ولاية مطابقة' : 'Aucune wilaya trouvée'}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
