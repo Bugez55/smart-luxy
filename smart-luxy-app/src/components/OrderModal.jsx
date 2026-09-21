@@ -411,6 +411,27 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
           </div>
         </div>
 
+        {/* Réassurance */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6,
+          padding: '9px 12px', background: 'rgba(201,168,76,.05)',
+          borderBottom: '1px solid rgba(201,168,76,.12)', flexShrink: 0,
+        }}>
+          {[
+            ['🚚', rtl ? '69 ولاية' : '69 wilayas'],
+            ['💳', rtl ? 'الدفع عند الاستلام' : 'Paiement à la livraison'],
+            ['🔒', rtl ? 'بيانات محمية' : 'Commande sécurisée'],
+          ].map(([icon, label]) => (
+            <div key={label} style={{
+              textAlign: 'center', color: 'var(--g4)', fontSize: 9.5,
+              lineHeight: 1.25, fontWeight: 700,
+            }}>
+              <div style={{ fontSize: 14, marginBottom: 2 }}>{icon}</div>
+              {label}
+            </div>
+          ))}
+        </div>
+
         {/* Corps */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
 
@@ -547,6 +568,14 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
 
         {/* Footer */}
         <div style={{ background: 'var(--card2)', borderTop: '1px solid #2a2a2a', padding: '12px 16px', flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            gap: 8, marginBottom: 10, color: 'var(--g4)', fontSize: 10,
+          }}>
+            <span style={{ color: '#74c69d' }}>●</span>
+            <span>{rtl ? 'سيتم تأكيد طلبك هاتفياً' : 'Votre commande sera confirmée par téléphone'}</span>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--g4)' }}>
               <span>{t.totalCmd}</span><span>{fmt(totalProduits)}</span>
