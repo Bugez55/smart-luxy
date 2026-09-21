@@ -52,6 +52,15 @@ export default function App() {
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
   const [politiqueTab, setPolitiqueTab] = useState(null)
+  const [showTopButton, setShowTopButton] = useState(false)
+
+  // Petit bouton de retour en haut, utile sur les longues pages mobiles.
+  useEffect(() => {
+    const onScroll = () => setShowTopButton(window.scrollY > 520)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -587,6 +596,37 @@ export default function App() {
       {trackingOpen && <TrackingPage onClose={() => setTrackingOpen(false)} />}
       <WAButton />
       <CookieConsent />
+
+      {showTopButton && !openProduct && !cartOpen && !orderItems && !lastOrder && !trackingOpen && !politiqueTab && (
+        <button
+          type="button"
+          aria-label="Revenir en haut"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            position:'fixed',
+            left:'16px',
+            bottom:'18px',
+            zIndex:180,
+            width:44,
+            height:44,
+            borderRadius:'50%',
+            border:'1px solid rgba(201,168,76,.35)',
+            background:'rgba(12,12,12,.90)',
+            color:'#E9C46A',
+            display:'flex',
+            alignItems:'center',
+            justifyContent:'center',
+            fontSize:19,
+            fontWeight:900,
+            cursor:'pointer',
+            boxShadow:'0 10px 28px rgba(0,0,0,.30)',
+            backdropFilter:'blur(12px)',
+            WebkitBackdropFilter:'blur(12px)',
+          }}
+        >
+          ↑
+        </button>
+      )}
 
       {/* Toasts */}
       <div className="toasts">
