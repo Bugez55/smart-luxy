@@ -405,7 +405,7 @@ export default function App() {
 
           <div className="wz-search-shell">
             <div className="wz-search-label">RECHERCHER UN PRODUIT</div>
-            <div className={`search-big wz-search-field${search ? ' has-value' : ''}`}>
+            <div className={`wz-search-field${search ? ' has-value' : ''}`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
@@ -454,18 +454,32 @@ export default function App() {
               align-items:center;
               min-height:54px;
               box-sizing:border-box;
+              gap:10px;
+              overflow:hidden;
+              border:1px solid rgba(255,255,255,.10);
+              border-radius:16px;
+              background:rgba(255,255,255,.035);
+              box-shadow:0 10px 30px rgba(0,0,0,.16);
+              transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
+            }
+            .wz-search-field:focus-within{
+              border-color:rgba(201,168,76,.40);
+              background:rgba(255,255,255,.045);
+              box-shadow:0 12px 34px rgba(0,0,0,.20), 0 0 0 3px rgba(201,168,76,.08);
             }
             .wz-search-field svg{
               flex:0 0 auto;
+              width:18px;
+              height:18px;
               margin-left:16px;
               color:var(--g4);
-              opacity:.8;
+              opacity:.9;
             }
             .wz-search-field input{
               flex:1;
               min-width:0;
               height:54px;
-              padding:0 48px 0 12px;
+              padding:0 52px 0 0;
               box-sizing:border-box;
               border:0;
               outline:none;
@@ -518,9 +532,9 @@ export default function App() {
             @media(max-width:640px){
               .wz-search-shell{margin-top:20px;}
               .wz-search-label{font-size:8px;margin-left:2px;}
-              .wz-search-field{min-height:52px;border-radius:14px;}
-              .wz-search-field input{height:52px;font-size:12px;padding-left:10px;}
-              .wz-search-field svg{margin-left:14px;}
+              .wz-search-field{min-height:52px;border-radius:14px;gap:9px;}
+              .wz-search-field input{height:52px;font-size:12px;padding-right:46px;}
+              .wz-search-field svg{margin-left:14px;width:17px;height:17px;}
               .wz-search-clear{right:8px;width:30px;height:30px;}
               .wz-search-meta{font-size:9px;}
             }
