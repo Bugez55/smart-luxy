@@ -27,35 +27,6 @@ function fbq(...args) {
   if (typeof window !== 'undefined' && window.fbq) window.fbq(...args)
 }
 
-// ── Meta Ads : capturer le fbclid pour construire le fbc ──
-function captureMetaClickId() {
-  if (typeof window === 'undefined') return
-
-  const params = new URLSearchParams(window.location.search)
-  const fbclid = params.get('fbclid')
-
-  // Aucun clic Meta : ne rien créer.
-  if (!fbclid) return
-
-  // Ne pas écraser un _fbc déjà présent.
-  const hasFbc = document.cookie
-    .split('; ')
-    .some(cookie => cookie.startsWith('_fbc='))
-
-  if (hasFbc) return
-
-  const fbc = `fb.1.${Date.now()}.${fbclid}`
-
-  document.cookie =
-    `_fbc=${encodeURIComponent(fbc)}; ` +
-    `Max-Age=${60 * 60 * 24 * 90}; ` +
-    `Path=/; ` +
-    `Secure; ` +
-    `SameSite=Lax`
-}
-
-captureMetaClickId()
-
 export default function App() {
 
   const [isNotFound] = useState(() => {
@@ -310,7 +281,39 @@ export default function App() {
 
   // ── Boutique ─────────────────────────────────────────
   return (
-    <div className="app">
+    <>
+      <style>{`
+        html, body, #root {
+          width: 100%;
+          min-width: 0;
+          margin: 0;
+          padding: 0;
+        }
+
+        html {
+          scrollbar-width: none;
+        }
+
+        html::-webkit-scrollbar {
+          width: 0;
+          height: 0;
+        }
+
+        body {
+          overflow-x: hidden;
+        }
+
+        .app {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          margin: 0;
+          padding: 0;
+          overflow-x: clip;
+        }
+      `}</style>
+
+      <div className="app">
       <AnnouncementBar />
       <Header
         cartCount={cartCount}
@@ -536,6 +539,7 @@ export default function App() {
           <div key={t.id} className={`toast-msg ${t.type}`}>{t.msg}</div>
         ))}
       </div>
-    </div>
+      </div>
+    </>
   )
 }
