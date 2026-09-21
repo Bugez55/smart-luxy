@@ -158,6 +158,67 @@ export default function ProductGrid({
         }
       `}</style>
 
+      <style>{`
+        /* Wazyo premium product-card micro-interactions */
+        .pcard{
+          position:relative;
+          overflow:hidden;
+          border:1px solid rgba(255,255,255,.055);
+          transition:transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+          will-change:transform;
+        }
+        .pcard::after{
+          content:"";
+          position:absolute;
+          inset:0;
+          border-radius:inherit;
+          pointer-events:none;
+          background:linear-gradient(135deg,rgba(255,255,255,.07),transparent 28%,transparent 72%,rgba(255,255,255,.025));
+          opacity:.45;
+          transition:opacity .28s ease;
+        }
+        .pcard-img{
+          overflow:hidden;
+        }
+        .pcard-img img{
+          transition:transform .5s cubic-bezier(.2,.7,.2,1), filter .35s ease;
+          transform-origin:center;
+        }
+        .pcard-quickview{
+          transform:translateY(8px);
+          opacity:0;
+          transition:opacity .25s ease, transform .25s ease, background .25s ease;
+        }
+        @media (hover:hover) and (pointer:fine){
+          .pcard:hover{
+            transform:translateY(-4px);
+            border-color:rgba(255,255,255,.11);
+            box-shadow:0 18px 40px rgba(0,0,0,.28);
+          }
+          .pcard:hover::after{opacity:.8;}
+          .pcard:hover .pcard-img img{
+            transform:scale(1.045);
+            filter:saturate(1.03);
+          }
+          .pcard:hover .pcard-quickview{
+            opacity:1;
+            transform:translateY(0);
+          }
+        }
+        @media (hover:none){
+          .pcard:active{transform:scale(.992);}
+          .pcard:active .pcard-img img{transform:scale(1.018);}
+        }
+        @media(max-width:640px){
+          .pcard{border-color:rgba(255,255,255,.06);}
+          .pcard-quickview{
+            opacity:1;
+            transform:none;
+            background:rgba(0,0,0,.48)!important;
+          }
+        }
+      `}</style>
+
       {loading ? (
         <div className="pgrid">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
