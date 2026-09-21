@@ -602,12 +602,28 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           <div style={{ marginBottom:14 }}>
             <label style={lbl}>{lang==='ar' ? 'طريقة التوصيل' : 'Mode de livraison' }</label>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-              {['domicile','bureau'].map(mode => (
-                <button key={mode} onClick={() => setModeLiv(mode)} style={{ padding:'11px 8px', background:modeLiv===mode?'rgba(201,168,76,.12)':'var(--card2)', border:`2px solid ${modeLiv===mode?'#C9A84C':'#2a2a2a'}`, borderRadius:10, color:modeLiv===mode?'#C9A84C':'#666', fontSize:12, fontWeight:800, cursor:'pointer', textAlign:'center', lineHeight:1.4, transition:'all .2s' }}>
-                  {mode==='domicile'?lang==='ar' ? '🏠 توصيل للمنزل' : '🏠 À domicile':lang==='ar' ? '📦 استلام من المكتب' : '📦 Retrait bureau'}
-                  <div style={{ fontSize:9, marginTop:3, color:modeLiv===mode?'rgba(201,168,76,.6)':'#444' }}>{mode==='domicile'?lang==='ar' ? '2–5 أيام' : '2–5 jours':lang==='ar' ? '1–3 أيام' : '1–3 jours'}</div>
-                </button>
-              ))}
+              {['domicile','bureau'].map(mode => {
+                const modeFee = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][mode] : null
+                const modeLabel = mode==='domicile'
+                  ? (lang==='ar' ? '🏠 توصيل للمنزل' : '🏠 À domicile')
+                  : (lang==='ar' ? '📦 استلام من المكتب' : '📦 Retrait bureau')
+                const modeTime = mode==='domicile'
+                  ? (lang==='ar' ? '2–5 أيام' : '2–5 jours')
+                  : (lang==='ar' ? '1–3 أيام' : '1–3 jours')
+                return (
+                  <button key={mode} onClick={() => setModeLiv(mode)} style={{ padding:'11px 8px', background:modeLiv===mode?'rgba(201,168,76,.12)':'var(--card2)', border:`2px solid ${modeLiv===mode?'#C9A84C':'#2a2a2a'}`, borderRadius:10, color:modeLiv===mode?'#C9A84C':'#666', fontSize:12, fontWeight:800, cursor:'pointer', textAlign:'center', lineHeight:1.4, transition:'all .2s', minHeight:78 }}>
+                    {modeLabel}
+                    <div style={{ fontSize:9, marginTop:3, color:modeLiv===mode?'rgba(201,168,76,.6)':'#444' }}>{modeTime}</div>
+                    <div style={{ fontSize:11, marginTop:6, color:modeFee===0?'#22c55e':(modeFee!==null ? (modeLiv===mode ? '#C9A84C' : 'var(--g3)') : '#555'), fontWeight:900 }}>
+                      {modeFee===null
+                        ? (lang==='ar' ? 'اختر الولاية' : 'Choisir la wilaya')
+                        : modeFee===0
+                          ? (lang==='ar' ? 'مجاني' : 'Gratuit')
+                          : fmt(modeFee)}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
