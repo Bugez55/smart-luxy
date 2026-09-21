@@ -51,7 +51,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [communeOpen, setCommuneOpen] = useState(false)
   const [stickyVisible, setStickyVisible] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
-  const [linkCopied, setLinkCopied] = useState(false)
   const formRef = useRef()
   const topRef = useRef()
 
@@ -484,19 +483,26 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
       {faq.length > 0 && (
         <div className="pp-section pp-faq" style={{ padding:'0 16px 16px' }}>
           <h3 style={{ fontSize:16, fontWeight:900, color:'var(--g3)', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
-          {faq.map((item,i) => (
-            <div key={i} style={{ marginBottom:6, borderRadius:12, overflow:'hidden', border:'1px solid var(--g3)' }}>
-              <button onClick={() => setOpenFaq(openFaq===i?null:i)} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background:openFaq===i?'rgba(201,168,76,.1)':'var(--card)', border:'none', padding:'13px 14px', color:'var(--g3)', fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'left', gap:8 }}>
-                <span style={{ flex:1 }}>{item.q}</span>
-                <span style={{ color:'var(--br)', fontSize:18, flexShrink:0, fontWeight:900 }}>{openFaq===i?'−':'+'}</span>
-              </button>
-              {openFaq===i && (
-                <div style={{ background:'var(--card)', padding:'12px 14px', fontSize:13, color:'var(--g3)', lineHeight:1.7, borderTop:'1px solid var(--g3)' }}>
-                  {item.r}
-                </div>
-              )}
-            </div>
-          ))}
+          {faq.map((item,i) => {
+            const isOpen = openFaq === i
+            return (
+              <div key={i} className={`pp-faq-item${isOpen ? ' is-open' : ''}`}>
+                <button
+                  className="pp-faq-q"
+                  onClick={() => setOpenFaq(isOpen ? null : i)}
+                  aria-expanded={isOpen}
+                >
+                  <span>{item.q}</span>
+                  <span className="pp-faq-chevron" aria-hidden="true">⌄</span>
+                </button>
+                {isOpen && (
+                  <div className="pp-faq-a">
+                    {item.r}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -844,20 +850,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {lang==='ar' ? 'مشاركة عبر واتساب' : 'Partager WhatsApp'}
         </a>
         <button
-          onClick={async () => {
-            try {
-              if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(window.location.href)
-              }
-              setLinkCopied(true)
-              window.clearTimeout(window.__wazyoCopyTimer)
-              window.__wazyoCopyTimer = window.setTimeout(() => setLinkCopied(false), 1800)
-            } catch {
-              setLinkCopied(false)
-            }
-          }}
-          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:linkCopied?'rgba(34,197,94,.1)':'var(--card2)', border:`1px solid ${linkCopied?'rgba(34,197,94,.3)':'rgba(128,128,128,.25)'}`, borderRadius:12, padding:'11px 16px', color:linkCopied?'#86efac':'var(--g3)', fontSize:12, fontWeight:800, cursor:'pointer', transition:'all .2s' }}
-        >{linkCopied ? '✓ ' : '🔗 '}{lang==='ar' ? (linkCopied ? 'تم نسخ الرابط' : 'نسخ الرابط') : (linkCopied ? 'Lien copié' : 'Copier lien')}</button>
+          onClick={() => { navigator.clipboard?.writeText(window.location.href); }}
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:12, padding:'11px 16px', color:'var(--g3)', fontSize:12, fontWeight:800, cursor:'pointer' }}
+        >🔗 {lang==='ar' ? 'نسخ الرابط' : 'Copier lien'}</button>
       </div>
 
       {/* ── Liens utiles ── */}
@@ -977,6 +972,16 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         .pp-trust-item small{display:block;font-size:9px;color:var(--g4);margin-top:2px;line-height:1.2}
         .pp-section{max-width:920px;margin:0 auto}
         .pp-description,.pp-specs,.pp-faq{background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.008));border-top:1px solid rgba(255,255,255,.055)}
+
+        .pp-faq-item{margin-bottom:8px;border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;background:rgba(255,255,255,.018);transition:border-color .22s ease,box-shadow .22s ease,transform .22s ease}
+        .pp-faq-item:hover{border-color:rgba(201,168,76,.26);box-shadow:0 8px 24px rgba(0,0,0,.14)}
+        .pp-faq-item.is-open{border-color:rgba(201,168,76,.34);box-shadow:0 10px 28px rgba(0,0,0,.18)}
+        .pp-faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--card);border:0;padding:14px 14px;color:var(--g3);font-size:13px;font-weight:800;cursor:pointer;text-align:left;transition:background .22s ease,color .22s ease}
+        .pp-faq-q:hover{background:rgba(201,168,76,.06)}
+        .pp-faq-item.is-open .pp-faq-q{background:linear-gradient(135deg,rgba(201,168,76,.13),rgba(201,168,76,.045));color:#fff}
+        .pp-faq-chevron{color:var(--br);font-size:20px;line-height:1;flex-shrink:0;transform:rotate(0deg);transition:transform .22s ease}
+        .pp-faq-item.is-open .pp-faq-chevron{transform:rotate(180deg)}
+        .pp-faq-a{background:var(--card);padding:0 14px 14px;color:var(--g3);font-size:13px;line-height:1.7;border-top:1px solid rgba(201,168,76,.12);animation:faqIn .22s ease both}
         .pp-gallery{max-width:920px;margin:0 auto}
         .pp-order-card{max-width:920px;margin:0 auto 18px!important;box-shadow:0 18px 50px rgba(0,0,0,.22)}
         .pp-share-label{max-width:920px;margin:0 auto;padding-top:4px!important}
@@ -1005,6 +1010,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           .pp-sticky button{min-width:126px!important;font-size:12px!important;padding:12px 10px!important}
         }
 
+        @keyframes faqIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
         @keyframes imgIn{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:scale(1)}}
         @keyframes stockGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3)}}
