@@ -608,13 +608,51 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           {/* Quantité si pas de bundles */}
           {!hasBundles && (
-            <div style={{ marginBottom:14 }}>
-              <label style={lbl}>{lang==='ar' ? 'الكمية' : 'Quantité' }</label>
-              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ background:'var(--card2)', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
-                <span style={{ color:'var(--g3)', fontWeight:900, fontSize:20, minWidth:32, textAlign:'center' }}>{qty}</span>
-                <button onClick={() => setQty(q => q+1)} style={{ background:'var(--card2)', border:'1px solid #333', borderRadius:10, width:44, height:44, color:'var(--br)', fontSize:20, cursor:'pointer', fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+            <div className="pp-qty-block" style={{ marginBottom:14 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:7 }}>
+                <label style={{ ...lbl, marginBottom:0 }}>{lang==='ar' ? 'الكمية' : 'Quantité' }</label>
+                <span className="pp-qty-stock" style={{ fontSize:10, color: outOfStock ? '#fca5a5' : 'var(--g4)', fontWeight:800 }}>
+                  {outOfStock
+                    ? (lang==='ar' ? 'غير متوفر' : 'Indisponible')
+                    : p.stock !== null && p.stock !== undefined
+                      ? `${p.stock} ${lang==='ar' ? 'en stock' : 'en stock'}`
+                      : (lang==='ar' ? 'Stock disponible' : 'Stock disponible')}
+                </span>
               </div>
+
+              <div className="pp-qty-row" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'9px 10px', background:'var(--card2)', border:'1px solid rgba(255,255,255,.08)', borderRadius:14 }}>
+                <button
+                  type="button"
+                  aria-label={lang==='ar' ? 'إنقاص الكمية' : 'Diminuer la quantité'}
+                  disabled={qty <= 1}
+                  onClick={() => setQty(q => Math.max(1,q-1))}
+                  style={{ background:qty<=1?'rgba(255,255,255,.04)':'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)', borderRadius:10, width:42, height:42, color:qty<=1?'#555':'var(--g3)', fontSize:20, cursor:qty<=1?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s', flexShrink:0 }}
+                >−</button>
+
+                <div style={{ minWidth:110, textAlign:'center' }}>
+                  <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:6 }}>
+                    <span style={{ color:'var(--g3)', fontWeight:900, fontSize:22, lineHeight:1 }}>{qty}</span>
+                    <span style={{ color:'var(--g4)', fontSize:10, fontWeight:800 }}>{qty > 1 ? (lang==='ar' ? 'unités' : 'unités') : (lang==='ar' ? 'unité' : 'unité')}</span>
+                  </div>
+                  <div style={{ marginTop:4, fontSize:10, color:'var(--br)', fontWeight:800 }}>
+                    {fmt(currentPrix * qty)}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label={lang==='ar' ? 'زيادة الكمية' : 'Augmenter la quantité'}
+                  disabled={outOfStock || (p.stock !== null && p.stock !== undefined && qty >= Number(p.stock))}
+                  onClick={() => setQty(q => (p.stock !== null && p.stock !== undefined ? Math.min(Number(p.stock), q+1) : q+1))}
+                  style={{ background:(outOfStock || (p.stock !== null && p.stock !== undefined && qty >= Number(p.stock)))?'rgba(255,255,255,.04)':'rgba(201,168,76,.10)', border:'1px solid rgba(201,168,76,.18)', borderRadius:10, width:42, height:42, color:(outOfStock || (p.stock !== null && p.stock !== undefined && qty >= Number(p.stock)))?'#555':'var(--br)', fontSize:20, cursor:(outOfStock || (p.stock !== null && p.stock !== undefined && qty >= Number(p.stock)))?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s', flexShrink:0 }}
+                >+</button>
+              </div>
+
+              {p.stock !== null && p.stock !== undefined && Number(p.stock) > 0 && qty >= Number(p.stock) && (
+                <div style={{ marginTop:6, fontSize:10, color:'#fbbf24', fontWeight:700, textAlign:'center' }}>
+                  {lang==='ar' ? 'الكمية maximale disponible' : 'Quantité maximale disponible'}
+                </div>
+              )}
             </div>
           )}
 
@@ -1141,6 +1179,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         .pp-sim-card{transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
         .pp-sim-card:hover{transform:translateY(-3px);border-color:rgba(201,168,76,.35)!important;box-shadow:0 10px 26px rgba(0,0,0,.2)}
         .pp-sticky{backdrop-filter:blur(24px) saturate(150%)!important;-webkit-backdrop-filter:blur(24px) saturate(150%)!important}
+        .pp-qty-row button:not(:disabled):hover{transform:translateY(-1px);filter:brightness(1.08)}
+        .pp-qty-row button:not(:disabled):active{transform:translateY(0) scale(.97)}
+        .pp-qty-row button:focus-visible{outline:2px solid rgba(201,168,76,.75);outline-offset:2px}
         @media (min-width: 900px){
           .pp-page{padding-bottom:24px}
           .pp-media{border-radius:0 0 22px 22px;margin:0 14px}
