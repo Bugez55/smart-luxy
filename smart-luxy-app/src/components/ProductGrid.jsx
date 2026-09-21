@@ -108,6 +108,9 @@ export default function ProductGrid({
             </button>
           ))}
         </div>
+        {categories.length > 4 && (
+          <div className="wz-categories-swipe" aria-hidden="true">Faites glisser <span>→</span></div>
+        )}
       </div>
 
       <style>{`
@@ -124,6 +127,9 @@ export default function ProductGrid({
           font-weight:900;
           letter-spacing:.16em;
           text-transform:uppercase;
+        }
+        .wz-categories-swipe{
+          display:none;
         }
         .wz-categories-scroll{
           max-width:1180px;
@@ -154,6 +160,30 @@ export default function ProductGrid({
             padding-left:13px!important;
             padding-right:13px!important;
             font-size:11px!important;
+          }
+          .wz-categories-swipe{
+            display:flex;
+            justify-content:flex-end;
+            align-items:center;
+            gap:4px;
+            margin:4px 2px 0;
+            color:var(--g4);
+            font-size:8px;
+            font-weight:800;
+            letter-spacing:.08em;
+            text-transform:uppercase;
+            opacity:.78;
+            animation:wzSwipeHint 2.8s ease-in-out infinite;
+          }
+          .wz-categories-swipe span{
+            color:var(--br);
+            font-size:12px;
+            line-height:1;
+          }
+          @keyframes wzSwipeHint{
+            0%,100%{opacity:.42;transform:translateX(0)}
+            35%{opacity:.9;transform:translateX(3px)}
+            65%{opacity:.9;transform:translateX(0)}
           }
         }
       `}</style>
