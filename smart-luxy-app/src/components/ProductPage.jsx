@@ -526,6 +526,29 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
         <div style={{ padding:16 }}>
 
+          {/* ── Progression de commande ── */}
+          {(() => {
+            const steps = [
+              { label: lang==='ar' ? 'المنتج' : 'Produit', done: !hasBundles || selectedBundle !== null },
+              { label: lang==='ar' ? 'التوصيل' : 'Livraison', done: !!form.wilaya && !!form.commune },
+              { label: lang==='ar' ? 'المعلومات' : 'Coordonnées', done: !!form.nom && !!form.tel && isValidTel(form.tel) },
+              { label: lang==='ar' ? 'التأكيد' : 'Confirmation', done: false },
+            ]
+            let active = steps.findIndex(x => !x.done)
+            if (active < 0) active = steps.length - 1
+            return (
+              <div className="pp-order-steps" aria-label={lang==='ar' ? 'تقدم الطلب' : 'Progression de la commande'}>
+                {steps.map((step, i) => (
+                  <div key={step.label} className={`pp-order-step ${step.done ? 'is-done' : ''} ${i === active ? 'is-active' : ''}`}>
+                    <div className="pp-order-step-line" aria-hidden="true" />
+                    <div className="pp-order-step-dot">{step.done ? '✓' : i + 1}</div>
+                    <div className="pp-order-step-label">{step.label}</div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+
           {/* ── PACKS / BUNDLES ── */}
           {hasBundles && (
             <div style={{ marginBottom:18 }}>
@@ -982,6 +1005,18 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         .pp-faq-chevron{color:var(--br);font-size:20px;line-height:1;flex-shrink:0;transform:rotate(0deg);transition:transform .22s ease}
         .pp-faq-item.is-open .pp-faq-chevron{transform:rotate(180deg)}
         .pp-faq-a{background:var(--card);padding:0 14px 14px;color:var(--g3);font-size:13px;line-height:1.7;border-top:1px solid rgba(201,168,76,.12);animation:faqIn .22s ease both}
+        .pp-order-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:0 0 18px;padding:10px 4px 2px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.018);border-radius:14px}
+        .pp-order-step{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+        .pp-order-step-line{position:absolute;top:13px;left:calc(-50% + 14px);width:calc(100% - 8px);height:1px;background:rgba(255,255,255,.1);z-index:0}
+        .pp-order-step:first-child .pp-order-step-line{display:none}
+        .pp-order-step-dot{position:relative;z-index:1;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--card2);border:1px solid rgba(255,255,255,.16);color:var(--g4);font-size:11px;font-weight:900;transition:all .2s ease}
+        .pp-order-step-label{max-width:100%;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--g4);font-size:9px;font-weight:800;text-align:center}
+        .pp-order-step.is-done .pp-order-step-dot{background:#22c55e;border-color:#22c55e;color:#04130a;box-shadow:0 0 0 3px rgba(34,197,94,.08)}
+        .pp-order-step.is-done .pp-order-step-label{color:#86efac}
+        .pp-order-step.is-done .pp-order-step-line{background:rgba(34,197,94,.38)}
+        .pp-order-step.is-active .pp-order-step-dot{background:linear-gradient(135deg,#C9A84C,#E9C46A);border-color:#C9A84C;color:#000;box-shadow:0 0 0 4px rgba(201,168,76,.08),0 0 16px rgba(201,168,76,.16)}
+        .pp-order-step.is-active .pp-order-step-label{color:#E9C46A}
+        @media (max-width:640px){.pp-order-steps{margin-bottom:16px;padding:9px 3px 1px}.pp-order-step-label{font-size:8px}.pp-order-step-dot{width:24px;height:24px;font-size:10px}.pp-order-step-line{top:12px;left:calc(-50% + 12px);width:calc(100% - 6px)}}
         .pp-gallery{max-width:920px;margin:0 auto}
         .pp-order-card{max-width:920px;margin:0 auto 18px!important;box-shadow:0 18px 50px rgba(0,0,0,.22)}
         .pp-share-label{max-width:920px;margin:0 auto;padding-top:4px!important}
