@@ -331,6 +331,61 @@ export default function App() {
 
         <TrustMarquee />
 
+        {/* ── Pourquoi Wazyo ? ── */}
+        <section className="wz-why">
+          <div className="wz-why-head">
+            <span className="wz-why-kicker">POURQUOI WAZYO ?</span>
+            <h2>Simple. Clair. Pensé pour vous.</h2>
+            <p>Une expérience d’achat directe, avec les informations essentielles visibles dès le départ.</p>
+          </div>
+
+          <div className="wz-why-grid">
+            <div className="wz-why-card">
+              <div className="wz-why-icon">🚚</div>
+              <div>
+                <strong>Livraison partout</strong>
+                <span>Nous livrons dans les 69 wilayas.</span>
+              </div>
+            </div>
+
+            <div className="wz-why-card">
+              <div className="wz-why-icon">💳</div>
+              <div>
+                <strong>Paiement à la livraison</strong>
+                <span>Vous payez à la réception de votre commande.</span>
+              </div>
+            </div>
+
+            <div className="wz-why-card">
+              <div className="wz-why-icon">💬</div>
+              <div>
+                <strong>Support WhatsApp</strong>
+                <span>Une question ? Notre support reste accessible.</span>
+              </div>
+            </div>
+          </div>
+
+          <style>{`
+            .wz-why{width:100%;box-sizing:border-box;padding:46px 20px 18px;background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,0));}
+            .wz-why-head{max-width:920px;margin:0 auto 22px;text-align:center;}
+            .wz-why-kicker{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.18em;color:var(--br);margin-bottom:9px;}
+            .wz-why-head h2{margin:0;color:var(--g3);font-family:Georgia,'Times New Roman',serif;font-size:clamp(26px,5vw,42px);line-height:1.05;letter-spacing:-.03em;font-weight:600;}
+            .wz-why-head p{max-width:620px;margin:12px auto 0;color:var(--g4);font-size:12px;line-height:1.65;}
+            .wz-why-grid{max-width:920px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+            .wz-why-card{display:flex;align-items:flex-start;gap:11px;padding:15px 14px;border:1px solid rgba(255,255,255,.075);border-radius:15px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.018));box-shadow:0 12px 30px rgba(0,0,0,.10);}
+            .wz-why-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex:0 0 38px;border-radius:11px;background:rgba(201,168,76,.10);border:1px solid rgba(201,168,76,.16);font-size:19px;}
+            .wz-why-card strong{display:block;color:var(--g3);font-size:12px;font-weight:900;line-height:1.25;margin-top:2px;}
+            .wz-why-card span{display:block;color:var(--g4);font-size:10px;line-height:1.45;margin-top:4px;}
+            @media(max-width:720px){
+              .wz-why{padding:34px 14px 12px;}
+              .wz-why-head{margin-bottom:16px;}
+              .wz-why-head p{font-size:11px;max-width:340px;}
+              .wz-why-grid{grid-template-columns:1fr;gap:8px;max-width:520px;}
+              .wz-why-card{padding:13px 12px;}
+            }
+          `}</style>
+        </section>
+
         {/* ── Recherche + badges (juste au-dessus des produits) ── */}
         <section id="collection" className="hero" style={{ minHeight:'auto', padding:'48px 20px 24px' }}>
           <div className="hero-badges">
