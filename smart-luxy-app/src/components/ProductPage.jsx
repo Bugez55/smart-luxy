@@ -710,6 +710,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             </div>
           </div>
 
+          <div className="pp-form-section-title">
+            <div className="pp-form-section-icon">📍</div>
+            <div>
+              <div>{lang==='ar' ? 'معلومات التوصيل' : 'Livraison'}</div>
+              <small>{lang==='ar' ? 'Choisis ta wilaya et ta commune' : 'Choisis ta wilaya et ta commune'}</small>
+            </div>
+          </div>
+
           {/* ── Wilaya ── */}
           <div style={{ marginBottom:10 }}>
             <label style={lbl}>{lang==='ar' ? 'الولاية *' : 'Wilaya *' }</label>
@@ -802,6 +810,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             </div>
           </div>
 
+          <div className="pp-form-section-title">
+            <div className="pp-form-section-icon">👤</div>
+            <div>
+              <div>{lang==='ar' ? 'معلومات الاتصال' : 'Vos coordonnées'}</div>
+              <small>{lang==='ar' ? 'Utilisées uniquement pour confirmer la commande' : 'Utilisées uniquement pour confirmer la commande'}</small>
+            </div>
+          </div>
+
           {/* ── Nom + Tel ── */}
           <div className="pp-contact-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
             <div>
@@ -855,6 +871,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
 
           <style>{`@keyframes ppTelShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }`}</style>
+
+          <div className="pp-form-section-title pp-payment-title">
+            <div className="pp-form-section-icon">💳</div>
+            <div>
+              <div>{lang==='ar' ? 'طريقة الدفع' : 'Paiement'}</div>
+              <small>{lang==='ar' ? 'Choisis ton mode de paiement préféré' : 'Choisis ton mode de paiement préféré'}</small>
+            </div>
+          </div>
 
           {/* Adresse */}
           {/* ── Mode de paiement ── */}
@@ -1204,6 +1228,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         .pp-sim-card{transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
         .pp-sim-card:hover{transform:translateY(-3px);border-color:rgba(201,168,76,.35)!important;box-shadow:0 10px 26px rgba(0,0,0,.2)}
         .pp-sticky{backdrop-filter:blur(24px) saturate(150%)!important;-webkit-backdrop-filter:blur(24px) saturate(150%)!important}
+        .pp-form-section-title{display:flex;align-items:center;gap:10px;margin:18px 0 10px;padding:10px 12px;border:1px solid rgba(201,168,76,.12);border-left:3px solid #C9A84C;border-radius:12px;background:linear-gradient(90deg,rgba(201,168,76,.065),rgba(255,255,255,.018));color:var(--g3);font-size:12px;font-weight:900;letter-spacing:.02em}
+        .pp-form-section-title small{display:block;margin-top:2px;color:var(--g4);font-size:10px;font-weight:600;letter-spacing:0}
+        .pp-form-section-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.16);font-size:15px;flex-shrink:0}
+        .pp-payment-title{margin-top:20px}
         .pp-qty-row button:not(:disabled):hover{transform:translateY(-1px);filter:brightness(1.08)}
         .pp-qty-row button:not(:disabled):active{transform:translateY(0) scale(.97)}
         .pp-qty-row button:focus-visible{outline:2px solid rgba(201,168,76,.75);outline-offset:2px}
