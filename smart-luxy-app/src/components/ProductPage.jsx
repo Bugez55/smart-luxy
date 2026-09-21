@@ -50,6 +50,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [wilayaOpen, setWilayaOpen] = useState(false)
   const [wilayaSearch, setWilayaSearch] = useState('')
   const [communeOpen, setCommuneOpen] = useState(false)
+  const [communeSearch, setCommuneSearch] = useState('')
   const [stickyVisible, setStickyVisible] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
   const formRef = useRef()
@@ -94,6 +95,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     const q = wilayaSearch.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     if (!q) return true
     return opt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
+  })
+  const filteredCommunes = communes.filter(opt => {
+    const q = communeSearch.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    if (!q) return true
+    return String(opt).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
   })
 
 
@@ -147,6 +153,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     const digits = (v || '').replace(/[^\d]/g, '')
     return /^0\d{9}$/.test(digits)
   }
+
+  function formatAlgerianPhone(v) {
+    const digits = (v || '').replace(/\D/g, '').slice(0, 10)
+    return digits.replace(/(\d{2})(?=\d)/g, '$1 ').trim()
+  }
+
+  const telDigits = (form.tel || '').replace(/\D/g, '')
+  const telValid = isValidTel(form.tel)
 
   // Sur mobile, le clavier + sa barre d'outils cachent souvent le champ en cours
   // de saisie. On recentre le champ à l'écran juste après l'ouverture du clavier.
@@ -665,7 +679,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                   </div>
                   <div style={{ maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
                     {filteredWilayas.length > 0 ? filteredWilayas.map(opt => (
-                      <div key={opt} onClick={() => { setF('wilaya',opt); setWilayaOpen(false); setWilayaSearch('') }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.wilaya?'#C9A84C':'var(--g3)', background:opt===form.wilaya?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid var(--g3)', touchAction:'manipulation' }}>
+                      <div key={opt} onClick={() => { setF('wilaya',opt); setWilayaOpen(false); setWilayaSearch(''); setCommuneSearch('') }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.wilaya?'#C9A84C':'var(--g3)', background:opt===form.wilaya?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid var(--g3)', touchAction:'manipulation' }}>
                         {opt}
                       </div>
                     )) : (
@@ -688,12 +702,38 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 <span style={{ color:'var(--br)', fontSize:10, flexShrink:0, marginLeft:8 }}>{communeOpen?'▲':'▼'}</span>
               </div>
               {communeOpen && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'var(--card2)', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
-                  {communes.map(opt => (
-                    <div key={opt} onClick={() => { setF('commune',opt); setCommuneOpen(false) }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.commune?'#C9A84C':'var(--g3)', background:opt===form.commune?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid var(--g3)', touchAction:'manipulation' }}>
-                      {opt}
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:99999, background:'var(--card2)', border:'1px solid #C9A84C', borderRadius:10, marginTop:4, overflow:'hidden', boxShadow:'0 12px 40px rgba(0,0,0,.9)' }}>
+                  <div style={{ padding:8, borderBottom:'1px solid rgba(128,128,128,.22)', background:'rgba(255,255,255,.02)' }}>
+                    <div style={{ position:'relative' }}>
+                      <span aria-hidden="true" style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', fontSize:14, opacity:.7 }}>⌕</span>
+                      <input
+                        value={communeSearch}
+                        onChange={e => setCommuneSearch(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={e => { if (e.key === 'Escape') { setCommuneSearch(''); setCommuneOpen(false) } }}
+                        autoFocus
+                        placeholder={lang==='ar' ? 'ابحث عن البلدية…' : 'Rechercher une commune…'}
+                        style={{ ...inp, height:42, padding:'10px 38px 10px 34px', fontSize:14, background:'rgba(0,0,0,.22)', border:'1px solid rgba(201,168,76,.22)', direction:'ltr' }}
+                      />
+                      {communeSearch && (
+                        <button type="button" onClick={() => setCommuneSearch('')} aria-label="Effacer la recherche" style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', width:28, height:28, border:'none', borderRadius:'50%', background:'rgba(128,128,128,.16)', color:'var(--g3)', cursor:'pointer', fontSize:15 }}>×</button>
+                      )}
                     </div>
-                  ))}
+                    <div style={{ marginTop:6, padding:'0 3px', fontSize:10, color:'var(--g4)', fontWeight:700 }}>
+                      {filteredCommunes.length} / {communes.length} communes
+                    </div>
+                  </div>
+                  <div style={{ maxHeight:220, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+                    {filteredCommunes.length > 0 ? filteredCommunes.map(opt => (
+                      <div key={opt} onClick={() => { setF('commune',opt); setCommuneOpen(false); setCommuneSearch('') }} style={{ padding:'12px 14px', fontSize:15, cursor:'pointer', color:opt===form.commune?'#C9A84C':'var(--g3)', background:opt===form.commune?'rgba(201,168,76,.1)':'transparent', borderBottom:'1px solid var(--g3)', touchAction:'manipulation' }}>
+                        {opt}
+                      </div>
+                    )) : (
+                      <div style={{ padding:'18px 14px', textAlign:'center', fontSize:12, color:'var(--g4)', fontWeight:700 }}>
+                        {lang==='ar' ? 'لا توجد بلدية مطابقة' : 'Aucune commune trouvée'}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -707,14 +747,42 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             </div>
             <div>
               <label style={lbl}>{lang==='ar' ? 'الهاتف *' : 'Téléphone *' }</label>
-              <input
-                placeholder="0555 00 00 00"
-                value={form.tel}
-                onChange={e => setF('tel',e.target.value)}
-                onFocus={handleFocusScroll}
-                style={{ ...inp, border: `1px solid ${telError ? '#ef4444' : '#2a2a2a'}`, animation: telShake ? 'ppTelShake .5s' : 'none' }}
-                type="tel"
-              />
+              <div style={{ position:'relative' }}>
+                <input
+                  placeholder="05 55 00 00 00"
+                  value={form.tel}
+                  onChange={e => setF('tel', formatAlgerianPhone(e.target.value))}
+                  onFocus={handleFocusScroll}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={14}
+                  aria-invalid={telError}
+                  style={{
+                    ...inp,
+                    paddingRight: telValid ? 42 : inp.padding,
+                    border: `1px solid ${telError ? '#ef4444' : telValid ? 'rgba(34,197,94,.55)' : '#2a2a2a'}`,
+                    boxShadow: telValid ? '0 0 0 3px rgba(34,197,94,.06)' : 'none',
+                    animation: telShake ? 'ppTelShake .5s' : 'none'
+                  }}
+                  type="tel"
+                />
+                {telValid && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position:'absolute', right:12, top:'50%', transform:'translateY(-50%)',
+                      width:22, height:22, borderRadius:'50%', background:'#22c55e', color:'#06120a',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:13, fontWeight:900, pointerEvents:'none'
+                    }}
+                  >✓</span>
+                )}
+              </div>
+              {telDigits.length > 0 && telDigits.length < 10 && !telError && (
+                <div style={{ color:'var(--g4)', fontSize:10, marginTop:5 }}>
+                  {lang==='ar' ? `${10 - telDigits.length} أرقام متبقية` : `${10 - telDigits.length} chiffre${10 - telDigits.length > 1 ? 's' : ''} restant${10 - telDigits.length > 1 ? 's' : ''}`}
+                </div>
+              )}
               {telError && (
                 <div style={{ color:'#fca5a5', fontSize:11, marginTop:5 }}>
                   {lang==='ar' ? '⚠️ رقم غير صحيح — 10 أرقام' : '⚠️ Numéro invalide — 10 chiffres'}
