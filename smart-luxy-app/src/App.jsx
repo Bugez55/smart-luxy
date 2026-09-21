@@ -415,6 +415,103 @@ export default function App() {
           </div>
         </section>
 
+        {/* ── En-tête de collection ── */}
+        <section className="wz-collection-head" aria-labelledby="collection-title">
+          <div className="wz-collection-copy">
+            <span className="wz-collection-kicker">LA COLLECTION WAZYO</span>
+            <h2 id="collection-title">{search ? 'Résultats de recherche' : 'Nos produits'}</h2>
+            <p>
+              {search
+                ? `${filtered.length} produit${filtered.length > 1 ? 's' : ''} trouvé${filtered.length > 1 ? 's' : ''}`
+                : 'Découvrez notre sélection de produits utiles, choisis pour votre quotidien.'}
+            </p>
+          </div>
+          {!search && (
+            <div className="wz-collection-count">
+              <strong>{filtered.length}</strong>
+              <span>produit{filtered.length > 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </section>
+
+        <style>{`
+          .wz-collection-head{
+            width:100%;
+            box-sizing:border-box;
+            max-width:1180px;
+            margin:0 auto;
+            padding:10px 20px 18px;
+            display:flex;
+            align-items:flex-end;
+            justify-content:space-between;
+            gap:18px;
+          }
+          .wz-collection-copy{min-width:0;}
+          .wz-collection-kicker{
+            display:inline-block;
+            margin-bottom:8px;
+            color:var(--br);
+            font-size:9px;
+            font-weight:900;
+            letter-spacing:.17em;
+            text-transform:uppercase;
+          }
+          .wz-collection-copy h2{
+            margin:0;
+            color:var(--g3);
+            font-family:Georgia,'Times New Roman',serif;
+            font-size:clamp(28px,5vw,44px);
+            line-height:1;
+            letter-spacing:-.035em;
+            font-weight:600;
+          }
+          .wz-collection-copy p{
+            max-width:620px;
+            margin:9px 0 0;
+            color:var(--g4);
+            font-size:12px;
+            line-height:1.6;
+          }
+          .wz-collection-count{
+            flex:0 0 auto;
+            min-width:76px;
+            padding:10px 12px;
+            border:1px solid rgba(201,168,76,.18);
+            border-radius:12px;
+            background:rgba(201,168,76,.055);
+            text-align:center;
+          }
+          .wz-collection-count strong{
+            display:block;
+            color:var(--br);
+            font-size:18px;
+            line-height:1;
+            font-weight:900;
+          }
+          .wz-collection-count span{
+            display:block;
+            margin-top:4px;
+            color:var(--g4);
+            font-size:9px;
+            font-weight:800;
+            text-transform:uppercase;
+            letter-spacing:.08em;
+          }
+          @media(max-width:640px){
+            .wz-collection-head{
+              padding:4px 14px 14px;
+              align-items:flex-end;
+              gap:12px;
+            }
+            .wz-collection-copy h2{font-size:30px;}
+            .wz-collection-copy p{font-size:11px;}
+            .wz-collection-count{
+              min-width:64px;
+              padding:8px 9px;
+            }
+          }
+        `}</style>
+
         <ProductGrid
           products={filtered}
           categories={categories}
