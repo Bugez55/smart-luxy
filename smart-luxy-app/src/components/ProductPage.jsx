@@ -51,6 +51,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [communeOpen, setCommuneOpen] = useState(false)
   const [stickyVisible, setStickyVisible] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [linkCopied, setLinkCopied] = useState(false)
   const formRef = useRef()
   const topRef = useRef()
 
@@ -843,9 +844,20 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {lang==='ar' ? 'مشاركة عبر واتساب' : 'Partager WhatsApp'}
         </a>
         <button
-          onClick={() => { navigator.clipboard?.writeText(window.location.href); }}
-          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:12, padding:'11px 16px', color:'var(--g3)', fontSize:12, fontWeight:800, cursor:'pointer' }}
-        >🔗 {lang==='ar' ? 'نسخ الرابط' : 'Copier lien'}</button>
+          onClick={async () => {
+            try {
+              if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(window.location.href)
+              }
+              setLinkCopied(true)
+              window.clearTimeout(window.__wazyoCopyTimer)
+              window.__wazyoCopyTimer = window.setTimeout(() => setLinkCopied(false), 1800)
+            } catch {
+              setLinkCopied(false)
+            }
+          }}
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, background:linkCopied?'rgba(34,197,94,.1)':'var(--card2)', border:`1px solid ${linkCopied?'rgba(34,197,94,.3)':'rgba(128,128,128,.25)'}`, borderRadius:12, padding:'11px 16px', color:linkCopied?'#86efac':'var(--g3)', fontSize:12, fontWeight:800, cursor:'pointer', transition:'all .2s' }}
+        >{linkCopied ? '✓ ' : '🔗 '}{lang==='ar' ? (linkCopied ? 'تم نسخ الرابط' : 'نسخ الرابط') : (linkCopied ? 'Lien copié' : 'Copier lien')}</button>
       </div>
 
       {/* ── Liens utiles ── */}
