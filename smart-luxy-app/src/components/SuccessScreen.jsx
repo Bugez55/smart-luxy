@@ -38,191 +38,179 @@ function Confetti() {
 
 export default function SuccessScreen({ order, onClose }) {
   const [show, setShow] = useState(false)
+  const [copied, setCopied] = useState(false)
   const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
 
   useEffect(() => {
-    setTimeout(() => setShow(true), 50)
+    const t = setTimeout(() => setShow(true), 50)
+    return () => clearTimeout(t)
   }, [])
 
   const steps = [
-    { icon: '✅', label: 'Commande reçue', done: true },
-    { icon: '📞', label: 'Confirmation appel', done: false },
-    { icon: '📦', label: 'Préparation colis', done: false },
-    { icon: '🚚', label: 'Livraison en cours', done: false },
+    { icon: '✓', label: 'Commande reçue', done: true },
+    { icon: '☎', label: 'Confirmation', done: false },
+    { icon: '📦', label: 'Préparation', done: false },
+    { icon: '🚚', label: 'Livraison', done: false },
   ]
+
+  async function copyOrderId() {
+    try {
+      await navigator.clipboard?.writeText(order.id)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {}
+  }
 
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 500,
-      background: 'rgba(0,0,0,.95)',
+      background: 'rgba(0,0,0,.94)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '16px',
+      padding: '14px', overflow: 'auto',
+      backdropFilter: 'blur(12px)',
     }}>
       <div style={{
-        background: 'var(--card)',
-        border: '1px solid rgba(201,168,76,.2)',
-        borderRadius: 24, width: '100%', maxWidth: 480,
-        maxHeight: '92vh', overflowY: 'auto',
-        position: 'relative',
-        transform: show ? 'scale(1)' : 'scale(.9)',
+        background: 'linear-gradient(180deg, var(--card) 0%, #101010 100%)',
+        border: '1px solid rgba(201,168,76,.28)',
+        borderRadius: 26, width: '100%', maxWidth: 520,
+        maxHeight: '94vh', overflowY: 'auto',
+        position: 'relative', boxShadow: '0 30px 100px rgba(0,0,0,.55)',
+        transform: show ? 'translateY(0) scale(1)' : 'translateY(18px) scale(.97)',
         opacity: show ? 1 : 0,
-        transition: 'all .4s cubic-bezier(.22,1,.36,1)',
+        transition: 'all .45s cubic-bezier(.22,1,.36,1)',
       }}>
         <Confetti />
 
-        {/* ── Haut ── */}
-        <div style={{ padding: '32px 24px 20px', textAlign: 'center', position: 'relative' }}>
-          {/* Icône animée */}
+        <div style={{ height: 5, background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
+
+        <div style={{ padding: '30px 22px 18px', textAlign: 'center', position: 'relative' }}>
           <div style={{
-            width: 72, height: 72, borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(201,168,76,.2), rgba(201,168,76,.05))',
-            border: '2px solid rgba(201,168,76,.4)',
+            width: 82, height: 82, borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 30%, rgba(233,196,106,.34), rgba(201,168,76,.08))',
+            border: '1px solid rgba(233,196,106,.5)',
+            boxShadow: '0 0 0 8px rgba(201,168,76,.05), 0 18px 45px rgba(201,168,76,.14)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 32, margin: '0 auto 16px',
-            animation: 'successPop .5s .2s cubic-bezier(.34,1.56,.64,1) both',
-          }}>🎉</div>
+            fontSize: 38, margin: '0 auto 16px',
+            animation: 'successPop .55s .1s cubic-bezier(.34,1.56,.64,1) both',
+          }}>✓</div>
+
+          <div style={{
+            display:'inline-flex', alignItems:'center', gap:6,
+            padding:'6px 10px', borderRadius:999,
+            background:'rgba(134,239,172,.08)', border:'1px solid rgba(134,239,172,.18)',
+            color:'#a7f3d0', fontSize:10, fontWeight:800, letterSpacing:'.08em', textTransform:'uppercase',
+            animation: 'successFade .4s .22s both',
+          }}>
+            Commande enregistrée
+          </div>
 
           <h2 style={{
-            margin: '0 0 8px', fontSize: 22, fontWeight: 900, color:'var(--g3)',
-            animation: 'successFade .4s .3s both',
-          }}>Commande confirmée !</h2>
+            margin: '14px 0 8px', fontSize: 25, fontWeight: 950, color:'var(--g3)',
+            letterSpacing:'-.03em', animation: 'successFade .4s .28s both',
+          }}>Merci pour votre commande</h2>
 
-          <p style={{
-            margin: '0 0 6px', fontSize: 14, color: 'var(--g3)',
-            animation: 'successFade .4s .4s both',
-          }}>
-            Merci <strong style={{ color:'var(--g3)' }}>{order.nom_client}</strong> 🙏
+          <p style={{ margin:'0 auto 5px', maxWidth:410, fontSize:14, lineHeight:1.65, color:'var(--g4)', animation:'successFade .4s .34s both' }}>
+            Bonjour <strong style={{ color:'var(--g3)' }}>{order.nom_client}</strong> 👋
           </p>
-          <p style={{
-            margin: 0, fontSize: 13, color: 'var(--g3)',
-            animation: 'successFade .4s .45s both',
-          }}>
-            Nous vous appellerons au <strong style={{ color: '#C9A84C' }}>{order.telephone}</strong> pour confirmer
+          <p style={{ margin:0, maxWidth:410, marginInline:'auto', fontSize:13, lineHeight:1.6, color:'var(--g4)', animation:'successFade .4s .4s both' }}>
+            Nous vous appellerons au <strong style={{ color:'#E9C46A' }}>{order.telephone}</strong> pour confirmer votre commande.
           </p>
         </div>
 
-        {/* ── N° commande ── */}
-        <div style={{
-          margin: '0 20px 16px',
-          background: 'rgba(201,168,76,.07)',
-          border: '1px solid rgba(201,168,76,.2)',
-          borderRadius: 12, padding: '12px 16px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          animation: 'successFade .4s .5s both',
-        }}>
-          <div>
-            <div style={{ fontSize: 10, color: 'var(--g3)', fontWeight: 800, letterSpacing: '.08em', marginBottom: 3 }}>
-              NUMÉRO DE SUIVI
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: '#C9A84C', letterSpacing: '.05em' }}>
-              {order.id}
-            </div>
+        <div style={{ margin:'0 18px 14px', padding:'13px 14px', borderRadius:16,
+          background:'linear-gradient(135deg, rgba(201,168,76,.12), rgba(201,168,76,.03))',
+          border:'1px solid rgba(201,168,76,.22)', display:'flex', justifyContent:'space-between', alignItems:'center', gap:12,
+          animation:'successFade .4s .46s both' }}>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:10, color:'var(--g4)', fontWeight:800, letterSpacing:'.08em', marginBottom:4 }}>N° DE COMMANDE</div>
+            <div style={{ fontSize:16, fontWeight:950, color:'#E9C46A', letterSpacing:'.05em', overflow:'hidden', textOverflow:'ellipsis' }}>{order.id}</div>
           </div>
-          <button
-            onClick={() => navigator.clipboard?.writeText(order.id).then(() => {})}
-            style={{
-              background: 'rgba(201,168,76,.1)', border: '1px solid rgba(201,168,76,.2)',
-              borderRadius: 8, padding: '6px 12px', color: '#C9A84C',
-              fontSize: 11, fontWeight: 700, cursor: 'pointer',
-            }}
-          >📋 Copier</button>
+          <button onClick={copyOrderId} style={{
+            flexShrink:0, background:'rgba(201,168,76,.1)', border:'1px solid rgba(201,168,76,.25)',
+            borderRadius:10, padding:'8px 11px', color:'#E9C46A', fontSize:11, fontWeight:800, cursor:'pointer'
+          }}>{copied ? '✓ Copié' : 'Copier'}</button>
         </div>
 
-        {/* ── Récap commande ── */}
-        <div style={{
-          margin: '0 20px 16px',
-          background: 'var(--card)', border: '1px solid var(--g3)',
-          borderRadius: 12, overflow: 'hidden',
-          animation: 'successFade .4s .55s both',
-        }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--g3)', fontSize: 11, fontWeight: 800, color: 'var(--g3)', letterSpacing: '.06em' }}>
-            ARTICLES COMMANDÉS
-          </div>
-          {items.map((item, i) => (
-            <div key={i} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '9px 14px',
-              borderBottom: i < items.length - 1 ? '1px solid var(--g3)' : 'none',
+        <div style={{ margin:'0 18px 14px', display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8,
+          animation:'successFade .4s .5s both' }}>
+          {[
+            ['🚚','Livraison','69 wilayas'],
+            ['☎','Confirmation','par téléphone'],
+            ['💳','Paiement','à la réception'],
+          ].map(([icon, title, sub]) => (
+            <div key={title} style={{
+              padding:'11px 8px', borderRadius:14, textAlign:'center',
+              background:'rgba(255,255,255,.025)', border:'1px solid rgba(255,255,255,.07)'
             }}>
-              <span style={{ fontSize: 13, color: 'var(--g3)' }}>
-                {item.nom} <span style={{ color: 'var(--g3)' }}>×{item.qty}</span>
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#C9A84C' }}>
-                {fmt(Number(item.prix) * item.qty)}
-              </span>
+              <div style={{ fontSize:17, marginBottom:4 }}>{icon}</div>
+              <div style={{ fontSize:11, fontWeight:850, color:'var(--g3)' }}>{title}</div>
+              <div style={{ fontSize:9, color:'var(--g4)', marginTop:2, lineHeight:1.35 }}>{sub}</div>
             </div>
           ))}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '10px 14px', borderTop: '1px solid rgba(128,128,128,.25)',
-            background: 'rgba(128,128,128,.08)',
-          }}>
-            <span style={{ fontSize: 14, fontWeight: 900, color:'var(--g3)' }}>Total payé</span>
-            <span style={{ fontSize: 18, fontWeight: 900, color: '#C9A84C' }}>{fmt(order.total)}</span>
+        </div>
+
+        <div style={{
+          margin:'0 18px 16px', background:'rgba(255,255,255,.018)',
+          border:'1px solid rgba(255,255,255,.07)', borderRadius:16, overflow:'hidden',
+          animation:'successFade .4s .54s both'
+        }}>
+          <div style={{ padding:'11px 14px', borderBottom:'1px solid rgba(255,255,255,.06)', fontSize:10, fontWeight:850, color:'var(--g4)', letterSpacing:'.08em' }}>
+            RÉCAPITULATIF
+          </div>
+          {items.map((item, i) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10,
+              padding:'10px 14px', borderBottom:i < items.length - 1 ? '1px solid rgba(255,255,255,.05)' : 'none' }}>
+              <span style={{ fontSize:12.5, color:'var(--g3)', minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {item.nom} <span style={{ color:'var(--g4)' }}>×{item.qty}</span>
+              </span>
+              <span style={{ fontSize:12.5, fontWeight:850, color:'#E9C46A', flexShrink:0 }}>{fmt(Number(item.prix) * item.qty)}</span>
+            </div>
+          ))}
+          <div style={{ padding:'12px 14px', background:'rgba(201,168,76,.07)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ fontSize:13, fontWeight:900, color:'var(--g3)' }}>Total à payer</span>
+            <span style={{ fontSize:19, fontWeight:950, color:'#E9C46A' }}>{fmt(order.total)}</span>
           </div>
         </div>
 
-        {/* ── Timeline étapes ── */}
-        <div style={{
-          margin: '0 20px 20px',
-          animation: 'successFade .4s .6s both',
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--g3)', letterSpacing: '.06em', marginBottom: 10 }}>
-            PROCHAINES ÉTAPES
-          </div>
-          <div style={{ display: 'flex', gap: 0 }}>
+        <div style={{ margin:'0 18px 18px', animation:'successFade .4s .58s both' }}>
+          <div style={{ fontSize:10, fontWeight:850, color:'var(--g4)', letterSpacing:'.08em', marginBottom:10 }}>SUIVI DE VOTRE COMMANDE</div>
+          <div style={{ display:'flex', gap:0 }}>
             {steps.map((s, i) => (
-              <div key={i} style={{ flex: 1, textAlign: 'center', position: 'relative' }}>
-                {i < steps.length - 1 && (
-                  <div style={{
-                    position: 'absolute', top: 16, left: '50%', right: '-50%', height: 2,
-                    background: s.done ? '#C9A84C' : 'var(--g3)',
-                    transition: 'background .3s',
-                  }} />
-                )}
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  background: s.done ? 'rgba(201,168,76,.2)' : 'var(--g3)',
-                  border: `2px solid ${s.done ? '#C9A84C' : 'var(--g3)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14, margin: '0 auto 6px',
-                  position: 'relative', zIndex: 1,
-                }}>{s.icon}</div>
-                <div style={{ fontSize: 10, color: s.done ? '#C9A84C' : 'var(--g3)', fontWeight: 700, lineHeight: 1.3 }}>
-                  {s.label}
+              <div key={i} style={{ flex:1, textAlign:'center', position:'relative', minWidth:0 }}>
+                {i < steps.length - 1 && <div style={{ position:'absolute', top:15, left:'50%', right:'-50%', height:1.5, background:i === 0 ? '#C9A84C' : 'rgba(255,255,255,.09)' }} />}
+                <div style={{ width:30, height:30, borderRadius:'50%', margin:'0 auto 6px', position:'relative', zIndex:1,
+                  background:s.done ? 'rgba(201,168,76,.18)' : '#171717', border:`1px solid ${s.done ? '#C9A84C' : 'rgba(255,255,255,.10)'}`,
+                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, color:s.done ? '#E9C46A' : 'var(--g4)', fontWeight:900 }}>
+                  {s.icon}
                 </div>
+                <div style={{ fontSize:9.5, lineHeight:1.3, color:s.done ? '#E9C46A' : 'var(--g4)', fontWeight:750 }}>{s.label}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Boutons ── */}
-        <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding:'0 18px 22px', display:'flex', flexDirection:'column', gap:9, animation:'successFade .4s .64s both' }}>
           <button onClick={() => openWA(order)} style={{
-            width: '100%', padding: '13px',
-            background: '#25D366', border: 'none', borderRadius: 12,
-            color:'var(--g3)', fontSize: 14, fontWeight: 800, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            width:'100%', padding:'13px', background:'#25D366', border:'none', borderRadius:13,
+            color:'#07130b', fontSize:14, fontWeight:900, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            boxShadow:'0 10px 25px rgba(37,211,102,.12)'
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.553 4.116 1.522 5.847L.057 23.882a.5.5 0 00.61.61l6.098-1.474A11.927 11.927 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.793 9.793 0 01-4.994-1.367l-.357-.212-3.718.899.929-3.628-.232-.372A9.796 9.796 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
-            </svg>
             Confirmer sur WhatsApp
           </button>
-
           <button onClick={onClose} style={{
-            width: '100%', padding: '12px',
-            background: 'var(--card2)', border: '1px solid rgba(128,128,128,.3)',
-            borderRadius: 12, color: 'var(--g3)',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            width:'100%', padding:'12px', background:'transparent', border:'1px solid rgba(255,255,255,.11)',
+            borderRadius:13, color:'var(--g3)', fontSize:13, fontWeight:750, cursor:'pointer'
           }}>
-            ← Retour à la boutique
+            ← Continuer mes achats
           </button>
         </div>
 
         <style>{`
           @keyframes successPop { from{opacity:0;transform:scale(.5)} to{opacity:1;transform:scale(1)} }
-          @keyframes successFade { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+          @keyframes successFade { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+          @media (max-width:420px){
+            .success-mini-grid{grid-template-columns:1fr 1fr !important}
+          }
         `}</style>
       </div>
     </div>
