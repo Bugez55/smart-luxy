@@ -659,26 +659,59 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {/* ── Mode livraison ── */}
           <div style={{ marginBottom:14 }}>
             <label style={lbl}>{lang==='ar' ? 'طريقة التوصيل' : 'Mode de livraison' }</label>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div className="pp-delivery-options" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {['domicile','bureau'].map(mode => {
+                const selected = modeLiv === mode
                 const modeFee = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][mode] : null
                 const modeLabel = mode==='domicile'
-                  ? (lang==='ar' ? '🏠 توصيل للمنزل' : '🏠 À domicile')
-                  : (lang==='ar' ? '📦 استلام من المكتب' : '📦 Retrait bureau')
+                  ? (lang==='ar' ? 'التوصيل للمنزل' : 'À domicile')
+                  : (lang==='ar' ? 'الاستلام من المكتب' : 'Retrait bureau')
                 const modeTime = mode==='domicile'
                   ? (lang==='ar' ? '2–5 أيام' : '2–5 jours')
                   : (lang==='ar' ? '1–3 أيام' : '1–3 jours')
+                const modeIcon = mode==='domicile' ? '🏠' : '📦'
                 return (
-                  <button key={mode} onClick={() => setModeLiv(mode)} style={{ padding:'11px 8px', background:modeLiv===mode?'rgba(201,168,76,.12)':'var(--card2)', border:`2px solid ${modeLiv===mode?'#C9A84C':'#2a2a2a'}`, borderRadius:10, color:modeLiv===mode?'#C9A84C':'#666', fontSize:12, fontWeight:800, cursor:'pointer', textAlign:'center', lineHeight:1.4, transition:'all .2s', minHeight:78 }}>
-                    {modeLabel}
-                    <div style={{ fontSize:9, marginTop:3, color:modeLiv===mode?'rgba(201,168,76,.6)':'#444' }}>{modeTime}</div>
-                    <div style={{ fontSize:11, marginTop:6, color:modeFee===0?'#22c55e':(modeFee!==null ? (modeLiv===mode ? '#C9A84C' : 'var(--g3)') : '#555'), fontWeight:900 }}>
-                      {modeFee===null
-                        ? (lang==='ar' ? 'اختر الولاية' : 'Choisir la wilaya')
-                        : modeFee===0
-                          ? (lang==='ar' ? 'مجاني' : 'Gratuit')
-                          : fmt(modeFee)}
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setModeLiv(mode)}
+                    aria-pressed={selected}
+                    className={selected ? 'pp-delivery-card is-selected' : 'pp-delivery-card'}
+                    style={{
+                      position:'relative', padding:'12px 12px 11px', minHeight:90,
+                      background:selected?'linear-gradient(180deg,rgba(201,168,76,.14),rgba(201,168,76,.06))':'var(--card2)',
+                      border:`1px solid ${selected?'rgba(201,168,76,.72)':'rgba(255,255,255,.10)'}`,
+                      borderRadius:14, color:'var(--g3)', cursor:'pointer', textAlign:'left',
+                      transition:'transform .2s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease',
+                      boxShadow:selected?'0 10px 24px rgba(201,168,76,.08)':'none',
+                      display:'flex', flexDirection:'column', justifyContent:'space-between',
+                    }}
+                  >
+                    <span style={{ position:'absolute', top:10, right:10, width:20, height:20, borderRadius:'50%', border:`1px solid ${selected?'#C9A84C':'rgba(255,255,255,.18)'}`, background:selected?'#C9A84C':'transparent', display:'flex', alignItems:'center', justifyContent:'center', color:'#000', fontSize:12, fontWeight:900 }}>
+                      {selected ? '✓' : ''}
+                    </span>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, paddingRight:28 }}>
+                      <span style={{ width:32, height:32, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', background:selected?'rgba(201,168,76,.16)':'rgba(255,255,255,.05)', fontSize:17, flexShrink:0 }}>{modeIcon}</span>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:900, lineHeight:1.25, color:selected?'#E9C46A':'var(--g3)' }}>{modeLabel}</div>
+                        <div style={{ fontSize:9, marginTop:4, color:selected?'rgba(233,196,106,.72)':'var(--g4)', fontWeight:700 }}>{modeTime}</div>
+                      </div>
                     </div>
+                    <div style={{ marginTop:10, display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:8 }}>
+                      <span style={{ fontSize:9, color:'var(--g4)', fontWeight:700 }}>{lang==='ar' ? 'تكلفة التوصيل' : 'Frais de livraison'}</span>
+                      <span style={{ fontSize:13, color:modeFee===0?'#22c55e':(modeFee!==null ? (selected ? '#C9A84C' : 'var(--g3)') : '#777'), fontWeight:900 }}>
+                        {modeFee===null
+                          ? (lang==='ar' ? 'اختر الولاية' : 'Choisir la wilaya')
+                          : modeFee===0
+                            ? (lang==='ar' ? 'مجاني' : 'Gratuit')
+                            : fmt(modeFee)}
+                      </span>
+                    </div>
+                    {selected && modeFee !== null && (
+                      <span style={{ marginTop:7, alignSelf:'flex-start', fontSize:8, fontWeight:900, letterSpacing:'.08em', textTransform:'uppercase', color:'#000', background:'#C9A84C', padding:'3px 6px', borderRadius:999 }}>
+                        {lang==='ar' ? 'مختار' : 'Sélectionné'}
+                      </span>
+                    )}
                   </button>
                 )
               })}
@@ -1190,7 +1223,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           .pp-info{padding-left:28px!important;padding-right:28px!important}
           .pp-sticky{left:50%!important;right:auto!important;width:min(720px,calc(100% - 40px));transform:translate(-50%,${stickyVisible ? '0' : '150%'})!important;border:1px solid rgba(201,168,76,.16);border-bottom:0;border-radius:18px 18px 0 0}
         }
+        .pp-delivery-card:hover{transform:translateY(-1px);border-color:rgba(201,168,76,.36)!important}
+        .pp-delivery-card:active{transform:scale(.99)}
         @media (max-width: 640px){
+          .pp-delivery-options{grid-template-columns:1fr!important}
           .pp-contact-grid{grid-template-columns:1fr!important}
           .pp-title{font-size:21px!important}
           .pp-price{font-size:29px!important}
