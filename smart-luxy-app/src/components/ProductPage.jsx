@@ -740,7 +740,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
 
           {/* ── Nom + Tel ── */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+          <div className="pp-contact-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
             <div>
               <label style={lbl}>{lang==='ar' ? 'الاسم الكامل *' : 'Nom complet *' }</label>
               <input placeholder="Votre nom" value={form.nom} onChange={e => setF('nom',e.target.value)} onFocus={handleFocusScroll} style={inp} />
@@ -1150,6 +1150,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           .pp-sticky{left:50%!important;right:auto!important;width:min(720px,calc(100% - 40px));transform:translate(-50%,${stickyVisible ? '0' : '150%'})!important;border:1px solid rgba(201,168,76,.16);border-bottom:0;border-radius:18px 18px 0 0}
         }
         @media (max-width: 640px){
+          .pp-contact-grid{grid-template-columns:1fr!important}
           .pp-title{font-size:21px!important}
           .pp-price{font-size:29px!important}
           .pp-save{font-size:9px!important;padding:4px 7px!important}
