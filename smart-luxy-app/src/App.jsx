@@ -8,7 +8,6 @@ import ProductGrid from './components/ProductGrid'
 import ProductPage from './components/ProductPage'
 import TrackingPage from './components/TrackingPage'
 import Cart from './components/Cart'
-import OrderModal from './components/OrderModal'
 import SuccessScreen from './components/SuccessScreen'
 import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
@@ -47,20 +46,11 @@ export default function App() {
   const [openProduct, setOpenProduct] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [trackingOpen, setTrackingOpen] = useState(false)
-  const [promoInfo, setPromoInfo] = useState(null)
-  const [orderItems, setOrderItems] = useState(null)
+  const [checkoutPromo, setCheckoutPromo] = useState(null)
+  const [checkoutItems, setCheckoutItems] = useState(null)
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
   const [politiqueTab, setPolitiqueTab] = useState(null)
-  const [showTopButton, setShowTopButton] = useState(false)
-
-  // Petit bouton de retour en haut, utile sur les longues pages mobiles.
-  useEffect(() => {
-    const onScroll = () => setShowTopButton(window.scrollY > 520)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    onScroll()
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -99,6 +89,8 @@ export default function App() {
       if (!hash.startsWith('#produit-')) {
         // L'utilisateur est revenu en arrière depuis la page produit → on la ferme
         setOpenProduct(null)
+        setCheckoutItems(null)
+        setCheckoutPromo(null)
       }
     }
     window.addEventListener('popstate', handlePopState)
@@ -216,10 +208,10 @@ export default function App() {
 
       notifyTelegram(order)
       setLastOrder(order)
-      setOrderItems(null)
+      setCheckoutItems(null)
       setCart([])
       setCartOpen(false)
-      setPromoInfo(null)
+      setCheckoutPromo(null)
       loadProducts()
       return true
     } catch (e) {
@@ -290,39 +282,7 @@ export default function App() {
 
   // ── Boutique ─────────────────────────────────────────
   return (
-    <>
-      <style>{`
-        html, body, #root {
-          width: 100%;
-          min-width: 0;
-          margin: 0;
-          padding: 0;
-        }
-
-        html {
-          scrollbar-width: none;
-        }
-
-        html::-webkit-scrollbar {
-          width: 0;
-          height: 0;
-        }
-
-        body {
-          overflow-x: hidden;
-        }
-
-        .app {
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          margin: 0;
-          padding: 0;
-          overflow-x: clip;
-        }
-      `}</style>
-
-      <div className="app">
+    <div className="app">
       <AnnouncementBar />
       <Header
         cartCount={cartCount}
@@ -340,61 +300,6 @@ export default function App() {
 
         <TrustMarquee />
 
-        {/* ── Pourquoi Wazyo ? ── */}
-        <section className="wz-why">
-          <div className="wz-why-head">
-            <span className="wz-why-kicker">POURQUOI WAZYO ?</span>
-            <h2>Simple. Clair. Pensé pour vous.</h2>
-            <p>Une expérience d’achat directe, avec les informations essentielles visibles dès le départ.</p>
-          </div>
-
-          <div className="wz-why-grid">
-            <div className="wz-why-card">
-              <div className="wz-why-icon">🚚</div>
-              <div>
-                <strong>Livraison partout</strong>
-                <span>Nous livrons dans les 69 wilayas.</span>
-              </div>
-            </div>
-
-            <div className="wz-why-card">
-              <div className="wz-why-icon">💳</div>
-              <div>
-                <strong>Paiement à la livraison</strong>
-                <span>Vous payez à la réception de votre commande.</span>
-              </div>
-            </div>
-
-            <div className="wz-why-card">
-              <div className="wz-why-icon">💬</div>
-              <div>
-                <strong>Support WhatsApp</strong>
-                <span>Une question ? Notre support reste accessible.</span>
-              </div>
-            </div>
-          </div>
-
-          <style>{`
-            .wz-why{width:100%;box-sizing:border-box;padding:46px 20px 18px;background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,0));}
-            .wz-why-head{max-width:920px;margin:0 auto 22px;text-align:center;}
-            .wz-why-kicker{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.18em;color:var(--br);margin-bottom:9px;}
-            .wz-why-head h2{margin:0;color:var(--g3);font-family:Georgia,'Times New Roman',serif;font-size:clamp(26px,5vw,42px);line-height:1.05;letter-spacing:-.03em;font-weight:600;}
-            .wz-why-head p{max-width:620px;margin:12px auto 0;color:var(--g4);font-size:12px;line-height:1.65;}
-            .wz-why-grid{max-width:920px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
-            .wz-why-card{display:flex;align-items:flex-start;gap:11px;padding:15px 14px;border:1px solid rgba(255,255,255,.075);border-radius:15px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.018));box-shadow:0 12px 30px rgba(0,0,0,.10);}
-            .wz-why-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex:0 0 38px;border-radius:11px;background:rgba(201,168,76,.10);border:1px solid rgba(201,168,76,.16);font-size:19px;}
-            .wz-why-card strong{display:block;color:var(--g3);font-size:12px;font-weight:900;line-height:1.25;margin-top:2px;}
-            .wz-why-card span{display:block;color:var(--g4);font-size:10px;line-height:1.45;margin-top:4px;}
-            @media(max-width:720px){
-              .wz-why{padding:34px 14px 12px;}
-              .wz-why-head{margin-bottom:16px;}
-              .wz-why-head p{font-size:11px;max-width:340px;}
-              .wz-why-grid{grid-template-columns:1fr;gap:8px;max-width:520px;}
-              .wz-why-card{padding:13px 12px;}
-            }
-          `}</style>
-        </section>
-
         {/* ── Recherche + badges (juste au-dessus des produits) ── */}
         <section id="collection" className="hero" style={{ minHeight:'auto', padding:'48px 20px 24px' }}>
           <div className="hero-badges">
@@ -403,240 +308,17 @@ export default function App() {
             <div className="hero-badge">✅ Qualité <span>garantie</span></div>
           </div>
 
-          <div className="wz-search-shell">
-            <div className="wz-search-label">RECHERCHER UN PRODUIT</div>
-            <div className={`wz-search-field${search ? ' has-value' : ''}`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input
-                aria-label="Rechercher un produit"
-                placeholder="Ex. : hachoir, écouteurs..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  type="button"
-                  className="wz-search-clear"
-                  aria-label="Effacer la recherche"
-                  onClick={() => setSearch('')}
-                >
-                  <span aria-hidden="true">×</span>
-                </button>
-              )}
-            </div>
-            {search && (
-              <div className="wz-search-meta">
-                <span>{filtered.length} résultat{filtered.length > 1 ? 's' : ''}</span>
-                <button type="button" onClick={() => setSearch('')}>Effacer la recherche</button>
-              </div>
-            )}
+          <div className="search-big">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              placeholder="Rechercher un produit..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
-
-          <style>{`
-            .wz-search-shell{
-              width:100%;
-              max-width:820px;
-              margin:24px auto 0;
-            }
-            .wz-search-label{
-              margin:0 0 8px 4px;
-              color:var(--g4);
-              font-size:9px;
-              font-weight:900;
-              letter-spacing:.16em;
-              text-transform:uppercase;
-            }
-            .wz-search-field{
-              position:relative;
-              display:flex;
-              align-items:center;
-              min-height:54px;
-              box-sizing:border-box;
-              gap:10px;
-              overflow:hidden;
-              border:1px solid rgba(255,255,255,.10);
-              border-radius:16px;
-              background:rgba(255,255,255,.035);
-              box-shadow:0 10px 30px rgba(0,0,0,.16);
-              transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
-            }
-            .wz-search-field:focus-within{
-              border-color:rgba(201,168,76,.40);
-              background:rgba(255,255,255,.045);
-              box-shadow:0 12px 34px rgba(0,0,0,.20), 0 0 0 3px rgba(201,168,76,.08);
-            }
-            .wz-search-field svg{
-              flex:0 0 auto;
-              width:18px;
-              height:18px;
-              margin-left:16px;
-              color:var(--g4);
-              opacity:.9;
-            }
-            .wz-search-field input{
-              flex:1;
-              min-width:0;
-              height:54px;
-              padding:0 52px 0 0;
-              box-sizing:border-box;
-              border:0;
-              outline:none;
-              background:transparent;
-              color:var(--g3);
-              font-size:13px;
-              font-weight:700;
-            }
-            .wz-search-field input::placeholder{color:var(--g4);opacity:.72;}
-            .wz-search-clear{
-              position:absolute;
-              right:10px;
-              top:50%;
-              width:32px;
-              height:32px;
-              transform:translateY(-50%);
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              border:1px solid rgba(255,255,255,.08);
-              border-radius:50%;
-              background:rgba(255,255,255,.035);
-              color:var(--g3);
-              cursor:pointer;
-              transition:transform .18s ease, background .18s ease, border-color .18s ease;
-            }
-            .wz-search-clear:hover{transform:translateY(-50%) scale(1.05);background:rgba(255,255,255,.07);border-color:rgba(201,168,76,.25);}
-            .wz-search-clear:active{transform:translateY(-50%) scale(.96);}
-            .wz-search-clear span{font-size:20px;line-height:1;font-weight:500;margin-top:-1px;}
-            .wz-search-meta{
-              display:flex;
-              justify-content:space-between;
-              align-items:center;
-              gap:12px;
-              margin-top:8px;
-              padding:0 4px;
-              color:var(--g4);
-              font-size:10px;
-              line-height:1.3;
-            }
-            .wz-search-meta button{
-              padding:0;
-              border:0;
-              background:transparent;
-              color:var(--br);
-              font:inherit;
-              font-weight:900;
-              cursor:pointer;
-            }
-            @media(max-width:640px){
-              .wz-search-shell{margin-top:20px;}
-              .wz-search-label{font-size:8px;margin-left:2px;}
-              .wz-search-field{min-height:52px;border-radius:14px;gap:9px;}
-              .wz-search-field input{height:52px;font-size:12px;padding-right:46px;}
-              .wz-search-field svg{margin-left:14px;width:17px;height:17px;}
-              .wz-search-clear{right:8px;width:30px;height:30px;}
-              .wz-search-meta{font-size:9px;}
-            }
-          `}</style>
         </section>
-
-        {/* ── En-tête de collection ── */}
-        <section className="wz-collection-head" aria-labelledby="collection-title">
-          <div className="wz-collection-copy">
-            <span className="wz-collection-kicker">LA COLLECTION WAZYO</span>
-            <h2 id="collection-title">{search ? 'Résultats de recherche' : 'Nos produits'}</h2>
-            <p>
-              {search
-                ? `${filtered.length} produit${filtered.length > 1 ? 's' : ''} trouvé${filtered.length > 1 ? 's' : ''}`
-                : 'Découvrez notre sélection de produits utiles, choisis pour votre quotidien.'}
-            </p>
-          </div>
-          {!search && (
-            <div className="wz-collection-count">
-              <strong>{filtered.length}</strong>
-              <span>produit{filtered.length > 1 ? 's' : ''}</span>
-            </div>
-          )}
-        </section>
-
-        <style>{`
-          .wz-collection-head{
-            width:100%;
-            box-sizing:border-box;
-            max-width:1180px;
-            margin:0 auto;
-            padding:10px 20px 18px;
-            display:flex;
-            align-items:flex-end;
-            justify-content:space-between;
-            gap:18px;
-          }
-          .wz-collection-copy{min-width:0;}
-          .wz-collection-kicker{
-            display:inline-block;
-            margin-bottom:8px;
-            color:var(--br);
-            font-size:9px;
-            font-weight:900;
-            letter-spacing:.17em;
-            text-transform:uppercase;
-          }
-          .wz-collection-copy h2{
-            margin:0;
-            color:var(--g3);
-            font-family:Georgia,'Times New Roman',serif;
-            font-size:clamp(28px,5vw,44px);
-            line-height:1;
-            letter-spacing:-.035em;
-            font-weight:600;
-          }
-          .wz-collection-copy p{
-            max-width:620px;
-            margin:9px 0 0;
-            color:var(--g4);
-            font-size:12px;
-            line-height:1.6;
-          }
-          .wz-collection-count{
-            flex:0 0 auto;
-            min-width:76px;
-            padding:10px 12px;
-            border:1px solid rgba(201,168,76,.18);
-            border-radius:12px;
-            background:rgba(201,168,76,.055);
-            text-align:center;
-          }
-          .wz-collection-count strong{
-            display:block;
-            color:var(--br);
-            font-size:18px;
-            line-height:1;
-            font-weight:900;
-          }
-          .wz-collection-count span{
-            display:block;
-            margin-top:4px;
-            color:var(--g4);
-            font-size:9px;
-            font-weight:800;
-            text-transform:uppercase;
-            letter-spacing:.08em;
-          }
-          @media(max-width:640px){
-            .wz-collection-head{
-              padding:4px 14px 14px;
-              align-items:flex-end;
-              gap:12px;
-            }
-            .wz-collection-copy h2{font-size:30px;}
-            .wz-collection-copy p{font-size:11px;}
-            .wz-collection-count{
-              min-width:64px;
-              padding:8px 9px;
-            }
-          }
-        `}</style>
 
         <ProductGrid
           products={filtered}
@@ -645,6 +327,8 @@ export default function App() {
           onCatChange={setActiveCat}
           loading={loading}
           onProductClick={(p) => {
+            setCheckoutItems(null)
+            setCheckoutPromo(null)
             setOpenProduct(p)
             window.history.pushState({}, '', '#produit-' + p.id)
             window.fbq && fbq('track', 'ViewContent', {
@@ -656,84 +340,96 @@ export default function App() {
             })
           }}
           onAddToCart={addToCart}
-          onBuyNow={p => setOrderItems([{ ...p, qty: 1 }])}
+          onBuyNow={p => {
+            setCheckoutItems([{ ...p, qty: 1 }])
+            setCheckoutPromo(null)
+            setOpenProduct(p)
+          }}
         />
       </main>
 
       {/* ════════════════════════════════════════
           GALERIE PRODUITS DÉFILANTE
       ════════════════════════════════════════ */}
-      {!openProduct && !cartOpen && !orderItems && !lastOrder && !trackingOpen && (
+      {!openProduct && !cartOpen && !checkoutItems && !lastOrder && !trackingOpen && (
         <ProductGallery products={products} onProductClick={setOpenProduct} />
       )}
 
-      <footer className="footer wz-footer-premium">
-        <style>{`
-          .wz-footer-premium{
-            position:relative;
-            overflow:hidden;
-            padding:58px 20px 26px!important;
-            border-top:1px solid rgba(201,168,76,.14);
-            background:
-              radial-gradient(circle at 50% 0%,rgba(201,168,76,.08),transparent 34%),
-              linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.005));
-          }
-          .wz-footer-premium::before{
-            content:'';
-            position:absolute;
-            left:50%;top:0;transform:translateX(-50%);
-            width:min(420px,70%);height:1px;
-            background:linear-gradient(90deg,transparent,rgba(201,168,76,.7),transparent);
-          }
-          .wz-footer-brand{font-family:Georgia,'Times New Roman',serif;font-size:34px;line-height:1;color:var(--g3);font-weight:700;letter-spacing:-.04em;}
-          .wz-footer-sub{max-width:520px;margin:10px auto 0;color:var(--g4);font-size:12px;line-height:1.7;}
-          .wz-footer-trust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:760px;margin:26px auto 0;}
-          .wz-footer-trust-item{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:8px 10px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.022);color:var(--g3);font-size:10px;font-weight:800;text-align:center;}
-          .wz-footer-links{display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap;margin-top:24px;}
-          .wz-footer-link{border:none;background:none;padding:0;color:var(--g4);font-size:11px;cursor:pointer;text-decoration:none;transition:color .2s ease;}
-          .wz-footer-link:hover{color:var(--br);}
-          .wz-footer-contact{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:20px;}
-          .wz-footer-contact a{display:inline-flex;align-items:center;gap:5px;padding:8px 11px;border:1px solid rgba(255,255,255,.07);border-radius:10px;color:var(--g3);font-size:11px;text-decoration:none;background:rgba(255,255,255,.018);transition:border-color .2s ease,transform .2s ease;}
-          .wz-footer-contact a:hover{border-color:rgba(201,168,76,.35);transform:translateY(-1px);}
-          .wz-footer-bottom{margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);color:var(--g4);font-size:10px;}
-          @media(max-width:640px){
-            .wz-footer-premium{padding:46px 14px 22px!important;}
-            .wz-footer-trust{grid-template-columns:1fr;max-width:420px;}
-            .wz-footer-brand{font-size:31px;}
-            .wz-footer-links{gap:12px 16px;}
-            .wz-footer-contact a{font-size:10px;padding:7px 9px;}
-          }
-        `}</style>
+      <footer className="footer">
+        <div className="fbn">Wazyo</div>
+        <p className="ftag">{CONFIG.slogan}</p>
 
-        <div className="wz-footer-brand">Wazyo</div>
-        <p className="wz-footer-sub">{CONFIG.slogan}</p>
-
-        <div className="wz-footer-trust" aria-label="Informations de service">
-          <div className="wz-footer-trust-item">🚚 69 wilayas</div>
-          <div className="wz-footer-trust-item">💳 Paiement à la livraison</div>
-          <div className="wz-footer-trust-item">💬 Support WhatsApp</div>
+        {/* Infos contact */}
+        <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:10, flexWrap:'wrap' }}>
+          <a href={`tel:+${CONFIG.telephone}`} style={{
+            color:'var(--g3)', fontSize:12, textDecoration:'none',
+            display:'flex', alignItems:'center', gap:4,
+          }}>📞 +{CONFIG.telephone}</a>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
+          <a href={`mailto:${CONFIG.email}`} style={{
+            color:'var(--g3)', fontSize:12, textDecoration:'none',
+            display:'flex', alignItems:'center', gap:4,
+          }}>✉️ {CONFIG.email}</a>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
+          <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noreferrer" style={{
+            color:'rgba(37,211,102,.5)', fontSize:12, textDecoration:'none',
+            display:'flex', alignItems:'center', gap:4,
+          }}>💬 WhatsApp</a>
         </div>
 
-        <div className="wz-footer-links">
-          <button className="wz-footer-link" onClick={() => setPolitiqueTab('confidentialite')}>🔒 Confidentialité</button>
-          <button className="wz-footer-link" onClick={() => setPolitiqueTab('retour')}>🔄 Politique de retour</button>
-          <button className="wz-footer-link" onClick={() => setTrackingOpen(true)}>📦 Suivre ma commande</button>
+        <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:12, flexWrap:'wrap' }}>
+          <button
+            onClick={() => setPolitiqueTab('confidentialite')}
+            style={{
+              background:'none', border:'none',
+              color:'var(--g3)', fontSize:12,
+              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
+              padding:0, transition:'color .2s',
+            }}
+            onMouseEnter={e => e.target.style.color = '#C9A84C'}
+            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
+          >
+            🔒 Politique de confidentialité
+          </button>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
+          <button
+            onClick={() => setPolitiqueTab('retour')}
+            style={{
+              background:'none', border:'none',
+              color:'var(--g3)', fontSize:12,
+              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
+              padding:0, transition:'color .2s',
+            }}
+            onMouseEnter={e => e.target.style.color = '#C9A84C'}
+            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
+          >
+            🔄 Politique de retour
+          </button>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
+          <button
+            onClick={() => setTrackingOpen(true)}
+            style={{
+              background:'none', border:'none',
+              color:'var(--g3)', fontSize:12,
+              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
+              padding:0, transition:'color .2s',
+            }}
+            onMouseEnter={e => e.target.style.color = '#C9A84C'}
+            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
+          >
+            📦 Suivre ma commande
+          </button>
         </div>
-
-        <div className="wz-footer-contact">
-          <a href={`tel:+${CONFIG.telephone}`}>📞 +{CONFIG.telephone}</a>
-          <a href={`mailto:${CONFIG.email}`}>✉️ {CONFIG.email}</a>
-          <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noreferrer">💬 WhatsApp</a>
-        </div>
-
-        <div className="wz-footer-bottom">
+        <p style={{ color:'var(--g3)', fontSize:11, marginTop:12 }}>
           © {new Date().getFullYear()} Wazyo · Tous droits réservés
-        </div>
+        </p>
       </footer>
 
       {/* Product detail */}
       <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={() => {
           setOpenProduct(null)
+          setCheckoutItems(null)
+          setCheckoutPromo(null)
           window.history.pushState({}, '', window.location.pathname)
         }} />
       {openProduct && (
@@ -741,23 +437,32 @@ export default function App() {
           product={openProduct}
           onClose={() => {
             setOpenProduct(null)
+            setCheckoutItems(null)
+            setCheckoutPromo(null)
             window.history.pushState({}, '', window.location.pathname)
           }}
           onAddToCart={(qty) => {
+            setCheckoutItems(null)
+            setCheckoutPromo(null)
             addToCart(openProduct, qty)
             setOpenProduct(null)
             window.history.pushState({}, '', window.location.pathname)
           }}
           allProducts={products}
           onBuyNow={(qty) => {
-            setOrderItems([{ ...openProduct, qty }])
-            setOpenProduct(null)
+            setCheckoutItems([{ ...openProduct, qty }])
+            setCheckoutPromo(null)
             window.history.pushState({}, '', window.location.pathname)
           }}
+          checkoutItems={checkoutItems}
+          checkoutOnly={!!checkoutItems}
+          promo={checkoutPromo}
           onSubmitOrder={async (form) => {
             const ok = await submitOrder(form)
             if (ok) {
               setOpenProduct(null)
+              setCheckoutItems(null)
+              setCheckoutPromo(null)
               window.history.pushState({}, '', window.location.pathname)
             }
             return ok
@@ -775,23 +480,19 @@ export default function App() {
         onClose={() => setCartOpen(false)}
         onRemove={removeFromCart}
         onChangeQty={changeQty}
-        onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart)
-            window.fbq && fbq('track', 'InitiateCheckout', {
-              value: cart.reduce((s,i) => s + i.prix * i.qty, 0),
-              currency: 'DZD',
-              num_items: cart.reduce((s,i) => s + i.qty, 0),
-            }) }}
+        onOrder={(promo, totalFinal) => {
+          if (!cart.length) return
+          setCartOpen(false)
+          setCheckoutPromo(promo || null)
+          setCheckoutItems(cart)
+          setOpenProduct(cart[0])
+          window.fbq && fbq('track', 'InitiateCheckout', {
+            value: cart.reduce((s,i) => s + i.prix * i.qty, 0),
+            currency: 'DZD',
+            num_items: cart.reduce((s,i) => s + i.qty, 0),
+          })
+        }}
       />
-
-      {/* Order modal */}
-      {orderItems && (
-        <OrderModal
-          items={orderItems}
-          promo={promoInfo}
-          onClose={() => { setOrderItems(null); setPromoInfo(null) }}
-          onSubmit={submitOrder}
-        />
-      )}
 
       {/* Success */}
       {lastOrder && (
@@ -814,44 +515,12 @@ export default function App() {
       <WAButton />
       <CookieConsent />
 
-      {showTopButton && !openProduct && !cartOpen && !orderItems && !lastOrder && !trackingOpen && !politiqueTab && (
-        <button
-          type="button"
-          aria-label="Revenir en haut"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          style={{
-            position:'fixed',
-            left:'16px',
-            bottom:'18px',
-            zIndex:180,
-            width:44,
-            height:44,
-            borderRadius:'50%',
-            border:'1px solid rgba(201,168,76,.35)',
-            background:'rgba(12,12,12,.90)',
-            color:'#E9C46A',
-            display:'flex',
-            alignItems:'center',
-            justifyContent:'center',
-            fontSize:19,
-            fontWeight:900,
-            cursor:'pointer',
-            boxShadow:'0 10px 28px rgba(0,0,0,.30)',
-            backdropFilter:'blur(12px)',
-            WebkitBackdropFilter:'blur(12px)',
-          }}
-        >
-          ↑
-        </button>
-      )}
-
       {/* Toasts */}
       <div className="toasts">
         {toasts.map(t => (
           <div key={t.id} className={`toast-msg ${t.type}`}>{t.msg}</div>
         ))}
       </div>
-      </div>
-    </>
+    </div>
   )
 }
