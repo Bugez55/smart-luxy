@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { supabase } from '../supabase'
 import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
 import { getSettings } from '../utils/useSettings'
 
@@ -283,12 +284,26 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
   const [telError, setTelError] = useState(false)
   const [telShake, setTelShake] = useState(false)
   const [freeShip, setFreeShip] = useState(null)
+  const [shippingRates, setShippingRates] = useState({})
+
+  async function loadShippingRates() {
+    const [{ data: rates }, settings] = await Promise.all([
+      supabase.from('shipping_rates').select('wilaya,bureau,domicile'),
+      getSettings(),
+    ])
+    const map = {}
+    for (const row of rates || []) map[row.wilaya] = { bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 }
+    setShippingRates(map)
+    const value = Number(settings?.free_ship)
+    setFreeShip(Number.isFinite(value) && value > 0 ? value : null)
+  }
 
   useEffect(() => {
-    getSettings().then(s => {
-      const value = Number(s.free_ship)
-      setFreeShip(Number.isFinite(value) && value > 0 ? value : null)
-    }).catch(() => {})
+    loadShippingRates().catch(() => {})
+    const onFocus = () => loadShippingRates().catch(() => {})
+    window.addEventListener('focus', onFocus)
+    const timer = window.setInterval(() => loadShippingRates().catch(() => {}), 30000)
+    return () => { window.removeEventListener('focus', onFocus); window.clearInterval(timer) }
   }, [])
 
   const t = T[lang]
@@ -296,7 +311,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
 
   const totalProduits = items.reduce((s, i) => s + Number(i.prix) * i.qty, 0)
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
-  const prixLiv = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][modeLiv] : null
+  const prixLiv = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][modeLiv] : null
   const fraisLivBase = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
   const fraisLiv = freeShip !== null && totalProduits >= freeShip ? 0 : fraisLivBase
   const totalFinal = totalProduits + (fraisLiv || 0)
