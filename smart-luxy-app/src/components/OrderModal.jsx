@@ -1,4 +1,4 @@
-getSettingsimport { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
 import { getSettings } from '../utils/useSettings'
