@@ -884,18 +884,19 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
 
           <style>{`@keyframes ppTelShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }`}</style>
 
-          <div className="pp-form-section-title pp-payment-title">
-            <div className="pp-form-section-icon">💳</div>
-            <div>
-              <div>{lang==='ar' ? 'طريقة الدفع' : 'Paiement'}</div>
-              <small>{lang==='ar' ? 'Choisis ton mode de paiement préféré' : 'Choisis ton mode de paiement préféré'}</small>
-            </div>
-          </div>
-
           {/* Adresse */}
-          {/* ── Mode de paiement ── */}
+          {/* ── Mode de paiement : affiché uniquement si un paiement en ligne est activé ── */}
           {(paiementInfo.ccp_actif || paiementInfo.baridimob_actif) && (
-            <div style={{ marginBottom:14 }}>
+            <>
+              <div className="pp-form-section-title pp-payment-title">
+                <div className="pp-form-section-icon">💳</div>
+                <div>
+                  <div>{lang==='ar' ? 'طريقة الدفع' : 'Paiement'}</div>
+                  <small>{lang==='ar' ? 'Choisis ton mode de paiement préféré' : 'Choisis ton mode de paiement préféré'}</small>
+                </div>
+              </div>
+
+              <div style={{ marginBottom:14 }}>
               <label style={lbl}>{lang==='ar' ? 'طريقة الدفع' : 'Mode de paiement'}</label>
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
 
@@ -1013,7 +1014,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                   </div>
                 )}
               </div>
-            </div>
+              </div>
+            </>
           )}
 
           {modeLiv==='domicile' && (
