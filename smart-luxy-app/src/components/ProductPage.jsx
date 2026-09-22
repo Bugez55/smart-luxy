@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../supabase'
 import DOMPurify from 'dompurify'
 import CountdownTimer from './CountdownTimer'
 import { WILAYAS, getCommunesByWilaya } from '../data/wilayas'
@@ -53,19 +54,36 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [communeSearch, setCommuneSearch] = useState('')
   const [stickyVisible, setStickyVisible] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [shippingRates, setShippingRates] = useState({})
+  const [freeShip, setFreeShip] = useState(null)
   const formRef = useRef()
   const topRef = useRef()
 
+  async function loadShippingRates() {
+    const [{ data: rates }, settings] = await Promise.all([
+      supabase.from('shipping_rates').select('wilaya,bureau,domicile'),
+      getSettings(),
+    ])
+    const map = {}
+    for (const row of rates || []) map[row.wilaya] = { bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 }
+    setShippingRates(map)
+    const fs = Number(settings?.free_ship)
+    setFreeShip(Number.isFinite(fs) && fs > 0 ? fs : null)
+    setPaiementInfo({
+      ccp:             settings?.ccp_numero       || '',
+      ccp_nom:         settings?.ccp_nom          || '',
+      baridimob:       settings?.baridimob_numero || '',
+      ccp_actif:       settings?.ccp_actif === 'true',
+      baridimob_actif: settings?.baridimob_actif === 'true',
+    })
+  }
+
   useEffect(() => {
-    getSettings().then(s => {
-      setPaiementInfo({
-        ccp:             s.ccp_numero       || '',
-        ccp_nom:         s.ccp_nom          || '',
-        baridimob:       s.baridimob_numero || '',
-        ccp_actif:       s.ccp_actif === 'true',
-        baridimob_actif: s.baridimob_actif === 'true',
-      })
-    }).catch(() => {})
+    loadShippingRates().catch(() => {})
+    const onFocus = () => loadShippingRates().catch(() => {})
+    window.addEventListener('focus', onFocus)
+    const timer = window.setInterval(() => loadShippingRates().catch(() => {}), 30000)
+    return () => { window.removeEventListener('focus', onFocus); window.clearInterval(timer) }
   }, [])
 
   const imgs = (() => { try { return typeof p.images==='string' ? JSON.parse(p.images) : (p.images||[]) } catch { return [] } })()
@@ -86,8 +104,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100-(p.prix/p.prix_old)*100) : 0
 
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
-  const prixLiv = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][modeLiv] : null
-  const fraisLiv = prixLiv !== null ? prixLiv : null
+  const prixLiv = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][modeLiv] : null
+  const fraisLivBase = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
+  const fraisLiv = freeShip !== null && currentPrix >= freeShip ? 0 : fraisLivBase
   const totalFinal = currentPrix + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
