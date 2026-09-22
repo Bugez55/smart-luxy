@@ -7,29 +7,7 @@ import { getSettings } from '../utils/useSettings'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
-const LIVRAISON = {
-  'Adrar':{bureau:1000,domicile:1600},'Chlef':{bureau:400,domicile:800},'Laghouat':{bureau:600,domicile:1100},
-  'Oum El Bouaghi':{bureau:400,domicile:950},'Batna':{bureau:400,domicile:950},'Béjaïa':{bureau:400,domicile:850},
-  'Biskra':{bureau:600,domicile:1100},'Béchar':{bureau:750,domicile:1400},'Blida':{bureau:400,domicile:800},
-  'Bouira':{bureau:400,domicile:850},'Tamanrasset':{bureau:1000,domicile:1800},'Tébessa':{bureau:600,domicile:1100},
-  'Tlemcen':{bureau:400,domicile:850},'Tiaret':{bureau:400,domicile:850},'Tizi Ouzou':{bureau:0,domicile:300},
-  'Alger':{bureau:300,domicile:750},'Djelfa':{bureau:600,domicile:1100},'Jijel':{bureau:400,domicile:950},
-  'Sétif':{bureau:400,domicile:900},'Saïda':{bureau:400,domicile:850},'Skikda':{bureau:400,domicile:950},
-  'Sidi Bel Abbès':{bureau:400,domicile:850},'Annaba':{bureau:400,domicile:900},'Guelma':{bureau:400,domicile:950},
-  'Constantine':{bureau:400,domicile:900},'Médéa':{bureau:400,domicile:850},'Mostaganem':{bureau:400,domicile:800},
-  "M'Sila":{bureau:400,domicile:900},'Mascara':{bureau:400,domicile:850},'Ouargla':{bureau:750,domicile:1200},
-  'Oran':{bureau:400,domicile:850},'El Bayadh':{bureau:400,domicile:900},'Illizi':{bureau:1500,domicile:1900},
-  'Bordj Bou Arréridj':{bureau:400,domicile:900},'Boumerdès':{bureau:400,domicile:850},'El Tarf':{bureau:400,domicile:1000},
-  'Tindouf':{bureau:1500,domicile:1900},'Tissemsilt':{bureau:400,domicile:850},'El Oued':{bureau:750,domicile:1200},
-  'Khenchela':{bureau:600,domicile:1000},'Souk Ahras':{bureau:600,domicile:1000},'Tipaza':{bureau:400,domicile:850},
-  'Mila':{bureau:400,domicile:950},'Aïn Defla':{bureau:400,domicile:850},'Naâma':{bureau:600,domicile:1200},
-  'Aïn Témouchent':{bureau:400,domicile:850},'Ghardaïa':{bureau:750,domicile:1200},'Relizane':{bureau:400,domicile:800},
-  'Timimoun':{bureau:1000,domicile:1600},'Touggourt':{bureau:750,domicile:1200},'Djanet':{bureau:1500,domicile:1900},
-  'In Salah':{bureau:1000,domicile:1800},'In Guezzam':{bureau:1500,domicile:1900},
-  'Bordj Badji Mokhtar':{bureau:1500,domicile:1900},'Ouled Djellal':{bureau:600,domicile:1100},
-}
-
-export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique }) {
+export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutItems = null, checkoutOnly = false, promo = null }) {
   const [openFaq, setOpenFaq] = useState(null)
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('ar')
@@ -104,10 +82,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100-(p.prix/p.prix_old)*100) : 0
 
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
+  const productSubtotal = activeBundle ? Number(activeBundle.prix) : Number(p.prix) * qty
+  const checkoutSubtotal = checkoutOnly && Array.isArray(checkoutItems)
+    ? checkoutItems.reduce((sum, item) => sum + Number(item.prix || 0) * Number(item.qty || 0), 0)
+    : productSubtotal
   const prixLiv = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][modeLiv] : null
   const fraisLivBase = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
-  const fraisLiv = freeShip !== null && currentPrix >= freeShip ? 0 : fraisLivBase
-  const totalFinal = currentPrix + (fraisLiv || 0)
+  const fraisLiv = freeShip !== null && checkoutSubtotal >= freeShip ? 0 : fraisLivBase
+  const totalFinal = checkoutSubtotal + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
   const filteredWilayas = wilayasOptions.filter(opt => {
@@ -266,18 +248,22 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     if (!isValidTel(form.tel)) { setTelError(true); setTelShake(true); setTimeout(() => setTelShake(false), 500); return }
     // Anti-bot honeypot — si ce champ caché est rempli, c'est un robot
     if (form.website) { console.warn('Bot détecté'); return }
-    if (hasBundles && selectedBundle === null) return
+    if (!checkoutOnly && hasBundles && selectedBundle === null) return
     setOrdering(true)
     const prixUnit = activeBundle ? Math.round(activeBundle.prix / activeBundle.qty) : p.prix
+    const submitItems = checkoutOnly && Array.isArray(checkoutItems)
+      ? checkoutItems
+      : [{ ...p, qty: currentQty, prix: prixUnit }]
     try {
       await onSubmitOrder({
         ...form,
-        items: [{ ...p, qty: currentQty, prix: prixUnit }],
+        items: submitItems,
         mode_livraison: modeLiv,
         mode_paiement:  modePaiement,
         preuve_paiement: preuvePaiement || null,
         frais_livraison: fraisLiv || 0,
         total: totalFinal,
+        promo_code: promo?.code || null,
       })
     } finally {
       setOrdering(false)
@@ -293,262 +279,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   }
   const lbl = { fontSize:11, fontWeight:800, color:'var(--g3)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
 
-  const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null)
-
-  return (
-    <div className="pp-root" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background: p.card_color || 'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
-
-      {/* ── Header sticky ── */}
-      <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(8,8,8,.90)', backdropFilter:'blur(24px) saturate(150%)', WebkitBackdropFilter:'blur(24px) saturate(150%)', borderBottom:'1px solid rgba(201,168,76,.18)', boxShadow:'0 10px 30px rgba(0,0,0,.18)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
-        <div aria-hidden="true" style={{ position:'absolute', left:0, right:0, bottom:-1, height:2, background:'rgba(255,255,255,.06)', overflow:'hidden' }}>
-          <div style={{ width:`${scrollProgress}%`, height:'100%', background:'linear-gradient(90deg,#C9A84C,#E9C46A)', boxShadow:'0 0 10px rgba(201,168,76,.45)', transition:'width .12s linear' }} />
-        </div>
-        <button onClick={onClose} style={{ background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
-        <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
-        {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
-      </div>
-
-      <div className="pp-page">
-
-      {/* ── Carrousel images en haut — swipe gauche/droite ── */}
-      {imgs.length > 0 ? (
-        <div ref={topRef} data-img-swipe className="pp-media" style={{ position:'relative', background:'var(--card)', lineHeight:0 }}>
-          {/* Image affichée */}
-          <img
-            key={imgIdx}
-            src={imgs[imgIdx]?.url || mainImg}
-            alt={p.nom}
-            style={{ width:'100%', maxHeight:380, objectFit:'cover', display:'block', animation:'imgIn .2s ease' }}
-            onClick={() => setLb(true)}
-          />
-          {/* Flèches */}
-          {imgs.length > 1 && <>
-            <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i-1+imgs.length)%imgs.length) }}
-              style={{ position:'absolute', left:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>‹</button>
-            <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i+1)%imgs.length) }}
-              style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>›</button>
-            {/* Points */}
-            <div style={{ position:'absolute', bottom:10, left:'50%', transform:'translateX(-50%)', display:'flex', gap:5, zIndex:3 }}>
-              {imgs.map((_,i) => (
-                <div key={i} onClick={() => setImgIdx(i)} style={{ width:i===imgIdx?18:6, height:6, borderRadius:3, background:i===imgIdx?'#C9A84C':'var(--g3)', transition:'all .25s', cursor:'pointer' }} />
-              ))}
-            </div>
-          </>}
-          {outOfStock && <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fca5a5' }}>ÉPUISÉ</div>}
-          {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:32, left:10, background:'rgba(239,68,68,.92)', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'3px 8px', borderRadius:6 }}>🔥 Plus que {p.stock}</div>}
-          {imgs.length > 1 && <div style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.55)', color:'var(--g3)', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20, zIndex:3 }}>{imgIdx+1}/{imgs.length}</div>}
-        </div>
-      ) : (
-        <div ref={topRef} className="pp-media pp-media-empty" style={{ height:280, background:'var(--card)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <span style={{ fontSize:80 }}>{p.emoji||'📦'}</span>
-        </div>
-      )}
-
-      {/* Miniatures scrollables */}
-      {imgs.length > 1 && (
-        <div style={{ display:'flex', gap:6, padding:'8px 12px', overflowX:'auto', scrollbarWidth:'none', background:'var(--card)' }}>
-          {imgs.map((img, i) => (
-            <div key={i} onClick={() => setImgIdx(i)} style={{ width:60, height:60, borderRadius:8, overflow:'hidden', border:`2px solid ${imgIdx===i?'#C9A84C':'var(--g3)'}`, cursor:'pointer', flexShrink:0, transition:'all .2s', transform:imgIdx===i?'scale(1.06)':'scale(1)' }}>
-              <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Vidéo produit si disponible ── */}
-      {p.video_url && (() => {
-        const embed = getEmbedUrl(p.video_url)
-        if (!embed) return null
-
-        if (embed.type === 'external') {
-          const isTikTok = embed.src.includes('tiktok')
-          const isInsta  = embed.src.includes('instagram')
-          const icon = isTikTok ? '🎵' : isInsta ? '📸' : '▶️'
-          const platform = isTikTok ? 'TikTok' : isInsta ? 'Instagram' : 'Voir la vidéo'
-          const color = isTikTok ? 'rgba(0,0,0,.8)' : isInsta ? 'rgba(131,58,180,.3)' : 'rgba(255,0,0,.1)'
-          const borderColor = isTikTok ? 'var(--g3)' : isInsta ? 'rgba(131,58,180,.4)' : 'rgba(255,0,0,.2)'
-          return (
-            <a href={embed.src} target="_blank" rel="noreferrer"
-              style={{ display:'flex', alignItems:'center', gap:12, padding:'16px', background:color, border:`1px solid ${borderColor}`, margin:'0 12px', borderRadius:14, textDecoration:'none', flexShrink:0 }}>
-              <div style={{ width:52, height:52, borderRadius:12, background:'rgba(128,128,128,.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>{icon}</div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:14, fontWeight:900, color:'var(--g3)', marginBottom:3 }}>Voir la vidéo {platform}</div>
-                <div style={{ fontSize:11, color:'var(--g3)', lineHeight:1.4 }}>Appuie pour regarder la vidéo du produit sur {platform}</div>
-              </div>
-              <div style={{ fontSize:20, color:'var(--g3)', flexShrink:0 }}>›</div>
-            </a>
-          )
-        }
-
-        return (
-          <div style={{ flexShrink:0 }}>
-            <div style={{ background:'var(--bk)', position:'relative', paddingBottom: embed.type==='tiktok' ? '177%' : '56.25%', overflow:'hidden' }}>
-              <iframe
-                src={embed.src}
-                style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
-                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                loading="lazy"
-              />
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* ── Infos produit ── */}
-      <div className="pp-info" style={{ padding:'18px 16px 0' }}>
-        <h1 className="pp-title" style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'var(--g3)', lineHeight:1.3 }}>{p.nom}</h1>
-
-        {/* Étoiles + commandes */}
-        {(p.note_etoiles || p.nb_commandes > 0) && (
-          <div className="pp-meta" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14, flexWrap:'wrap' }}>
-            {p.note_etoiles && (
-              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                {[1,2,3,4,5].map(i => (
-                  <span key={i} style={{ fontSize:16, color: i <= Math.round(p.note_etoiles) ? '#F9A825' : 'var(--g3)' }}>★</span>
-                ))}
-                <span style={{ fontSize:13, fontWeight:800, color:'#F9A825', marginLeft:3 }}>{Number(p.note_etoiles).toFixed(1)}</span>
-              </div>
-            )}
-            {p.nb_commandes > 0 && (
-              <div style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(201,168,76,.08)', border:'1px solid rgba(201,168,76,.2)', borderRadius:20, padding:'3px 10px' }}>
-                <span style={{ fontSize:13 }}>📦</span>
-                <span style={{ fontSize:12, fontWeight:800, color:'var(--g3)' }}>{p.nb_commandes.toLocaleString()} commandes</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Prix + bouton Commander immédiat */}
-        <div className="pp-price-row" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:14, flexWrap:'wrap' }}>
-          <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
-            <span className="pp-price" style={{ fontSize:32, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
-            {p.prix_old && p.prix_old > p.prix && <>
-              <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
-              <span className="pp-discount" style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:900, padding:'4px 9px', borderRadius:999 }}>-{disc}%</span>
-              <span className="pp-save" style={{ background:'rgba(34,197,94,.10)', border:'1px solid rgba(34,197,94,.22)', color:'#86efac', fontSize:10, fontWeight:900, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>Économisez {fmt(p.prix_old - p.prix)}</span>
-            </>}
-          </div>
-          {!outOfStock && (
-            <button
-              onClick={() => formRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })}
-              style={{
-                background:'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:10,
-                padding:'11px 20px', color:'#000', fontSize:13, fontWeight:900, cursor:'pointer',
-                whiteSpace:'nowrap', flexShrink:0,
-              }}
-            >{lang==='ar' ? '🛒 اطلب الآن' : '🛒 Commander'}</button>
-          )}
-        </div>
-
-        <div className="pp-trust-grid">
-          <div className="pp-trust-item"><span>🚚</span><div><strong>69 wilayas</strong><small>Livraison nationale</small></div></div>
-          <div className="pp-trust-item"><span>💳</span><div><strong>Paiement à la livraison</strong><small>Simple et pratique</small></div></div>
-          <div className="pp-trust-item"><span>✅</span><div><strong>Commande sécurisée</strong><small>Validation par téléphone</small></div></div>
-        </div>
-
-        {/* 🔥 Barre de progression stock — urgence */}
-        {p.stock_initial > 0 && p.stock !== null && p.stock !== undefined && (() => {
-          const vendus = Math.max(0, p.stock_initial - p.stock)
-          const pct = Math.min(100, Math.round((vendus / p.stock_initial) * 100))
-          if (vendus <= 0) return null
-          return (
-            <div style={{ marginBottom:14, background:'rgba(239,68,68,.06)', border:'1px solid rgba(239,68,68,.2)', borderRadius:12, padding:'10px 14px' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                <span style={{ fontSize:12, fontWeight:800, color:'#fca5a5' }}>🔥 {vendus} vendus sur {p.stock_initial}</span>
-                <span style={{ fontSize:11, fontWeight:700, color:'var(--g4)' }}>{pct}%</span>
-              </div>
-              <div style={{ height:7, background:'rgba(255,255,255,.08)', borderRadius:4, overflow:'hidden' }}>
-                <div style={{
-                  height:'100%', width:`${pct}%`,
-                  background:'linear-gradient(90deg,#f97316,#ef4444)',
-                  borderRadius:4, transition:'width .5s ease',
-                  animation: pct >= 70 ? 'stockGlow 1.8s ease-in-out infinite' : 'none',
-                }} />
-              </div>
-            </div>
-          )
-        })()}
-
-        {/* Disponibilité réelle */}
-        {!outOfStock && (
-          <div style={{ display:'inline-flex', alignItems:'center', gap:7, marginBottom:10, padding:'6px 10px', borderRadius:999, background:'rgba(34,197,94,.08)', border:'1px solid rgba(34,197,94,.2)' }}>
-            <span style={{ width:7, height:7, borderRadius:'50%', background:'#22c55e', boxShadow:'0 0 0 4px rgba(34,197,94,.08)', flexShrink:0 }} />
-            <span style={{ fontSize:11, color:'#86efac', fontWeight:800 }}>
-              {p.stock !== null && p.stock !== undefined ? `Disponible — ${p.stock} en stock` : 'Disponible maintenant'}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* ── Description ── */}
-      {p.description && (
-        <div className="pp-section pp-description" style={{ padding:'0 16px 16px' }}>
-          <div style={{ fontSize:14, color:'var(--g3)', lineHeight:1.8 }}
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description || '') }} />
-        </div>
-      )}
-
-      {/* ── Caractéristiques ── */}
-      {specs.length > 0 && (
-        <div className="pp-section pp-specs" style={{ padding:'0 16px 16px' }}>
-          {specs.map((s,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
-              <span style={{ color:'var(--br)', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
-              <span style={{ color:'var(--g3)', fontSize:14, lineHeight:1.5 }}>{s}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── GALERIE VERTICALE — photos séparées du carrousel ── */}
-      {imgsGallery.length > 0 && (
-        <div className="pp-gallery" style={{ lineHeight:0, margin:0, padding:0 }}>
-          {imgsGallery.map((img, i) => (
-            <img
-              key={i}
-              src={img.url}
-              alt=""
-              loading="lazy"
-              style={{
-                width:'100%',
-                display:'block',
-                objectFit: img.type === 'gif' ? 'contain' : 'cover',
-                margin:0, padding:0, lineHeight:0,
-                background: img.type === 'gif' ? '#000' : 'transparent',
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* ── FAQ ── */}
-      {faq.length > 0 && (
-        <div className="pp-section pp-faq" style={{ padding:'0 16px 16px' }}>
-          <h3 style={{ fontSize:16, fontWeight:900, color:'var(--g3)', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
-          {faq.map((item,i) => {
-            const isOpen = openFaq === i
-            return (
-              <div key={i} className={`pp-faq-item${isOpen ? ' is-open' : ''}`}>
-                <button
-                  className="pp-faq-q"
-                  onClick={() => setOpenFaq(isOpen ? null : i)}
-                  aria-expanded={isOpen}
-                >
-                  <span>{item.q}</span>
-                  <span className="pp-faq-chevron" aria-hidden="true">⌄</span>
-                </button>
-                {isOpen && (
-                  <div className="pp-faq-a">
-                    {item.r}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
+  const renderOrderForm = () => (
+    <>
       {/* ══════════════════════════════════════════
           FORMULAIRE DE COMMANDE — style MarketDZ
       ══════════════════════════════════════════ */}
@@ -568,6 +300,17 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         </div>
 
         <div style={{ padding:16 }}>
+
+          {checkoutOnly && Array.isArray(checkoutItems) && checkoutItems.length > 0 && (
+            <div style={{ background:'var(--card2)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'10px 12px', marginBottom:14 }}>
+              {checkoutItems.map((item, i) => (
+                <div key={`${item.id}-${i}`} style={{ display:'flex', justifyContent:'space-between', gap:10, fontSize:12, marginBottom:i < checkoutItems.length - 1 ? 6 : 0 }}>
+                  <span style={{ color:'var(--g3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.nom} ×{item.qty}</span>
+                  <span style={{ color:'var(--br)', fontWeight:800, flexShrink:0 }}>{fmt(Number(item.prix) * Number(item.qty))}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* ── Progression de commande ── */}
           {(() => {
@@ -593,7 +336,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           })()}
 
           {/* ── PACKS / BUNDLES ── */}
-          {hasBundles && (
+          {!checkoutOnly && hasBundles && (
             <div style={{ marginBottom:18 }}>
               <div style={lbl}>Choisir une offre</div>
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -630,7 +373,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           )}
 
           {/* Quantité si pas de bundles */}
-          {!hasBundles && (
+          {!checkoutOnly && !hasBundles && (
             <div className="pp-qty-block" style={{ marginBottom:14 }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:7 }}>
                 <label style={{ ...lbl, marginBottom:0 }}>{lang==='ar' ? 'الكمية' : 'Quantité' }</label>
@@ -685,7 +428,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             <div className="pp-delivery-options" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {['domicile','bureau'].map(mode => {
                 const selected = modeLiv === mode
-                const modeFee = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][mode] : null
+                const modeFee = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][mode] : null
                 const modeLabel = mode==='domicile'
                   ? (lang==='ar' ? 'التوصيل للمنزل' : 'À domicile')
                   : (lang==='ar' ? 'الاستلام من المكتب' : 'Retrait bureau')
@@ -1048,7 +791,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {form.wilaya && (
             <div style={{ background:'rgba(201,168,76,.08)', borderRadius:12, padding:'12px 14px', marginBottom:16, border:'1px solid rgba(201,168,76,.25)' }}>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:6 }}>
-                <span>🛍️ Prix produit</span><span>{fmt(currentPrix)}</span>
+                <span>🛍️ Prix produit</span><span>{fmt(checkoutSubtotal)}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:8 }}>
                 <span>🚚 Frais livraison</span>
@@ -1107,6 +850,285 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
         </div>
       </div>
+
+    </>
+  )
+
+  const canOrder = form.nom && form.tel && form.wilaya && form.commune && (checkoutOnly ? Array.isArray(checkoutItems) && checkoutItems.length > 0 : !outOfStock && (!hasBundles || selectedBundle !== null))
+
+  if (checkoutOnly) {
+    return (
+      <div className="pp-root" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:400, background: p.card_color || 'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+        <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(8,8,8,.94)', backdropFilter:'blur(24px) saturate(150%)', WebkitBackdropFilter:'blur(24px) saturate(150%)', borderBottom:'1px solid rgba(201,168,76,.18)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
+          <button onClick={onClose} style={{ background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:13, color:'var(--g3)', fontWeight:800 }}>{lang==='ar' ? 'تأكيد الطلب' : 'Finaliser la commande'}</div>
+            <div style={{ fontSize:10, color:'var(--g4)', marginTop:2 }}>{lang==='ar' ? 'نفس نموذج الطلب في كل Wazyo' : 'Un seul formulaire de commande Wazyo'}</div>
+          </div>
+          <span style={{ fontSize:10, color:'#86efac', fontWeight:800 }}>COD</span>
+        </div>
+        <div style={{ maxWidth:720, margin:'0 auto', padding:'14px 0 32px' }}>
+          {renderOrderForm()}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="pp-root" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background: p.card_color || 'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+
+      {/* ── Header sticky ── */}
+      <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(8,8,8,.90)', backdropFilter:'blur(24px) saturate(150%)', WebkitBackdropFilter:'blur(24px) saturate(150%)', borderBottom:'1px solid rgba(201,168,76,.18)', boxShadow:'0 10px 30px rgba(0,0,0,.18)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
+        <div aria-hidden="true" style={{ position:'absolute', left:0, right:0, bottom:-1, height:2, background:'rgba(255,255,255,.06)', overflow:'hidden' }}>
+          <div style={{ width:`${scrollProgress}%`, height:'100%', background:'linear-gradient(90deg,#C9A84C,#E9C46A)', boxShadow:'0 0 10px rgba(201,168,76,.45)', transition:'width .12s linear' }} />
+        </div>
+        <button onClick={onClose} style={{ background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
+        <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
+        {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
+      </div>
+
+      <div className="pp-page">
+
+      {/* ── Carrousel images en haut — swipe gauche/droite ── */}
+      {imgs.length > 0 ? (
+        <div ref={topRef} data-img-swipe className="pp-media" style={{ position:'relative', background:'var(--card)', lineHeight:0 }}>
+          {/* Image affichée */}
+          <img
+            key={imgIdx}
+            src={imgs[imgIdx]?.url || mainImg}
+            alt={p.nom}
+            style={{ width:'100%', maxHeight:380, objectFit:'cover', display:'block', animation:'imgIn .2s ease' }}
+            onClick={() => setLb(true)}
+          />
+          {/* Flèches */}
+          {imgs.length > 1 && <>
+            <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i-1+imgs.length)%imgs.length) }}
+              style={{ position:'absolute', left:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>‹</button>
+            <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i+1)%imgs.length) }}
+              style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'rgba(0,0,0,.55)', border:'none', borderRadius:'50%', width:36, height:36, color:'var(--g3)', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:3 }}>›</button>
+            {/* Points */}
+            <div style={{ position:'absolute', bottom:10, left:'50%', transform:'translateX(-50%)', display:'flex', gap:5, zIndex:3 }}>
+              {imgs.map((_,i) => (
+                <div key={i} onClick={() => setImgIdx(i)} style={{ width:i===imgIdx?18:6, height:6, borderRadius:3, background:i===imgIdx?'#C9A84C':'var(--g3)', transition:'all .25s', cursor:'pointer' }} />
+              ))}
+            </div>
+          </>}
+          {outOfStock && <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fca5a5' }}>ÉPUISÉ</div>}
+          {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:32, left:10, background:'rgba(239,68,68,.92)', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'3px 8px', borderRadius:6 }}>🔥 Plus que {p.stock}</div>}
+          {imgs.length > 1 && <div style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.55)', color:'var(--g3)', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20, zIndex:3 }}>{imgIdx+1}/{imgs.length}</div>}
+        </div>
+      ) : (
+        <div ref={topRef} className="pp-media pp-media-empty" style={{ height:280, background:'var(--card)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <span style={{ fontSize:80 }}>{p.emoji||'📦'}</span>
+        </div>
+      )}
+
+      {/* Miniatures scrollables */}
+      {imgs.length > 1 && (
+        <div style={{ display:'flex', gap:6, padding:'8px 12px', overflowX:'auto', scrollbarWidth:'none', background:'var(--card)' }}>
+          {imgs.map((img, i) => (
+            <div key={i} onClick={() => setImgIdx(i)} style={{ width:60, height:60, borderRadius:8, overflow:'hidden', border:`2px solid ${imgIdx===i?'#C9A84C':'var(--g3)'}`, cursor:'pointer', flexShrink:0, transition:'all .2s', transform:imgIdx===i?'scale(1.06)':'scale(1)' }}>
+              <img src={img.url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Vidéo produit si disponible ── */}
+      {p.video_url && (() => {
+        const embed = getEmbedUrl(p.video_url)
+        if (!embed) return null
+
+        if (embed.type === 'external') {
+          const isTikTok = embed.src.includes('tiktok')
+          const isInsta  = embed.src.includes('instagram')
+          const icon = isTikTok ? '🎵' : isInsta ? '📸' : '▶️'
+          const platform = isTikTok ? 'TikTok' : isInsta ? 'Instagram' : 'Voir la vidéo'
+          const color = isTikTok ? 'rgba(0,0,0,.8)' : isInsta ? 'rgba(131,58,180,.3)' : 'rgba(255,0,0,.1)'
+          const borderColor = isTikTok ? 'var(--g3)' : isInsta ? 'rgba(131,58,180,.4)' : 'rgba(255,0,0,.2)'
+          return (
+            <a href={embed.src} target="_blank" rel="noreferrer"
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'16px', background:color, border:`1px solid ${borderColor}`, margin:'0 12px', borderRadius:14, textDecoration:'none', flexShrink:0 }}>
+              <div style={{ width:52, height:52, borderRadius:12, background:'rgba(128,128,128,.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>{icon}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:14, fontWeight:900, color:'var(--g3)', marginBottom:3 }}>Voir la vidéo {platform}</div>
+                <div style={{ fontSize:11, color:'var(--g3)', lineHeight:1.4 }}>Appuie pour regarder la vidéo du produit sur {platform}</div>
+              </div>
+              <div style={{ fontSize:20, color:'var(--g3)', flexShrink:0 }}>›</div>
+            </a>
+          )
+        }
+
+        return (
+          <div style={{ flexShrink:0 }}>
+            <div style={{ background:'var(--bk)', position:'relative', paddingBottom: embed.type==='tiktok' ? '177%' : '56.25%', overflow:'hidden' }}>
+              <iframe
+                src={embed.src}
+                style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Infos produit ── */}
+      <div className="pp-info" style={{ padding:'18px 16px 0' }}>
+        <h1 className="pp-title" style={{ margin:'0 0 10px', fontSize:20, fontWeight:900, color:'var(--g3)', lineHeight:1.3 }}>{p.nom}</h1>
+
+        {/* Étoiles + commandes */}
+        {(p.note_etoiles || p.nb_commandes > 0) && (
+          <div className="pp-meta" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+            {p.note_etoiles && (
+              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                {[1,2,3,4,5].map(i => (
+                  <span key={i} style={{ fontSize:16, color: i <= Math.round(p.note_etoiles) ? '#F9A825' : 'var(--g3)' }}>★</span>
+                ))}
+                <span style={{ fontSize:13, fontWeight:800, color:'#F9A825', marginLeft:3 }}>{Number(p.note_etoiles).toFixed(1)}</span>
+              </div>
+            )}
+            {p.nb_commandes > 0 && (
+              <div style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(201,168,76,.08)', border:'1px solid rgba(201,168,76,.2)', borderRadius:20, padding:'3px 10px' }}>
+                <span style={{ fontSize:13 }}>📦</span>
+                <span style={{ fontSize:12, fontWeight:800, color:'var(--g3)' }}>{p.nb_commandes.toLocaleString()} commandes</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Prix + bouton Commander immédiat */}
+        <div className="pp-price-row" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:14, flexWrap:'wrap' }}>
+          <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
+            <span className="pp-price" style={{ fontSize:32, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
+            {p.prix_old && p.prix_old > p.prix && <>
+              <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
+              <span className="pp-discount" style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:900, padding:'4px 9px', borderRadius:999 }}>-{disc}%</span>
+              <span className="pp-save" style={{ background:'rgba(34,197,94,.10)', border:'1px solid rgba(34,197,94,.22)', color:'#86efac', fontSize:10, fontWeight:900, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>Économisez {fmt(p.prix_old - p.prix)}</span>
+            </>}
+          </div>
+          {!outOfStock && (
+            <button
+              onClick={() => formRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })}
+              style={{
+                background:'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:10,
+                padding:'11px 20px', color:'#000', fontSize:13, fontWeight:900, cursor:'pointer',
+                whiteSpace:'nowrap', flexShrink:0,
+              }}
+            >{lang==='ar' ? '🛒 اطلب الآن' : '🛒 Commander'}</button>
+          )}
+        </div>
+
+        <div className="pp-trust-grid">
+          <div className="pp-trust-item"><span>🚚</span><div><strong>69 wilayas</strong><small>Livraison nationale</small></div></div>
+          <div className="pp-trust-item"><span>💳</span><div><strong>Paiement à la livraison</strong><small>Simple et pratique</small></div></div>
+          <div className="pp-trust-item"><span>✅</span><div><strong>Commande sécurisée</strong><small>Validation par téléphone</small></div></div>
+        </div>
+
+        {/* 🔥 Barre de progression stock — urgence */}
+        {p.stock_initial > 0 && p.stock !== null && p.stock !== undefined && (() => {
+          const vendus = Math.max(0, p.stock_initial - p.stock)
+          const pct = Math.min(100, Math.round((vendus / p.stock_initial) * 100))
+          if (vendus <= 0) return null
+          return (
+            <div style={{ marginBottom:14, background:'rgba(239,68,68,.06)', border:'1px solid rgba(239,68,68,.2)', borderRadius:12, padding:'10px 14px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                <span style={{ fontSize:12, fontWeight:800, color:'#fca5a5' }}>🔥 {vendus} vendus sur {p.stock_initial}</span>
+                <span style={{ fontSize:11, fontWeight:700, color:'var(--g4)' }}>{pct}%</span>
+              </div>
+              <div style={{ height:7, background:'rgba(255,255,255,.08)', borderRadius:4, overflow:'hidden' }}>
+                <div style={{
+                  height:'100%', width:`${pct}%`,
+                  background:'linear-gradient(90deg,#f97316,#ef4444)',
+                  borderRadius:4, transition:'width .5s ease',
+                  animation: pct >= 70 ? 'stockGlow 1.8s ease-in-out infinite' : 'none',
+                }} />
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Disponibilité réelle */}
+        {!outOfStock && (
+          <div style={{ display:'inline-flex', alignItems:'center', gap:7, marginBottom:10, padding:'6px 10px', borderRadius:999, background:'rgba(34,197,94,.08)', border:'1px solid rgba(34,197,94,.2)' }}>
+            <span style={{ width:7, height:7, borderRadius:'50%', background:'#22c55e', boxShadow:'0 0 0 4px rgba(34,197,94,.08)', flexShrink:0 }} />
+            <span style={{ fontSize:11, color:'#86efac', fontWeight:800 }}>
+              {p.stock !== null && p.stock !== undefined ? `Disponible — ${p.stock} en stock` : 'Disponible maintenant'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Description ── */}
+      {p.description && (
+        <div className="pp-section pp-description" style={{ padding:'0 16px 16px' }}>
+          <div style={{ fontSize:14, color:'var(--g3)', lineHeight:1.8 }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description || '') }} />
+        </div>
+      )}
+
+      {/* ── Caractéristiques ── */}
+      {specs.length > 0 && (
+        <div className="pp-section pp-specs" style={{ padding:'0 16px 16px' }}>
+          {specs.map((s,i) => (
+            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
+              <span style={{ color:'var(--br)', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
+              <span style={{ color:'var(--g3)', fontSize:14, lineHeight:1.5 }}>{s}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── GALERIE VERTICALE — photos séparées du carrousel ── */}
+      {imgsGallery.length > 0 && (
+        <div className="pp-gallery" style={{ lineHeight:0, margin:0, padding:0 }}>
+          {imgsGallery.map((img, i) => (
+            <img
+              key={i}
+              src={img.url}
+              alt=""
+              loading="lazy"
+              style={{
+                width:'100%',
+                display:'block',
+                objectFit: img.type === 'gif' ? 'contain' : 'cover',
+                margin:0, padding:0, lineHeight:0,
+                background: img.type === 'gif' ? '#000' : 'transparent',
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── FAQ ── */}
+      {faq.length > 0 && (
+        <div className="pp-section pp-faq" style={{ padding:'0 16px 16px' }}>
+          <h3 style={{ fontSize:16, fontWeight:900, color:'var(--g3)', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
+          {faq.map((item,i) => {
+            const isOpen = openFaq === i
+            return (
+              <div key={i} className={`pp-faq-item${isOpen ? ' is-open' : ''}`}>
+                <button
+                  className="pp-faq-q"
+                  onClick={() => setOpenFaq(isOpen ? null : i)}
+                  aria-expanded={isOpen}
+                >
+                  <span>{item.q}</span>
+                  <span className="pp-faq-chevron" aria-hidden="true">⌄</span>
+                </button>
+                {isOpen && (
+                  <div className="pp-faq-a">
+                    {item.r}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {renderOrderForm()}
 
       {/* ── Partager le produit ── */}
       <div className="pp-share-label" style={{ padding:'0 16px 16px', display:'flex', gap:8, alignItems:'center' }}>
