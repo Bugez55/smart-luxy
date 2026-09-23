@@ -556,6 +556,9 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
                   ...inputStyle,
                   border: `1px solid ${telError ? '#ef4444' : '#333'}`,
                   animation: telShake ? 'omTelShake .5s' : 'none',
+                   direction: 'ltr',
+                   textAlign: 'left',
+                   unicodeBidi: 'plaintext',
                 }}
                 type="tel"
               />
