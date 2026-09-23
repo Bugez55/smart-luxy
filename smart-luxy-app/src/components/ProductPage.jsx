@@ -615,7 +615,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     paddingRight: telValid ? 42 : inp.padding,
                     border: `1px solid ${telError ? '#ef4444' : telValid ? 'rgba(34,197,94,.55)' : '#2a2a2a'}`,
                     boxShadow: telValid ? '0 0 0 3px rgba(34,197,94,.06)' : 'none',
-                    animation: telShake ? 'ppTelShake .5s' : 'none'
+                    animation: telShake ? 'ppTelShake .5s' : 'none',
+                     direction: 'ltr',
+                     textAlign: 'left',
+                     unicodeBidi: 'plaintext'
                   }}
                   type="tel"
                 />
