@@ -283,9 +283,7 @@ function AdminSettings({ onLogout, onToast }) {
   const [shopSaving, setShopSaving] = useState(false)
 
   // ── Mode maintenance ──
-  const [maintenance, setMaintenance] = useState(
-    localStorage.getItem('sl_maintenance') === '1'
-  )
+  const [maintenance, setMaintenance] = useState(false)
 
   // ── Livraison gratuite seuil ──
   const [freeShip, setFreeShip] = useState(
@@ -322,9 +320,14 @@ function AdminSettings({ onLogout, onToast }) {
 
   async function toggleMaintenance() {
     const val = !maintenance
-    setMaintenance(val)
-    await saveSettings({ maintenance: String(val) })
-    onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
+    try {
+      await saveSetting('maintenance', String(val))
+      setMaintenance(val)
+      onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
+    } catch (e) {
+      console.error('toggleMaintenance:', e)
+      onToast && onToast('❌ Impossible de modifier le mode maintenance', 'error')
+    }
   }
 
   async function saveFreeShip() {
@@ -386,7 +389,7 @@ function AdminSettings({ onLogout, onToast }) {
           <input value={shop.name} onChange={e => setShop(s => ({ ...s, name: e.target.value }))} style={inp} placeholder="Wazyo" />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <div className="adm-shop-contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
           <div>
             <label style={lbl}>Téléphone WhatsApp</label>
             <input value={shop.phone} onChange={e => setShop(s => ({ ...s, phone: e.target.value }))} style={inp} placeholder="213XXXXXXXXX" type="tel" />
