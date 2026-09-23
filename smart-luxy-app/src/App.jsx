@@ -26,6 +26,42 @@ function fbq(...args) {
   if (typeof window !== 'undefined' && window.fbq) window.fbq(...args)
 }
 
+function MaintenanceScreen() {
+  return (
+    <div
+      style={{
+        minHeight: '100svh',
+        background: 'var(--bk)',
+        color: 'var(--g3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        textAlign: 'center',
+      }}
+    >
+      <div style={{ width: 'min(460px, 100%)' }}>
+        <img
+          src="/WY-logo-192.png"
+          alt="Wazyo"
+          style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 22px' }}
+        />
+        <div style={{ color: 'var(--br)', fontSize: 11, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 10 }}>
+          Wazyo · Boutique en ligne
+        </div>
+        <h1 style={{ fontFamily: 'var(--ff)', fontSize: 'clamp(30px, 8vw, 48px)', lineHeight: 1.05, marginBottom: 14 }}>
+          Boutique temporairement en maintenance
+        </h1>
+        <p style={{ color: 'var(--g4)', fontSize: 15, lineHeight: 1.7 }}>
+          Nous effectuons actuellement quelques améliorations.
+          <br />
+          La boutique sera de nouveau disponible très bientôt.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
 
   const [isNotFound] = useState(() => {
@@ -51,6 +87,8 @@ export default function App() {
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
   const [politiqueTab, setPolitiqueTab] = useState(null)
+  const [maintenance, setMaintenance] = useState(false)
+  const [settingsLoading, setSettingsLoading] = useState(true)
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -97,16 +135,27 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  // ── Appliquer le thème depuis Supabase + cache localStorage ──
+  // ── Appliquer les réglages depuis Supabase ──
   useEffect(() => {
+    let mounted = true
+
     getSettings().then(s => {
+      if (!mounted) return
+
       const r = document.documentElement
       if (s.theme_bg)       { r.style.setProperty('--bk', s.theme_bg); r.style.setProperty('--bk2', s.theme_bg); document.body.style.background = s.theme_bg; localStorage.setItem('sl_theme_bg', s.theme_bg) }
       if (s.theme_card)     { r.style.setProperty('--card', s.theme_card); r.style.setProperty('--card2', s.theme_card); localStorage.setItem('sl_theme_card', s.theme_card) }
       if (s.theme_accent)   { r.style.setProperty('--br', s.theme_accent); r.style.setProperty('--br2', s.theme_accent); r.style.setProperty('--br3', s.theme_accent); localStorage.setItem('sl_theme_accent', s.theme_accent) }
-      if (s.theme_text)     { r.style.setProperty('--g3', s.theme_text);     localStorage.setItem('sl_theme_text', s.theme_text) }
+      if (s.theme_text)     { r.style.setProperty('--g3', s.theme_text); localStorage.setItem('sl_theme_text', s.theme_text) }
       if (s.theme_text_sub) { r.style.setProperty('--g4', s.theme_text_sub); localStorage.setItem('sl_theme_text_sub', s.theme_text_sub) }
+
+      setMaintenance(s.maintenance === 'true' || s.maintenance === true)
+      setSettingsLoading(false)
+    }).catch(() => {
+      if (mounted) setSettingsLoading(false)
     })
+
+    return () => { mounted = false }
   }, [])
 
   function toast(msg, type = 'default') {
@@ -281,6 +330,16 @@ export default function App() {
   }
 
   // ── Boutique ─────────────────────────────────────────
+  if (settingsLoading) {
+    return (
+      <div style={{ minHeight:'100svh', background:'var(--bk)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--g4)' }}>
+        Chargement…
+      </div>
+    )
+  }
+
+  if (maintenance) return <MaintenanceScreen />
+
   return (
     <div className="app">
       <AnnouncementBar />
