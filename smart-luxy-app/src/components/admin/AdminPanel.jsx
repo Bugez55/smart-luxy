@@ -283,7 +283,9 @@ function AdminSettings({ onLogout, onToast }) {
   const [shopSaving, setShopSaving] = useState(false)
 
   // ── Mode maintenance ──
-  const [maintenance, setMaintenance] = useState(false)
+  const [maintenance, setMaintenance] = useState(
+    localStorage.getItem('sl_maintenance') === '1'
+  )
 
   // ── Livraison gratuite seuil ──
   const [freeShip, setFreeShip] = useState(
@@ -320,14 +322,9 @@ function AdminSettings({ onLogout, onToast }) {
 
   async function toggleMaintenance() {
     const val = !maintenance
-    try {
-      await saveSetting('maintenance', String(val))
-      setMaintenance(val)
-      onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
-    } catch (e) {
-      console.error('toggleMaintenance:', e)
-      onToast && onToast('❌ Impossible de modifier le mode maintenance', 'error')
-    }
+    setMaintenance(val)
+    await saveSettings({ maintenance: String(val) })
+    onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
   }
 
   async function saveFreeShip() {
@@ -389,7 +386,7 @@ function AdminSettings({ onLogout, onToast }) {
           <input value={shop.name} onChange={e => setShop(s => ({ ...s, name: e.target.value }))} style={inp} placeholder="Wazyo" />
         </div>
 
-        <div className="adm-shop-contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
           <div>
             <label style={lbl}>Téléphone WhatsApp</label>
             <input value={shop.phone} onChange={e => setShop(s => ({ ...s, phone: e.target.value }))} style={inp} placeholder="213XXXXXXXXX" type="tel" />
@@ -1394,11 +1391,24 @@ export default function AdminPanel({ onLogout, onToast }) {
   const filteredOrders = orders.filter(o => {
     if (filter !== 'all' && o.statut !== filter) return false
     if (search) {
-      const q = search.toLowerCase()
-      return o.id?.toLowerCase().includes(q) ||
-        o.nom_client?.toLowerCase().includes(q) ||
-        o.telephone?.includes(q) ||
-        o.wilaya?.toLowerCase().includes(q)
+      // Recherche tolérante : accepte #SL-FAA66, SL-FAA66,
+      // téléphone avec espaces, nom, wilaya ou commune.
+      const q = search.trim().toLowerCase()
+      const qId = q.replace(/^#/, '').replace(/\s+/g, '')
+      const id = String(o.id || '').toLowerCase().replace(/^#/, '')
+      const phone = String(o.telephone || '').replace(/\D/g, '')
+      const qPhone = q.replace(/\D/g, '')
+      const haystack = [
+        id,
+        String(o.nom_client || '').toLowerCase(),
+        String(o.wilaya || '').toLowerCase(),
+        String(o.commune || '').toLowerCase(),
+      ]
+      return (
+        id.includes(qId) ||
+        haystack.some(v => v.includes(q)) ||
+        (qPhone.length >= 3 && phone.includes(qPhone))
+      )
     }
     return true
   })
@@ -1565,19 +1575,47 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   async function setStatus(id, statut) {
     const order = orders.find(o => o.id === id)
-    if (!order) return
-
-    if (!canTransitionOrderStatus(order.statut, statut)) {
-      onToast && onToast(`⚠️ Impossible : ${STATUT_COLORS[order.statut]?.label || order.statut} → ${STATUT_COLORS[statut]?.label || statut}`, 'error')
+    if (!order) {
+      onToast && onToast('❌ Commande introuvable', 'error')
       return
     }
 
-    const { error } = await supabase.from('orders').update({ statut }).eq('id', id)
-    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, statut } : o))
+    if (!canTransitionOrderStatus(order.statut, statut)) {
+      onToast && onToast(
+        `⚠️ Impossible : ${STATUT_COLORS[order.statut]?.label || order.statut} → ${STATUT_COLORS[statut]?.label || statut}`,
+        'error'
+      )
+      return
+    }
 
-    // "Purchase" envoyé à Meta seulement ici — à la vraie livraison confirmée,
-    // pas à la simple commande.
+    // Demande explicite à Supabase + retour de la ligne modifiée.
+    // On n'affiche le nouveau statut localement que si la base l'a réellement accepté.
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ statut })
+      .eq('id', id)
+      .select('id, statut')
+      .maybeSingle()
+
+    if (error) {
+      console.error('setStatus error:', error)
+      onToast && onToast(`❌ Impossible de modifier la commande : ${error.message}`, 'error')
+      return
+    }
+
+    if (!data) {
+      onToast && onToast(
+        '❌ La commande n’a pas été modifiée. Vérifie les droits Supabase de mise à jour des commandes.',
+        'error'
+      )
+      return
+    }
+
+    setOrders(prev => prev.map(o =>
+      o.id === id ? { ...o, statut: data.statut } : o
+    ))
+
+    // "Purchase" uniquement à la vraie livraison.
     if (statut === 'delivered') {
       sendCapiEvent({
         eventName: 'Purchase',
@@ -1592,6 +1630,7 @@ export default function AdminPanel({ onLogout, onToast }) {
       delivered: 'livrée',
       cancelled: 'annulée',
     }[statut] || 'mise à jour'
+
     onToast && onToast(`✅ Commande ${successLabel}`, 'default')
   }
 
