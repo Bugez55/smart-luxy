@@ -20,17 +20,18 @@ export default function TrackingPage({ onClose }) {
   const [show, setShow] = useState(true)
 
   async function search() {
-    const q = input.trim().toUpperCase()
+    const q = input.trim().replace(/^#+/, '').toUpperCase()
+    const normalizedId = q.startsWith('SL-') ? q : `SL-${q}`
     if (!q) return
     setLoading(true); setError(''); setOrder(null)
-    if (!/^SL-[A-Z0-9]+$/.test(q)) {
+    if (!/^SL-[A-Z0-9]+$/.test(normalizedId)) {
       setLoading(false)
       setError('Numéro de commande invalide.')
       return
     }
 
     const { data, error: rpcError } = await supabase.rpc('get_order_tracking', {
-      p_order_id: q,
+      p_order_id: normalizedId,
     })
     setLoading(false)
     if (rpcError || !data) { setError('Aucune commande trouvée avec ce numéro.'); return }
