@@ -67,7 +67,7 @@ function printInvoice(order) {
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Facture — Wazyo #${escapeHtml(order.id?.slice(0,8).toUpperCase())}</title>
+  <title>Facture — Wazyo #${escapeHtml(order.id?.toUpperCase())}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; background: white; }
@@ -138,7 +138,7 @@ function printInvoice(order) {
     </div>
     <div class="inv-meta">
       <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Bon de commande</div>
-      <div class="inv-num">#${escapeHtml(order.id?.slice(0,8).toUpperCase())}</div>
+      <div class="inv-num">#${escapeHtml(order.id?.toUpperCase())}</div>
       <div class="inv-date">${date}</div>
       <span class="badge badge-${order.statut}">${STATUT_COLORS[order.statut]?.label || order.statut}</span>
     </div>
@@ -850,7 +850,7 @@ function LivraisonManager({ orders, onToast }) {
                 <div>
                   <div style={{ fontSize:12, fontWeight:900, color:'white' }}>{order.nom_client}</div>
                   <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>📞 {order.telephone} · 📍 {order.wilaya}</div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>#{order.id?.slice(0,8).toUpperCase()}</div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>#{order.id?.toUpperCase()}</div>
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0 }}>
                   <div style={{ fontSize:14, fontWeight:900, color:'#C9A84C' }}>{Number(order.total).toLocaleString()} DA</div>
@@ -1443,7 +1443,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     const invalidOrders = ordersToUpdate.filter(o => !canTransitionOrderStatus(o.statut, statut))
 
     if (invalidOrders.length > 0) {
-      const names = invalidOrders.slice(0, 3).map(o => `#${o.id?.slice(0, 8).toUpperCase()}`).join(', ')
+      const names = invalidOrders.slice(0, 3).map(o => `#${o.id?.toUpperCase()}`).join(', ')
       const suffix = invalidOrders.length > 3 ? ` +${invalidOrders.length - 3}` : ''
       onToast && onToast(`⚠️ Transition impossible pour ${names}${suffix}`, 'error')
       return
@@ -2004,7 +2004,7 @@ export default function AdminPanel({ onLogout, onToast }) {
                     >{selectedOrders.has(o.id) ? '✓' : ''}</div>
                   <div style={{ flex: 1 }} onClick={() => setExpanded(isOpen ? null : o.id)}>
                     <div style={{flex:1}}>
-                      <div className="ocard-id">#{o.id?.slice(0,8).toUpperCase()}</div>
+                      <div className="ocard-id">#{o.id?.toUpperCase()}</div>
                       <div className="ocard-client">{o.nom_client}</div>
                       <div className="ocard-loc">📍 {o.wilaya} — {o.commune}</div>
                       <div style={{fontSize:11, color:'#555', marginTop:2}}>
