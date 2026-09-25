@@ -45,6 +45,7 @@ export default function ReviewSection({ productId }) {
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [photoPreview, setPhotoPreview] = useState('')
+  const [submitError, setSubmitError] = useState('')
   const fileRef = useRef()
 
   useEffect(() => { loadReviews() }, [productId])
@@ -82,9 +83,18 @@ export default function ReviewSection({ productId }) {
 
   async function uploadPhoto(file) {
     setUploading(true)
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      setUploading(false)
+      return ''
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setUploading(false)
+      return ''
+    }
     try {
       const compressed = await compressImage(file)
-      const path = `reviews/${Date.now()}.jpg`
+      const reviewId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      const path = `reviews/${reviewId}.jpg`
       const { error } = await supabase.storage.from('product-images').upload(path, compressed, { contentType: 'image/jpeg' })
       if (error) { setUploading(false); return '' }
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
@@ -96,23 +106,59 @@ export default function ReviewSection({ productId }) {
   async function handlePhoto(e) {
     const file = e.target.files[0]
     if (!file) return
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      setSubmitError('Photo refusée : utilisez JPG, PNG, WebP ou GIF.')
+      e.target.value = ''
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setSubmitError('Photo trop volumineuse : 2 Mo maximum.')
+      e.target.value = ''
+      return
+    }
+
+    if (photoPreview) URL.revokeObjectURL(photoPreview)
     setPhotoPreview(URL.createObjectURL(file))
     const url = await uploadPhoto(file)
+    e.target.value = ''
+    if (!url) {
+      setSubmitError('Photo refusée : utilisez JPG, PNG, WebP ou GIF, 2 Mo maximum.')
+      return
+    }
+    setSubmitError('')
     setForm(f => ({ ...f, photo: url }))
   }
 
   async function submit() {
     if (!form.nom.trim() || !form.commentaire.trim()) return
+    if (uploading) return
+
     setSending(true)
-    await supabase.from('reviews').insert({
+    setSubmitError('')
+
+    const { error } = await supabase.from('reviews').insert({
       product_id: productId,
-      nom: form.nom.trim(),
-      note: form.note,
-      commentaire: form.commentaire.trim(),
+      nom: form.nom.trim().slice(0, 80),
+      note: Math.min(5, Math.max(1, Number(form.note))),
+      commentaire: form.commentaire.trim().slice(0, 1200),
       photo: form.photo || null,
     })
-    setSending(false); setSent(true); setOpen(false)
+
+    if (error) {
+      console.error('Erreur publication avis:', error)
+      setSending(false)
+      setSubmitError('Impossible de publier votre avis. Réessayez.')
+      return
+    }
+
+    setSending(false)
+    setSent(true)
+    setOpen(false)
     setForm({ nom: '', note: 5, commentaire: '', photo: '' })
+    if (photoPreview) URL.revokeObjectURL(photoPreview)
     setPhotoPreview('')
     loadReviews()
   }
@@ -199,6 +245,17 @@ export default function ReviewSection({ productId }) {
               </div>
 
               {/* Upload photo optionnelle */}
+              {submitError && (
+                <div style={{
+                  background: 'rgba(239,68,68,.1)',
+                  border: '1px solid rgba(239,68,68,.25)',
+                  borderRadius: 8, padding: '9px 11px', marginBottom: 12,
+                  color: '#fca5a5', fontSize: 12,
+                }}>
+                  {submitError}
+                </div>
+              )}
+
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--g3)', letterSpacing: '.06em', display: 'block', marginBottom: 6 }}>
                   📸 PHOTO (optionnel)

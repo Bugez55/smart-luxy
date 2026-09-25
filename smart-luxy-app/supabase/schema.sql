@@ -88,6 +88,7 @@ create table if not exists public.orders (
   frais_livraison       numeric(12,2) not null default 0,
   fbc                   text,
   fbp                   text,
+  request_fingerprint   text,
   tracking_code         text,
   livraison_company     text,
   purchase_event_sent_at timestamptz,
@@ -104,6 +105,7 @@ alter table public.orders add column if not exists purchase_event_sent_at timest
 alter table public.orders add column if not exists stock_restored_at timestamptz;
 alter table public.orders add column if not exists fbc text;
 alter table public.orders add column if not exists fbp text;
+alter table public.orders add column if not exists request_fingerprint text;
 
 alter table public.orders drop constraint if exists orders_statut_check;
 alter table public.orders
@@ -149,6 +151,36 @@ drop trigger if exists trg_restore_stock_on_cancel on public.orders;
 create trigger trg_restore_stock_on_cancel
 before update of statut on public.orders
 for each row execute function public.restore_stock_on_cancel();
+
+create or replace function public.enforce_order_status_transition()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.statut = new.statut then
+    return new;
+  end if;
+
+  if (old.statut, new.statut) in (
+    ('new', 'confirmed'),
+    ('new', 'cancelled'),
+    ('confirmed', 'shipped'),
+    ('confirmed', 'cancelled'),
+    ('shipped', 'delivered'),
+    ('shipped', 'cancelled')
+  ) then
+    return new;
+  end if;
+
+  raise exception 'Transition de statut interdite: % -> %', old.statut, new.statut;
+end;
+$$;
+
+drop trigger if exists trg_enforce_order_status_transition on public.orders;
+create trigger trg_enforce_order_status_transition
+before update of statut on public.orders
+for each row execute function public.enforce_order_status_transition();
+revoke all on function public.enforce_order_status_transition() from public;
 
 create or replace function public.restore_stock_on_delete()
 returns trigger
@@ -207,6 +239,34 @@ create table if not exists public.reviews (
   created_at   timestamptz default now()
 );
 
+
+-- ─────────────────────────────────────────────────────────────
+-- PRIVATE ANTI-ABUSE / SHIPPING STATE
+-- These tables are intentionally outside the public Data API surface.
+-- ─────────────────────────────────────────────────────────────
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
+
+create table if not exists private.order_rate_limits (
+  key_hash   text not null,
+  request_at timestamptz not null default now()
+);
+create index if not exists idx_private_order_rate_limits_key_time
+  on private.order_rate_limits(key_hash, request_at desc);
+revoke all on private.order_rate_limits from public, anon, authenticated;
+
+create table if not exists private.review_rate_limits (
+  key_hash    text not null,
+  scope       text not null,
+  product_id  bigint,
+  request_at  timestamptz not null default now()
+);
+create index if not exists idx_private_review_rate_limits_scope_key_time
+  on private.review_rate_limits(scope, key_hash, request_at desc);
+revoke all on private.review_rate_limits from public, anon, authenticated;
+
+
 -- ─────────────────────────────────────────────────────────────
 -- SETTINGS
 -- ─────────────────────────────────────────────────────────────
@@ -251,6 +311,13 @@ create table if not exists public.client_notes (
   updated_at  timestamptz default now()
 );
 
+-- Helpful indexes for storefront/admin queries
+create index if not exists idx_orders_created_at on public.orders(created_at desc);
+create index if not exists idx_orders_statut_created_at on public.orders(statut, created_at desc);
+create index if not exists idx_orders_telephone_created_at on public.orders(telephone, created_at desc);
+create index if not exists idx_orders_request_fingerprint_created_at on public.orders(request_fingerprint, created_at desc);
+create index if not exists idx_reviews_product_created_at on public.reviews(product_id, created_at desc);
+
 -- ─────────────────────────────────────────────────────────────
 -- ADMIN ALLOWLIST
 -- ─────────────────────────────────────────────────────────────
@@ -278,75 +345,75 @@ create table if not exists public.shipping_rates (
 );
 
 insert into public.shipping_rates (wilaya, bureau, domicile) values
-  ("Adrar", 1000, 1600),
-  ("Chlef", 400, 800),
-  ("Laghouat", 600, 1100),
-  ("Oum El Bouaghi", 400, 950),
-  ("Batna", 400, 950),
-  ("B\u00e9ja\u00efa", 400, 850),
-  ("Biskra", 600, 1100),
-  ("B\u00e9char", 750, 1400),
-  ("Blida", 400, 800),
-  ("Bouira", 400, 850),
-  ("Tamanrasset", 1000, 1800),
-  ("T\u00e9bessa", 600, 1100),
-  ("Tlemcen", 400, 850),
-  ("Tiaret", 400, 850),
-  ("Tizi Ouzou", 0, 300),
-  ("Alger", 300, 750),
-  ("Djelfa", 600, 1100),
-  ("Jijel", 400, 950),
-  ("S\u00e9tif", 400, 900),
-  ("Sa\u00efda", 400, 850),
-  ("Skikda", 400, 950),
-  ("Sidi Bel Abb\u00e8s", 400, 850),
-  ("Annaba", 400, 900),
-  ("Guelma", 400, 950),
-  ("Constantine", 400, 900),
-  ("M\u00e9d\u00e9a", 400, 850),
-  ("Mostaganem", 400, 800),
-  ("M'Sila", 400, 900),
-  ("Mascara", 400, 850),
-  ("Ouargla", 750, 1200),
-  ("Oran", 400, 850),
-  ("El Bayadh", 400, 900),
-  ("Illizi", 1500, 1900),
-  ("Bordj Bou Arr\u00e9ridj", 400, 900),
-  ("Boumerd\u00e8s", 400, 850),
-  ("El Tarf", 400, 1000),
-  ("Tindouf", 1500, 1900),
-  ("Tissemsilt", 400, 850),
-  ("El Oued", 750, 1200),
-  ("Khenchela", 600, 1000),
-  ("Souk Ahras", 600, 1000),
-  ("Tipaza", 400, 850),
-  ("Mila", 400, 950),
-  ("A\u00efn Defla", 400, 850),
-  ("Na\u00e2ma", 600, 1200),
-  ("A\u00efn T\u00e9mouchent", 400, 850),
-  ("Gharda\u00efa", 750, 1200),
-  ("Relizane", 400, 800),
-  ("Timimoun", 1000, 1600),
-  ("Bordj Badji Mokhtar", 1500, 1900),
-  ("Ouled Djellal", 600, 1100),
-  ("B\u00e9ni Abb\u00e8s", 750, 1400),
-  ("In Salah", 1000, 1800),
-  ("In Guezzam", 1500, 1900),
-  ("Touggourt", 750, 1200),
-  ("Djanet", 1500, 1900),
-  ("El M'Ghair", 750, 1200),
-  ("El Meniaa", 750, 1200),
-  ("Aflou", 600, 1100),
-  ("A\u00efn Oussera", 600, 1100),
-  ("Barika", 400, 950),
-  ("Bir El Ater", 600, 1100),
-  ("Bou Sa\u00e2da", 400, 900),
-  ("El Abiodh Sidi Cheikh", 400, 900),
-  ("El Aricha", 400, 850),
-  ("El Kantara", 600, 1100),
-  ("Ksar Chellala", 400, 850),
-  ("Ksar El Boukhari", 400, 850),
-  ("Messaad", 600, 1100)
+  ('Adrar', 1000, 1600),
+  ('Chlef', 400, 800),
+  ('Laghouat', 600, 1100),
+  ('Oum El Bouaghi', 400, 950),
+  ('Batna', 400, 950),
+  ('Béjaïa', 400, 850),
+  ('Biskra', 600, 1100),
+  ('Béchar', 750, 1400),
+  ('Blida', 400, 800),
+  ('Bouira', 400, 850),
+  ('Tamanrasset', 1000, 1800),
+  ('Tébessa', 600, 1100),
+  ('Tlemcen', 400, 850),
+  ('Tiaret', 400, 850),
+  ('Tizi Ouzou', 0, 300),
+  ('Alger', 300, 750),
+  ('Djelfa', 600, 1100),
+  ('Jijel', 400, 950),
+  ('Sétif', 400, 900),
+  ('Saïda', 400, 850),
+  ('Skikda', 400, 950),
+  ('Sidi Bel Abbès', 400, 850),
+  ('Annaba', 400, 900),
+  ('Guelma', 400, 950),
+  ('Constantine', 400, 900),
+  ('Médéa', 400, 850),
+  ('Mostaganem', 400, 800),
+  ('M''Sila', 400, 900),
+  ('Mascara', 400, 850),
+  ('Ouargla', 750, 1200),
+  ('Oran', 400, 850),
+  ('El Bayadh', 400, 900),
+  ('Illizi', 1500, 1900),
+  ('Bordj Bou Arréridj', 400, 900),
+  ('Boumerdès', 400, 850),
+  ('El Tarf', 400, 1000),
+  ('Tindouf', 1500, 1900),
+  ('Tissemsilt', 400, 850),
+  ('El Oued', 750, 1200),
+  ('Khenchela', 600, 1000),
+  ('Souk Ahras', 600, 1000),
+  ('Tipaza', 400, 850),
+  ('Mila', 400, 950),
+  ('Aïn Defla', 400, 850),
+  ('Naâma', 600, 1200),
+  ('Aïn Témouchent', 400, 850),
+  ('Ghardaïa', 750, 1200),
+  ('Relizane', 400, 800),
+  ('Timimoun', 1000, 1600),
+  ('Bordj Badji Mokhtar', 1500, 1900),
+  ('Ouled Djellal', 600, 1100),
+  ('Béni Abbès', 750, 1400),
+  ('In Salah', 1000, 1800),
+  ('In Guezzam', 1500, 1900),
+  ('Touggourt', 750, 1200),
+  ('Djanet', 1500, 1900),
+  ('El M''Ghair', 750, 1200),
+  ('El Meniaa', 750, 1200),
+  ('Aflou', 600, 1100),
+  ('Aïn Oussera', 600, 1100),
+  ('Barika', 400, 950),
+  ('Bir El Ater', 600, 1100),
+  ('Bou Saâda', 400, 900),
+  ('El Abiodh Sidi Cheikh', 400, 900),
+  ('El Aricha', 400, 850),
+  ('El Kantara', 600, 1100),
+  ('Ksar Chellala', 400, 850),
+  ('Ksar El Boukhari', 400, 850),
+  ('Messaad', 600, 1100)
 on conflict (wilaya) do update
 set bureau = excluded.bureau, domicile = excluded.domicile;
 
@@ -368,6 +435,171 @@ $$;
 
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to authenticated;
+
+create table if not exists public.shipping_dispatches (
+  id            bigserial primary key,
+  provider      text not null check (provider = 'yalidine'),
+  order_id      text not null references public.orders(id),
+  status        text not null default 'creating'
+                check (status in ('creating','created','failed','unknown')),
+  attempts      integer not null default 1 check (attempts >= 1),
+  tracking_code text,
+  label_url     text,
+  last_error    text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  unique(provider, order_id),
+  unique(provider, tracking_code)
+);
+create index if not exists idx_shipping_dispatches_status_updated_at
+  on public.shipping_dispatches(status, updated_at desc);
+
+alter table public.shipping_dispatches enable row level security;
+drop policy if exists "admin manage shipping dispatches" on public.shipping_dispatches;
+create policy "admin manage shipping dispatches"
+  on public.shipping_dispatches for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+
+create or replace function public.touch_shipping_dispatch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+revoke all on function public.touch_shipping_dispatch_updated_at() from public;
+drop trigger if exists trg_shipping_dispatches_updated_at on public.shipping_dispatches;
+create trigger trg_shipping_dispatches_updated_at
+before update on public.shipping_dispatches
+for each row execute function public.touch_shipping_dispatch_updated_at();
+
+-- ─────────────────────────────────────────────────────────────
+-- REVIEW ANTI-SPAM
+-- Uses the trusted request headers exposed by PostgREST when available,
+-- with a name/product fallback when the request does not expose an IP.
+-- Admins are exempt.
+-- ─────────────────────────────────────────────────────────────
+create or replace function public.guard_public_review_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_headers jsonb;
+  v_ip text;
+  v_identity_hash text;
+  v_product_key text;
+  v_count integer;
+begin
+  if auth.uid() is not null and public.is_admin() then
+    return new;
+  end if;
+
+  begin
+    v_headers := coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb;
+    v_ip := trim(split_part(coalesce(v_headers->>'x-forwarded-for', ''), ',', 1));
+    if v_ip is null or v_ip = '' then
+      v_ip := trim(v_headers->>'cf-connecting-ip');
+    end if;
+    if v_ip is not null and v_ip <> '' then
+      begin
+        perform v_ip::inet;
+      exception when others then
+        v_ip := null;
+      end;
+    end if;
+  exception when others then
+    v_ip := null;
+  end;
+
+  delete from private.review_rate_limits
+  where request_at < now() - interval '24 hours';
+
+  if v_ip is not null then
+    v_identity_hash := encode(digest('ip:' || v_ip, 'sha256'), 'hex');
+    perform pg_advisory_xact_lock(hashtext('wazyo-review-rate:' || v_identity_hash));
+
+    select count(*) into v_count
+    from private.review_rate_limits
+    where scope = 'global'
+      and key_hash = v_identity_hash
+      and request_at >= now() - interval '15 minutes';
+
+    if v_count >= 8 then
+      raise exception 'Trop de tentatives d''avis. Réessayez plus tard.';
+    end if;
+
+    v_product_key := encode(digest('ip-product:' || v_ip || ':' || new.product_id::text, 'sha256'), 'hex');
+    select count(*) into v_count
+    from private.review_rate_limits
+    where scope = 'product'
+      and key_hash = v_product_key
+      and request_at >= now() - interval '24 hours';
+
+    if v_count >= 1 then
+      raise exception 'Un avis a déjà été envoyé pour ce produit récemment.';
+    end if;
+
+    insert into private.review_rate_limits(key_hash, scope, product_id)
+    values (v_identity_hash, 'global', new.product_id);
+    insert into private.review_rate_limits(key_hash, scope, product_id)
+    values (v_product_key, 'product', new.product_id);
+  else
+    v_identity_hash := encode(
+      digest('name-product:' || lower(trim(new.nom)) || ':' || new.product_id::text, 'sha256'),
+      'hex'
+    );
+    perform pg_advisory_xact_lock(hashtext('wazyo-review-rate:' || v_identity_hash));
+
+    select count(*) into v_count
+    from private.review_rate_limits
+    where scope = 'fallback'
+      and key_hash = v_identity_hash
+      and request_at >= now() - interval '24 hours';
+
+    if v_count >= 1 then
+      raise exception 'Un avis a déjà été envoyé pour ce produit récemment.';
+    end if;
+
+    insert into private.review_rate_limits(key_hash, scope, product_id)
+    values (v_identity_hash, 'fallback', new.product_id);
+  end if;
+
+  -- Block exact duplicates even when names/IPs vary only slightly.
+  v_comment_key := encode(
+    digest(
+      'comment:' || new.product_id::text || ':' || lower(regexp_replace(trim(new.commentaire), '\s+', ' ', 'g')),
+      'sha256'
+    ),
+    'hex'
+  );
+
+  select count(*) into v_count
+  from public.reviews
+  where product_id = new.product_id
+    and lower(regexp_replace(trim(commentaire), '\s+', ' ', 'g')) = lower(regexp_replace(trim(new.commentaire), '\s+', ' ', 'g'))
+    and created_at >= now() - interval '24 hours';
+
+  if v_count >= 1 then
+    raise exception 'Cet avis existe déjà.';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.guard_public_review_insert() from public;
+
+drop trigger if exists trg_guard_public_review_insert on public.reviews;
+create trigger trg_guard_public_review_insert
+before insert on public.reviews
+for each row execute function public.guard_public_review_insert();
+
 
 -- ─────────────────────────────────────────────────────────────
 -- RLS
@@ -406,7 +638,7 @@ create policy "admin manage promos"
   using (public.is_admin())
   with check (public.is_admin());
 
--- Reviews: public can read/write their own submitted reviews; admin can manage.
+-- Reviews: public can read and submit reviews; anti-spam trigger applies on insert; admin can manage.
 drop policy if exists "public read reviews" on public.reviews;
 drop policy if exists "public insert reviews" on public.reviews;
 drop policy if exists "admin manage reviews" on public.reviews;
@@ -565,6 +797,10 @@ as $$
 declare
   v_id text;
   v_wilaya text;
+  v_phone text;
+  v_client_ip text;
+  v_headers_raw text;
+  v_headers jsonb;
   v_mode text := case when p_mode_livraison = 'bureau' then 'bureau' else 'domicile' end;
   v_payment text := case when p_mode_paiement in ('livraison','ccp','baridimob') then p_mode_paiement else 'livraison' end;
   v_subtotal numeric(12,2) := 0;
@@ -578,12 +814,20 @@ declare
   v_items jsonb := '[]'::jsonb;
   v_product public.products;
   v_line record;
+  v_existing public.orders;
+  v_request_fingerprint text;
+  v_rate_count integer;
+  v_rate_key text;
 begin
   if length(trim(coalesce(p_nom_client,''))) not between 2 and 120 then
     raise exception 'Nom invalide';
   end if;
 
-  if regexp_replace(coalesce(p_telephone,''), '\D', '', 'g') !~ '^0[0-9]{9}$' then
+  v_phone := regexp_replace(trim(coalesce(p_telephone,'')), '\D', '', 'g');
+  if v_phone ~ '^213[567][0-9]{8}$' then
+    v_phone := '0' || substring(v_phone from 4);
+  end if;
+  if v_phone !~ '^0[567][0-9]{8}$' then
     raise exception 'Téléphone invalide';
   end if;
 
@@ -599,7 +843,117 @@ begin
     raise exception 'Panier vide';
   end if;
 
+  if jsonb_array_length(p_items) > 50 then
+    raise exception 'Panier trop volumineux';
+  end if;
+
   v_wilaya := regexp_replace(trim(p_wilaya), '^\d+\s*—\s*', '');
+
+  -- Build a stable fingerprint before mutating stock/promo state.
+  -- It intentionally excludes Meta browser identifiers (fbc/fbp) because retries
+  -- of the same checkout can legitimately carry different tracking cookies.
+  v_request_fingerprint := encode(
+    digest(
+      jsonb_build_object(
+        'nom', lower(trim(p_nom_client)),
+        'telephone', v_phone,
+        'wilaya', lower(trim(v_wilaya)),
+        'commune', lower(trim(p_commune)),
+        'adresse', lower(trim(coalesce(p_adresse,''))),
+        'note', left(trim(coalesce(p_note,'')), 1200),
+        'items', p_items,
+        'mode_livraison', v_mode,
+        'mode_paiement', v_payment,
+        'promo_code', upper(trim(coalesce(p_promo_code,'')))
+      )::text,
+      'sha256'
+    ),
+    'hex'
+  );
+
+  -- Serialize exact retries so only the first request mutates stock/promo state.
+  perform pg_advisory_xact_lock(hashtext('wazyo-order-idem:' || v_request_fingerprint));
+
+  select * into v_existing
+  from public.orders
+  where request_fingerprint = v_request_fingerprint
+    and created_at >= now() - interval '30 minutes'
+  order by created_at desc
+  limit 1;
+
+  if found then
+    return jsonb_build_object(
+      'id', v_existing.id,
+      'nom_client', v_existing.nom_client,
+      'telephone', v_existing.telephone,
+      'wilaya', v_existing.wilaya,
+      'commune', v_existing.commune,
+      'items', v_existing.items,
+      'sous_total', v_existing.sous_total,
+      'promo_code', v_existing.promo_code,
+      'promo_reduction', v_existing.promo_reduction,
+      'total', v_existing.total,
+      'statut', v_existing.statut,
+      'mode_livraison', v_existing.mode_livraison,
+      'mode_paiement', v_existing.mode_paiement,
+      'frais_livraison', v_existing.frais_livraison,
+      'created_at', v_existing.created_at,
+      'stock_alerts', '[]'::jsonb
+    );
+  end if;
+
+  -- IP-based request throttling. Supabase/PostgREST exposes request headers
+  -- through current_setting('request.headers', true); fall back to phone only.
+  begin
+    v_headers_raw := current_setting('request.headers', true);
+    v_headers := coalesce(nullif(v_headers_raw, ''), '{}')::jsonb;
+    v_client_ip := trim(split_part(coalesce(v_headers->>'x-forwarded-for', ''), ',', 1));
+    if v_client_ip is null or v_client_ip = '' then
+      v_client_ip := trim(v_headers->>'cf-connecting-ip');
+    end if;
+    if v_client_ip is not null and v_client_ip <> '' then
+      begin
+        perform v_client_ip::inet;
+      exception when others then
+        v_client_ip := null;
+      end;
+    end if;
+  exception when others then
+    v_client_ip := null;
+  end;
+
+  if v_client_ip is not null then
+    v_rate_key := encode(digest('ip:' || v_client_ip, 'sha256'), 'hex');
+    perform pg_advisory_xact_lock(hashtext('wazyo-order-rate:' || v_rate_key));
+    delete from private.order_rate_limits
+    where request_at < now() - interval '30 minutes';
+
+    select count(*) into v_rate_count
+    from private.order_rate_limits
+    where key_hash = v_rate_key
+      and request_at >= now() - interval '10 minutes';
+
+    if v_rate_count >= 12 then
+      raise exception 'Trop de tentatives de commande. Réessayez dans quelques minutes.';
+    end if;
+
+    insert into private.order_rate_limits(key_hash) values (v_rate_key);
+  end if;
+
+  -- Secondary throttle by phone, useful when several users share an IP or when
+  -- the request arrives without trusted proxy headers.
+  delete from private.order_rate_limits where request_at < now() - interval '30 minutes';
+  v_rate_key := encode(digest('phone:' || v_phone, 'sha256'), 'hex');
+  perform pg_advisory_xact_lock(hashtext('wazyo-order-rate:' || v_rate_key));
+  select count(*) into v_rate_count
+  from private.order_rate_limits
+  where key_hash = v_rate_key
+    and request_at >= now() - interval '10 minutes';
+
+  if v_rate_count >= 6 then
+    raise exception 'Trop de commandes pour ce numéro. Réessayez dans quelques minutes.';
+  end if;
+  insert into private.order_rate_limits(key_hash) values (v_rate_key);
 
   select
     case when v_mode = 'bureau' then bureau else domicile end
@@ -703,16 +1057,15 @@ begin
   end if;
 
   v_total := greatest(0, v_subtotal - v_discount) + v_shipping;
-
   v_id := 'SL-' || upper(encode(gen_random_bytes(5), 'hex'));
 
   insert into public.orders (
     id, nom_client, telephone, wilaya, commune, adresse, note,
     items, sous_total, promo_code, promo_reduction, total, statut,
-    mode_livraison, mode_paiement, frais_livraison, fbc, fbp
+    mode_livraison, mode_paiement, frais_livraison, fbc, fbp, request_fingerprint
   )
   values (
-    v_id, trim(p_nom_client), regexp_replace(trim(p_telephone), '\D', '', 'g'),
+    v_id, trim(p_nom_client), v_phone,
     trim(p_wilaya), trim(p_commune),
     left(coalesce(trim(p_adresse), ''), 2000),
     left(coalesce(trim(p_note), ''), 1200),
@@ -720,13 +1073,13 @@ begin
     case when p_promo_code is null or trim(p_promo_code) = '' then null else upper(trim(p_promo_code)) end,
     v_discount, v_total, 'new',
     v_mode, v_payment, v_shipping,
-    left(p_fbc, 500), left(p_fbp, 500)
+    left(p_fbc, 500), left(p_fbp, 500), v_request_fingerprint
   );
 
   return jsonb_build_object(
     'id', v_id,
     'nom_client', trim(p_nom_client),
-    'telephone', regexp_replace(trim(p_telephone), '\D', '', 'g'),
+    'telephone', v_phone,
     'wilaya', trim(p_wilaya),
     'commune', trim(p_commune),
     'items', v_items,
@@ -744,8 +1097,8 @@ begin
 end;
 $$;
 
-revoke all on function public.create_order(text,text,text,text,text,text,jsonb,text,numeric,text,text,text) from public;
-grant execute on function public.create_order(text,text,text,text,text,text,jsonb,text,numeric,text,text,text) to anon, authenticated;
+revoke all on function public.create_order(text,text,text,text,text,text,jsonb,text,numeric,text,text,text,text) from public;
+grant execute on function public.create_order(text,text,text,text,text,text,jsonb,text,numeric,text,text,text,text) to anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────
 -- STORAGE

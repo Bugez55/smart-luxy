@@ -1,7 +1,7 @@
 // api/telegram.js — Proxy sécurisé pour Telegram
 // Le token Telegram reste 100% côté serveur, jamais dans le navigateur
+import { applyCors } from './_cors.js'
 
-const ALLOWED_ORIGIN = 'https://wazyo.vercel.app'
 
 // Rate-limit simple en mémoire (best-effort — se réinitialise si la
 // fonction serverless redémarre, mais bloque déjà l'essentiel du spam)
@@ -22,14 +22,9 @@ function isRateLimited(ip) {
 }
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || ''
-  const isAllowedOrigin = origin === ALLOWED_ORIGIN || origin.endsWith('.vercel.app')
+  const isAllowedOrigin = applyCors(req, res)
 
-  res.setHeader('Access-Control-Allow-Origin', isAllowedOrigin ? origin : ALLOWED_ORIGIN)
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
-  if (req.method === 'OPTIONS') return res.status(200).end()
+  if (req.method === 'OPTIONS') return res.status(isAllowedOrigin ? 204 : 403).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   if (!isAllowedOrigin) {
     return res.status(403).json({ error: 'Origine non autorisée' })

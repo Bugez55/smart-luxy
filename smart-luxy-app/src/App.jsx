@@ -339,6 +339,7 @@ export default function App() {
   }
 
   if (maintenance) return <MaintenanceScreen />
+  if (isNotFound) return <NotFound />
 
   return (
     <div className="app">

@@ -8,40 +8,11 @@ import net from 'net'
 import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { requireAdmin } from './_auth.js'
-
-const BASE_ALLOWED_ORIGINS = [
-  'https://wazyo.com',
-  'https://www.wazyo.com',
-  'https://wazyo.vercel.app'
-]
+import { applyCors } from './_cors.js'
 
 const MAX_RESPONSE_BYTES = 6 * 1024 * 1024
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024
 const STORAGE_BUCKET = 'product-images'
-
-function isAllowedOrigin(origin) {
-  if (!origin) return false
-  if (BASE_ALLOWED_ORIGINS.includes(origin)) return true
-  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)
-}
-
-function setCors(req, res) {
-  const origin = req.headers.origin || ''
-  const allowed = isAllowedOrigin(origin)
-
-  res.setHeader(
-    'Access-Control-Allow-Origin',
-    allowed ? origin : BASE_ALLOWED_ORIGINS[0]
-  )
-  res.setHeader('Vary', 'Origin')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Content-Type, Authorization'
-  )
-
-  return allowed
-}
 
 function isPrivateIpv4(ip) {
   const parts = ip.split('.').map(Number)
@@ -522,67 +493,113 @@ function getImageExtension(contentType, imageUrl) {
   return 'jpg'
 }
 
-async function downloadAndStoreImage(
-  supabase,
-  imageUrl,
-  index
-) {
-  const safeImageUrl =
-    await assertSafeUrl(imageUrl)
+async function fetchImageSafely(rawUrl) {
+  let currentUrl = await assertSafeUrl(rawUrl)
 
-  const response = await fetch(
-    safeImageUrl,
-    {
-      redirect: 'follow',
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const response = await fetch(currentUrl, {
+      redirect: 'manual',
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0 Safari/537.36',
         'Accept':
           'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
         'Accept-Language':
-          'fr-FR,fr;q=0.9,en;q=0.8'
-      }
+          'fr-FR,fr;q=0.9,en;q=0.8',
+      },
+    })
+
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location')
+      if (!location) throw new Error('Redirection image invalide')
+      currentUrl = await assertSafeUrl(
+        new URL(location, currentUrl).href
+      )
+      continue
     }
-  )
 
-  if (!response.ok) {
-    throw new Error(
-      `Image inaccessible (${response.status})`
+    if (!response.ok) {
+      throw new Error(`Image inaccessible (${response.status})`)
+    }
+
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.toLowerCase().startsWith('image/')) {
+      throw new Error(
+        `Le serveur distant n'a pas renvoyé une image (${contentType || 'type inconnu'})`
+      )
+    }
+
+    const contentLength = Number(
+      response.headers.get('content-length') || 0
     )
+
+    if (contentLength > MAX_IMAGE_BYTES) {
+      throw new Error('Image trop volumineuse')
+    }
+
+    return { response, contentType, finalUrl: currentUrl }
   }
 
-  const contentType =
-    response.headers.get('content-type') || ''
+  throw new Error('Trop de redirections image')
+}
 
-  if (!contentType.toLowerCase().startsWith('image/')) {
-    throw new Error(
-      `Le serveur distant n'a pas renvoyé une image (${contentType || 'type inconnu'})`
-    )
+async function readResponseBuffer(response, maxBytes) {
+  if (!response.body?.getReader) {
+    const arrayBuffer = await response.arrayBuffer()
+    if (arrayBuffer.byteLength > maxBytes) {
+      throw new Error('Image trop volumineuse')
+    }
+    return Buffer.from(arrayBuffer)
   }
 
-  const contentLength = Number(
-    response.headers.get('content-length') || 0
+  const reader = response.body.getReader()
+  const chunks = []
+  let total = 0
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      total += value.byteLength
+      if (total > maxBytes) {
+        await reader.cancel()
+        throw new Error('Image trop volumineuse')
+      }
+
+      chunks.push(Buffer.from(value))
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  return Buffer.concat(chunks, total)
+}
+
+async function downloadAndStoreImage(
+  supabase,
+  imageUrl,
+  index
+) {
+  const {
+    response,
+    contentType,
+    finalUrl,
+  } = await fetchImageSafely(imageUrl)
+
+  const buffer = await readResponseBuffer(
+    response,
+    MAX_IMAGE_BYTES
   )
-
-  if (contentLength > MAX_IMAGE_BYTES) {
-    throw new Error('Image trop volumineuse')
-  }
-
-  const arrayBuffer =
-    await response.arrayBuffer()
-
-  if (arrayBuffer.byteLength > MAX_IMAGE_BYTES) {
-    throw new Error('Image trop volumineuse')
-  }
 
   const extension = getImageExtension(
     contentType,
-    imageUrl
+    finalUrl
   )
 
   const hash = crypto
     .createHash('sha256')
-    .update(Buffer.from(arrayBuffer))
+    .update(buffer)
     .digest('hex')
     .slice(0, 24)
 
@@ -594,13 +611,13 @@ async function downloadAndStoreImage(
       .from(STORAGE_BUCKET)
       .upload(
         filePath,
-        Buffer.from(arrayBuffer),
+        buffer,
         {
           contentType:
             contentType.split(';')[0] ||
             'image/jpeg',
           cacheControl: '31536000',
-          upsert: true
+          upsert: true,
         }
       )
 
@@ -610,11 +627,10 @@ async function downloadAndStoreImage(
     )
   }
 
-  const {
-    data: publicData
-  } = supabase.storage
-    .from(STORAGE_BUCKET)
-    .getPublicUrl(filePath)
+  const { data: publicData } =
+    supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(filePath)
 
   if (!publicData?.publicUrl) {
     throw new Error(
@@ -625,44 +641,15 @@ async function downloadAndStoreImage(
   return publicData.publicUrl
 }
 
-async function storeAliExpressImages(images) {
-  if (!images?.length) return []
-
-  const supabase = getSupabaseAdmin()
-
-  const storedImages = []
-
-  for (let i = 0; i < images.length; i++) {
-    try {
-      const publicUrl =
-        await downloadAndStoreImage(
-          supabase,
-          images[i],
-          i + 1
-        )
-
-      storedImages.push(publicUrl)
-    } catch (error) {
-      console.error(
-        `Image AliExpress ${i + 1} ignorée:`,
-        error?.message || error
-      )
-    }
-  }
-
-  return storedImages
-}
-
 // ─────────────────────────────────────────────
 // HANDLER
 // ─────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  const isAllowedOrigin =
-    setCors(req, res)
+  const isAllowedOrigin = applyCors(req, res)
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end()
+    return res.status(isAllowedOrigin ? 204 : 403).end()
   }
 
   if (req.method !== 'POST') {

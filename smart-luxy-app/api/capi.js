@@ -1,6 +1,7 @@
 // api/capi.js — Facebook Conversions API côté serveur
 import crypto from 'crypto'
 import { requireAdmin } from './_auth.js'
+import { applyCors } from './_cors.js'
 
 const META_API_VERSION = 'v21.0'
 const DZ_COUNTRY_CODE = '213'
@@ -27,47 +28,11 @@ function normaliseName(raw) {
     .replace(/[^\p{L}]/gu, '')
 }
 
-function allowedOrigins() {
-  return String(
-    process.env.ALLOWED_ORIGINS ||
-    'https://wazyo.com,https://www.wazyo.com,https://wazyo.vercel.app'
-  )
-    .split(',')
-    .map(x => x.trim())
-    .filter(Boolean)
-}
-
-function isAllowedOrigin(origin) {
-  if (!origin) return false
-  if (allowedOrigins().includes(origin)) return true
-
-  // Preview deployments on Vercel can still be used during admin testing.
-  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)
-}
-
-function sendCors(req, res) {
-  const origin = req.headers.origin || ''
-  const allowed = isAllowedOrigin(origin)
-
-  res.setHeader(
-    'Access-Control-Allow-Origin',
-    allowed ? origin : allowedOrigins()[0]
-  )
-  res.setHeader('Vary', 'Origin')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Content-Type, Authorization'
-  )
-
-  return allowed
-}
-
 export default async function handler(req, res) {
-  const allowed = sendCors(req, res)
+  const allowed = applyCors(req, res)
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end()
+    return res.status(allowed ? 204 : 403).end()
   }
 
   if (req.method !== 'POST') {
@@ -121,7 +86,7 @@ export default async function handler(req, res) {
     const { data: order, error } = await auth.client
       .from('orders')
       .select(
-        'id,nom_client,telephone,wilaya,total,items,status:statut,fbc,fbp,client_id,purchase_event_sent_at'
+        'id,nom_client,telephone,wilaya,total,items,status:statut,fbc,fbp,purchase_event_sent_at'
       )
       .eq('id', orderId)
       .eq('statut', 'delivered')
@@ -172,9 +137,6 @@ export default async function handler(req, res) {
 
       fbc: order.fbc,
       fbp: order.fbp,
-
-      // Nouveau : identifiant client stable
-      externalId: order.client_id,
 
       ip:
         req.headers['x-forwarded-for']?.split(',')[0] ||
@@ -246,8 +208,8 @@ export default async function handler(req, res) {
       fbc,
       fbp,
 
-      // Compatible avec un éventuel external_id envoyé
-      // ultérieurement depuis le frontend.
+      // Un external_id pourra être ajouté plus tard si un identifiant
+      // client stable est réellement stocké côté base.
       externalId,
 
       ip:
