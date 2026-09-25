@@ -5,6 +5,7 @@ import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
 import ClientsCRM from './ClientsCRM'
+import ReviewsManager from './ReviewsManager'
 import { sendCapiEvent } from '../../utils/api'
 import CONFIG from '../../config'
 
@@ -1822,7 +1823,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Wazyo — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['reviews','⭐ Avis'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -2100,6 +2101,11 @@ export default function AdminPanel({ onLogout, onToast }) {
 
         {/* ── CLIENTS TAB (CRM) ── */}
         {tab === 'clients' && <ClientsCRM orders={orders} onToast={onToast} />}
+
+        {/* ── REVIEWS TAB ── */}
+        {tab === 'reviews' && (
+          <ReviewsManager products={products} onToast={onToast} />
+        )}
 
         {/* ── PRODUCTS TAB ── */}
         {tab === 'products' && (

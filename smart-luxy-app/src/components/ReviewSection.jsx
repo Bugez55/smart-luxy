@@ -1,179 +1,93 @@
 // ═══════════════════════════════════════════════════
-//  AVIS CLIENTS AVEC PHOTO — Smart Luxy v2
+//  AVIS CLIENTS — affichage public uniquement
+//  Les avis sont ajoutés exclusivement par l'administrateur.
 // ═══════════════════════════════════════════════════
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
-const STARS = [1, 2, 3, 4, 5]
-
-function Star({ filled, onClick, size = 22 }) {
+function Stars({ note, size = 15 }) {
   return (
-    <span onClick={onClick} style={{
-      cursor: onClick ? 'pointer' : 'default',
-      color: filled ? '#F9A825' : 'var(--g3)',
-      fontSize: size, lineHeight: 1,
-      transition: 'color .15s, transform .15s',
-      display: 'inline-block',
-    }}>★</span>
+    <span aria-label={`${note} sur 5`} style={{ letterSpacing: 1 }}>
+      {[1, 2, 3, 4, 5].map(s => (
+        <span key={s} style={{
+          color: s <= note ? '#F9A825' : 'var(--g3)',
+          fontSize: size,
+        }}>★</span>
+      ))}
+    </span>
   )
 }
 
 function Avatar({ nom, photo }) {
   if (photo) return (
-    <img src={photo} alt={nom}
-      style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(201,168,76,.3)', flexShrink: 0 }}
-      onError={e => e.target.style.display = 'none'}
+    <img
+      src={photo}
+      alt={nom}
+      loading="lazy"
+      style={{
+        width: 44, height: 44, borderRadius: '50%', objectFit: 'cover',
+        border: '2px solid rgba(201,168,76,.3)', flexShrink: 0,
+      }}
+      onError={e => { e.currentTarget.style.display = 'none' }}
     />
   )
+
   const initials = nom?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
   const colors = ['#C9A84C', '#E9C46A', '#F4A261', '#2A9D8F', '#457B9D']
   const color = colors[nom?.charCodeAt(0) % colors.length] || colors[0]
+
   return (
     <div style={{
       width: 44, height: 44, borderRadius: '50%', background: color + '22',
       border: `2px solid ${color}55`, display: 'flex', alignItems: 'center',
       justifyContent: 'center', fontSize: 15, fontWeight: 800, color, flexShrink: 0,
-    }}>{initials}</div>
+    }}>
+      {initials}
+    </div>
   )
 }
 
 export default function ReviewSection({ productId }) {
   const [reviews, setReviews] = useState([])
-  const [form, setForm] = useState({ nom: '', note: 5, commentaire: '', photo: '' })
-  const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
-  const [open, setOpen] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [photoPreview, setPhotoPreview] = useState('')
-  const [submitError, setSubmitError] = useState('')
-  const fileRef = useRef()
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadReviews() }, [productId])
+  useEffect(() => {
+    let cancelled = false
 
-  async function loadReviews() {
-    const { data } = await supabase
-      .from('reviews').select('*')
-      .eq('product_id', productId)
-      .order('created_at', { ascending: false })
-    setReviews(data || [])
-  }
+    async function loadReviews() {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id, product_id, nom, note, commentaire, photo, created_at')
+        .eq('product_id', productId)
+        .order('created_at', { ascending: false })
 
-  async function compressImage(file) {
-    if (file.type === 'image/gif') return file
-    return new Promise((resolve) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-      img.onload = () => {
-        URL.revokeObjectURL(url)
-        const MAX = 900
-        let { width, height } = img
-        if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
-        const canvas = document.createElement('canvas')
-        canvas.width = width; canvas.height = height
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-        canvas.toBlob(
-          blob => resolve(new File([blob], 'review.jpg', { type: 'image/jpeg' })),
-          'image/jpeg', 0.8
-        )
+      if (!cancelled) {
+        if (error) console.error('Erreur chargement avis:', error)
+        setReviews(data || [])
+        setLoading(false)
       }
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
-      img.src = url
-    })
-  }
-
-  async function uploadPhoto(file) {
-    setUploading(true)
-    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-      setUploading(false)
-      return ''
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setUploading(false)
-      return ''
-    }
-    try {
-      const compressed = await compressImage(file)
-      const reviewId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-      const path = `reviews/${reviewId}.jpg`
-      const { error } = await supabase.storage.from('product-images').upload(path, compressed, { contentType: 'image/jpeg' })
-      if (error) { setUploading(false); return '' }
-      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
-      setUploading(false)
-      return publicUrl
-    } catch { setUploading(false); return '' }
-  }
-
-  async function handlePhoto(e) {
-    const file = e.target.files[0]
-    if (!file) return
-
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowedTypes.includes(file.type)) {
-      setSubmitError('Photo refusée : utilisez JPG, PNG, WebP ou GIF.')
-      e.target.value = ''
-      return
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setSubmitError('Photo trop volumineuse : 2 Mo maximum.')
-      e.target.value = ''
-      return
-    }
-
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
-    setPhotoPreview(URL.createObjectURL(file))
-    const url = await uploadPhoto(file)
-    e.target.value = ''
-    if (!url) {
-      setSubmitError('Photo refusée : utilisez JPG, PNG, WebP ou GIF, 2 Mo maximum.')
-      return
-    }
-    setSubmitError('')
-    setForm(f => ({ ...f, photo: url }))
-  }
-
-  async function submit() {
-    if (!form.nom.trim() || !form.commentaire.trim()) return
-    if (uploading) return
-
-    setSending(true)
-    setSubmitError('')
-
-    const { error } = await supabase.from('reviews').insert({
-      product_id: productId,
-      nom: form.nom.trim().slice(0, 80),
-      note: Math.min(5, Math.max(1, Number(form.note))),
-      commentaire: form.commentaire.trim().slice(0, 1200),
-      photo: form.photo || null,
-    })
-
-    if (error) {
-      console.error('Erreur publication avis:', error)
-      setSending(false)
-      setSubmitError('Impossible de publier votre avis. Réessayez.')
-      return
-    }
-
-    setSending(false)
-    setSent(true)
-    setOpen(false)
-    setForm({ nom: '', note: 5, commentaire: '', photo: '' })
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
-    setPhotoPreview('')
     loadReviews()
-  }
+    return () => { cancelled = true }
+  }, [productId])
 
   const avg = reviews.length
-    ? (reviews.reduce((s, r) => s + r.note, 0) / reviews.length).toFixed(1)
+    ? (reviews.reduce((sum, review) => sum + Number(review.note || 0), 0) / reviews.length).toFixed(1)
     : null
 
   return (
     <div style={{ padding: '0 16px 24px' }}>
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 16,
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18 }}>⭐</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color:'var(--g3)' }}>Avis clients</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--g3)' }}>
+            Avis clients
+          </span>
           {avg && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ fontSize: 14, fontWeight: 900, color: '#F9A825' }}>{avg}</span>
@@ -181,173 +95,56 @@ export default function ReviewSection({ productId }) {
             </div>
           )}
         </div>
-        <button onClick={() => { setOpen(true); setSent(false) }} style={{
-          background: 'rgba(201,168,76,.12)', border: '1px solid rgba(201,168,76,.25)',
-          borderRadius: 10, padding: '7px 14px',
-          color:'var(--br)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+        <span style={{
+          fontSize: 10, color: 'rgba(255,255,255,.35)',
+          border: '1px solid rgba(255,255,255,.08)', borderRadius: 999,
+          padding: '4px 8px',
         }}>
-          ✍️ Laisser un avis
-        </button>
+          Avis vérifiés
+        </span>
       </div>
 
-      {/* ── Formulaire avis ── */}
-      {open && (
-        <div style={{
-          background: 'var(--card2)', border: '1px solid rgba(201,168,76,.15)',
-          borderRadius: 14, padding: 16, marginBottom: 18,
-          animation: 'slideDown .2s ease',
-        }}>
-          {sent ? (
-            <div style={{ textAlign: 'center', padding: '12px 0' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>🎉</div>
-              <div style={{ color: '#4CAF50', fontWeight: 700 }}>Merci pour votre avis !</div>
-            </div>
-          ) : (
-            <>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--g3)', letterSpacing: '.06em', display: 'block', marginBottom: 6 }}>VOTRE NOTE</label>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {STARS.map(s => (
-                    <Star key={s} filled={s <= form.note} size={28}
-                      onClick={() => setForm(f => ({ ...f, note: s }))} />
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--g3)', letterSpacing: '.06em', display: 'block', marginBottom: 6 }}>VOTRE NOM</label>
-                <input
-                  placeholder="Ex: Ahmed B."
-                  value={form.nom}
-                  onChange={e => setForm(f => ({ ...f, nom: e.target.value }))}
-                  style={{
-                    width: '100%', background: 'var(--card)', border: '1px solid #333',
-                    borderRadius: 8, padding: '9px 12px', color:'var(--g3)',
-                    fontSize: '16px', outline: 'none', boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--g3)', letterSpacing: '.06em', display: 'block', marginBottom: 6 }}>VOTRE AVIS</label>
-                <textarea
-                  rows={3}
-                  placeholder="Partagez votre expérience avec ce produit..."
-                  value={form.commentaire}
-                  onChange={e => setForm(f => ({ ...f, commentaire: e.target.value }))}
-                  style={{
-                    width: '100%', background: 'var(--card)', border: '1px solid #333',
-                    borderRadius: 8, padding: '9px 12px', color:'var(--g3)',
-                    fontSize: '16px', outline: 'none', resize: 'none',
-                    boxSizing: 'border-box', fontFamily: 'inherit',
-                  }}
-                />
-              </div>
-
-              {/* Upload photo optionnelle */}
-              {submitError && (
-                <div style={{
-                  background: 'rgba(239,68,68,.1)',
-                  border: '1px solid rgba(239,68,68,.25)',
-                  borderRadius: 8, padding: '9px 11px', marginBottom: 12,
-                  color: '#fca5a5', fontSize: 12,
-                }}>
-                  {submitError}
-                </div>
-              )}
-
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--g3)', letterSpacing: '.06em', display: 'block', marginBottom: 6 }}>
-                  📸 PHOTO (optionnel)
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {photoPreview && (
-                    <img src={photoPreview} alt=""
-                      style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', border: '1px solid #333' }}
-                    />
-                  )}
-                  <button onClick={() => fileRef.current?.click()} style={{
-                    background: '#222', border: '1px dashed #444', borderRadius: 8,
-                    padding: '8px 14px', color: 'var(--g4)', fontSize: 12, cursor: 'pointer',
-                  }}>
-                    {uploading ? '⏳ Upload...' : photoPreview ? '🔄 Changer' : '📁 Ajouter une photo'}
-                  </button>
-                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setOpen(false)} style={{
-                  flex: 1, background: 'none', border: '1px solid #333',
-                  borderRadius: 10, padding: '10px', color: 'var(--g4)',
-                  fontSize: 13, cursor: 'pointer',
-                }}>Annuler</button>
-                <button
-                  onClick={submit}
-                  disabled={sending || !form.nom || !form.commentaire}
-                  style={{
-                    flex: 2,
-                    background: sending || !form.nom || !form.commentaire
-                      ? '#222' : 'linear-gradient(135deg,#C9A84C,#E9C46A)',
-                    border: 'none', borderRadius: 10, padding: '10px',
-                    color: sending || !form.nom || !form.commentaire ? '#555' : '#000',
-                    fontSize: 13, fontWeight: 800, cursor: 'pointer',
-                  }}
-                >
-                  {sending ? '⏳ Envoi...' : '✅ Publier mon avis'}
-                </button>
-              </div>
-            </>
-          )}
+      {loading ? (
+        <div style={{ padding: '18px 0', textAlign: 'center', color: 'var(--g4)', fontSize: 13 }}>
+          Chargement…
         </div>
-      )}
-
-      {/* ── Liste des avis ── */}
-      {reviews.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--g3)', fontSize: 13 }}>
-          Aucun avis pour l'instant — soyez le premier ! 🌟
+      ) : reviews.length === 0 ? (
+        <div style={{
+          padding: '22px 0', textAlign: 'center', color: 'var(--g4)', fontSize: 13,
+        }}>
+          Aucun avis pour le moment.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {reviews.map(r => (
-            <div key={r.id} style={{
-              background: 'var(--card)', border: '1px solid var(--g3)',
-              borderRadius: 12, padding: 14,
-              animation: 'fadeIn .3s ease',
+        <div style={{ display: 'grid', gap: 10 }}>
+          {reviews.map(review => (
+            <article key={review.id} style={{
+              background: 'var(--card2)',
+              border: '1px solid rgba(201,168,76,.12)',
+              borderRadius: 14,
+              padding: 14,
             }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <Avatar nom={r.nom} photo={r.photo} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+                <Avatar nom={review.nom} photo={review.photo} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <span style={{ fontWeight: 800, color:'var(--g3)', fontSize: 14 }}>{r.nom}</span>
-                    <span style={{ fontSize: 10, color: 'var(--g3)' }}>
-                      {new Date(r.created_at).toLocaleDateString('fr-DZ', { day: 'numeric', month: 'short' })}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <strong style={{ color: 'var(--g3)', fontSize: 13 }}>{review.nom}</strong>
+                    <Stars note={Number(review.note || 0)} />
+                    <span style={{ fontSize: 10, color: 'var(--g4)' }}>
+                      {new Date(review.created_at).toLocaleDateString('fr-DZ')}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 2, marginBottom: 7 }}>
-                    {STARS.map(s => <Star key={s} filled={s <= r.note} size={13} />)}
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--g3)', lineHeight: 1.5 }}>
-                    {r.commentaire}
+                  <p style={{
+                    margin: '7px 0 0', color: 'rgba(255,255,255,.72)',
+                    fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap',
+                  }}>
+                    {review.commentaire}
                   </p>
-                  {/* Photo du client si présente */}
-                  {r.photo && (
-                    <img src={r.photo} alt="avis"
-                      style={{ marginTop: 10, width: '100%', maxHeight: 180,
-                        objectFit: 'cover', borderRadius: 8, border: '1px solid var(--g3)' }}
-                    />
-                  )}
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
-
-      <style>{`
-        @keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
-        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-      `}</style>
     </div>
   )
 }

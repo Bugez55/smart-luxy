@@ -638,24 +638,21 @@ create policy "admin manage promos"
   using (public.is_admin())
   with check (public.is_admin());
 
--- Reviews: public can read and submit reviews; anti-spam trigger applies on insert; admin can manage.
+-- Reviews: public can read; only admins can create/update/delete reviews.
 drop policy if exists "public read reviews" on public.reviews;
 drop policy if exists "public insert reviews" on public.reviews;
 drop policy if exists "admin manage reviews" on public.reviews;
 create policy "public read reviews"
   on public.reviews for select to anon, authenticated
   using (true);
-create policy "public insert reviews"
-  on public.reviews for insert to anon, authenticated
+create policy "admin manage reviews"
+  on public.reviews for all to authenticated
+  using (public.is_admin())
   with check (
     char_length(trim(nom)) between 1 and 80
     and char_length(trim(commentaire)) between 1 and 1200
     and note between 1 and 5
   );
-create policy "admin manage reviews"
-  on public.reviews for all to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
 
 -- Settings: values are intentionally public because the storefront reads them.
 drop policy if exists "public read settings" on public.settings;
@@ -1124,13 +1121,7 @@ create policy "public read product images"
   on storage.objects for select to anon, authenticated
   using (bucket_id = 'product-images');
 
-create policy "public review image upload"
-  on storage.objects for insert to anon, authenticated
-  with check (
-    bucket_id = 'product-images'
-    and name like 'reviews/%'
-  );
-
+-- Review photos are uploaded only by admins, through the admin panel.
 create policy "admin manage product images"
   on storage.objects for all to authenticated
   using (bucket_id = 'product-images' and public.is_admin())
