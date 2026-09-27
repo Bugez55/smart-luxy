@@ -5,7 +5,6 @@ import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
 import ClientsCRM from './ClientsCRM'
-import ReviewsManager from './ReviewsManager'
 import { sendCapiEvent } from '../../utils/api'
 import CONFIG from '../../config'
 
@@ -68,7 +67,7 @@ function printInvoice(order) {
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Facture — Wazyo #${escapeHtml(order.id?.slice(0,8).toUpperCase())}</title>
+  <title>Facture — Wazyo #${escapeHtml(order.id?.toUpperCase())}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; background: white; }
@@ -139,7 +138,7 @@ function printInvoice(order) {
     </div>
     <div class="inv-meta">
       <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Bon de commande</div>
-      <div class="inv-num">#${escapeHtml(order.id?.slice(0,8).toUpperCase())}</div>
+      <div class="inv-num">#${escapeHtml(order.id?.toUpperCase())}</div>
       <div class="inv-date">${date}</div>
       <span class="badge badge-${order.statut}">${STATUT_COLORS[order.statut]?.label || order.statut}</span>
     </div>
@@ -851,7 +850,7 @@ function LivraisonManager({ orders, onToast }) {
                 <div>
                   <div style={{ fontSize:12, fontWeight:900, color:'white' }}>{order.nom_client}</div>
                   <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>📞 {order.telephone} · 📍 {order.wilaya}</div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>#{order.id?.slice(0,8).toUpperCase()}</div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>#{order.id?.toUpperCase()}</div>
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0 }}>
                   <div style={{ fontSize:14, fontWeight:900, color:'#C9A84C' }}>{Number(order.total).toLocaleString()} DA</div>
@@ -1392,24 +1391,11 @@ export default function AdminPanel({ onLogout, onToast }) {
   const filteredOrders = orders.filter(o => {
     if (filter !== 'all' && o.statut !== filter) return false
     if (search) {
-      // Recherche tolérante : accepte #SL-FAA66, SL-FAA66,
-      // téléphone avec espaces, nom, wilaya ou commune.
-      const q = search.trim().toLowerCase()
-      const qId = q.replace(/^#/, '').replace(/\s+/g, '')
-      const id = String(o.id || '').toLowerCase().replace(/^#/, '')
-      const phone = String(o.telephone || '').replace(/\D/g, '')
-      const qPhone = q.replace(/\D/g, '')
-      const haystack = [
-        id,
-        String(o.nom_client || '').toLowerCase(),
-        String(o.wilaya || '').toLowerCase(),
-        String(o.commune || '').toLowerCase(),
-      ]
-      return (
-        id.includes(qId) ||
-        haystack.some(v => v.includes(q)) ||
-        (qPhone.length >= 3 && phone.includes(qPhone))
-      )
+      const q = search.toLowerCase()
+      return o.id?.toLowerCase().includes(q) ||
+        o.nom_client?.toLowerCase().includes(q) ||
+        o.telephone?.includes(q) ||
+        o.wilaya?.toLowerCase().includes(q)
     }
     return true
   })
@@ -1444,7 +1430,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     const invalidOrders = ordersToUpdate.filter(o => !canTransitionOrderStatus(o.statut, statut))
 
     if (invalidOrders.length > 0) {
-      const names = invalidOrders.slice(0, 3).map(o => `#${o.id?.slice(0, 8).toUpperCase()}`).join(', ')
+      const names = invalidOrders.slice(0, 3).map(o => `#${o.id?.toUpperCase()}`).join(', ')
       const suffix = invalidOrders.length > 3 ? ` +${invalidOrders.length - 3}` : ''
       onToast && onToast(`⚠️ Transition impossible pour ${names}${suffix}`, 'error')
       return
@@ -1576,47 +1562,19 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   async function setStatus(id, statut) {
     const order = orders.find(o => o.id === id)
-    if (!order) {
-      onToast && onToast('❌ Commande introuvable', 'error')
-      return
-    }
+    if (!order) return
 
     if (!canTransitionOrderStatus(order.statut, statut)) {
-      onToast && onToast(
-        `⚠️ Impossible : ${STATUT_COLORS[order.statut]?.label || order.statut} → ${STATUT_COLORS[statut]?.label || statut}`,
-        'error'
-      )
+      onToast && onToast(`⚠️ Impossible : ${STATUT_COLORS[order.statut]?.label || order.statut} → ${STATUT_COLORS[statut]?.label || statut}`, 'error')
       return
     }
 
-    // Demande explicite à Supabase + retour de la ligne modifiée.
-    // On n'affiche le nouveau statut localement que si la base l'a réellement accepté.
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ statut })
-      .eq('id', id)
-      .select('id, statut')
-      .maybeSingle()
+    const { error } = await supabase.from('orders').update({ statut }).eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, statut } : o))
 
-    if (error) {
-      console.error('setStatus error:', error)
-      onToast && onToast(`❌ Impossible de modifier la commande : ${error.message}`, 'error')
-      return
-    }
-
-    if (!data) {
-      onToast && onToast(
-        '❌ La commande n’a pas été modifiée. Vérifie les droits Supabase de mise à jour des commandes.',
-        'error'
-      )
-      return
-    }
-
-    setOrders(prev => prev.map(o =>
-      o.id === id ? { ...o, statut: data.statut } : o
-    ))
-
-    // "Purchase" uniquement à la vraie livraison.
+    // "Purchase" envoyé à Meta seulement ici — à la vraie livraison confirmée,
+    // pas à la simple commande.
     if (statut === 'delivered') {
       sendCapiEvent({
         eventName: 'Purchase',
@@ -1631,7 +1589,6 @@ export default function AdminPanel({ onLogout, onToast }) {
       delivered: 'livrée',
       cancelled: 'annulée',
     }[statut] || 'mise à jour'
-
     onToast && onToast(`✅ Commande ${successLabel}`, 'default')
   }
 
@@ -1823,7 +1780,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Wazyo — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['reviews','⭐ Avis'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -2005,7 +1962,7 @@ export default function AdminPanel({ onLogout, onToast }) {
                     >{selectedOrders.has(o.id) ? '✓' : ''}</div>
                   <div style={{ flex: 1 }} onClick={() => setExpanded(isOpen ? null : o.id)}>
                     <div style={{flex:1}}>
-                      <div className="ocard-id">#{o.id?.slice(0,8).toUpperCase()}</div>
+                      <div className="ocard-id">#{o.id?.toUpperCase()}</div>
                       <div className="ocard-client">{o.nom_client}</div>
                       <div className="ocard-loc">📍 {o.wilaya} — {o.commune}</div>
                       <div style={{fontSize:11, color:'#555', marginTop:2}}>
@@ -2101,11 +2058,6 @@ export default function AdminPanel({ onLogout, onToast }) {
 
         {/* ── CLIENTS TAB (CRM) ── */}
         {tab === 'clients' && <ClientsCRM orders={orders} onToast={onToast} />}
-
-        {/* ── REVIEWS TAB ── */}
-        {tab === 'reviews' && (
-          <ReviewsManager products={products} onToast={onToast} />
-        )}
 
         {/* ── PRODUCTS TAB ── */}
         {tab === 'products' && (
