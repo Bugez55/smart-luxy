@@ -80,10 +80,10 @@ function LogoWazyo() {
         </div>
 
         <div className="wz2-word" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-          <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 800, letterSpacing: '.01em', color: 'var(--g3)' }}>
+          <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 800, letterSpacing: '-.028em', color: 'var(--g3)' }}>
             Wazyo
           </span>
-          <span style={{ fontFamily: "'Outfit', system-ui, sans-serif", fontSize: 8.5, fontWeight: 700, letterSpacing: '.23em', textTransform: 'uppercase', color: 'var(--br)', marginTop: 3 }}>
+          <span style={{ fontFamily: "'Outfit', system-ui, sans-serif", fontSize: 8, fontWeight: 800, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--br)', marginTop: 3 }}>
             Boutique
           </span>
           <span className="wz2-shine" />
@@ -141,23 +141,24 @@ export default function Header({ cartCount, onCartOpen, search, onSearch }) {
           z-index: 100;
           width: 100%;
           box-sizing: border-box;
-          padding: 12px clamp(14px, 3vw, 30px);
+          padding: 11px clamp(12px, 3vw, 30px);
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 18px;
+          gap: 16px;
           transition: .28s ease;
         }
         .wz-header--top {
-          background: linear-gradient(180deg, rgba(10,10,10,.82) 0%, rgba(10,10,10,.35) 100%);
+          background: linear-gradient(180deg, rgba(7,7,7,.80) 0%, rgba(7,7,7,.28) 100%);
           border-bottom: 1px solid transparent;
         }
         .wz-header--scrolled {
           background: color-mix(in srgb, var(--card) 88%, transparent);
-          border-bottom: 1px solid rgba(255,255,255,.07);
-          box-shadow: 0 10px 30px rgba(0,0,0,.16);
-          backdrop-filter: blur(18px) saturate(130%);
+          border-bottom: 1px solid rgba(255,255,255,.065);
+          box-shadow: 0 14px 36px rgba(0,0,0,.20);
+          backdrop-filter: blur(20px) saturate(145%);
         }
+        .wz-header::after { content:''; position:absolute; left:50%; bottom:-1px; width:min(420px,46vw); height:1px; transform:translateX(-50%); background:linear-gradient(90deg,transparent,rgba(232,202,131,.50),transparent); opacity:.16; pointer-events:none; }
         .wz-header__side { display:flex; align-items:center; min-width:0; }
         .wz-header__right { display:flex; align-items:center; gap:10px; }
         .wz-cart {
@@ -165,11 +166,11 @@ export default function Header({ cartCount, onCartOpen, search, onSearch }) {
           display:flex;
           align-items:center;
           gap:8px;
-          height:42px;
-          padding:0 14px;
-          border-radius:14px;
-          border:1px solid rgba(255,255,255,.10);
-          background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+          height:44px;
+          padding:0 15px;
+          border-radius:13px;
+          border:1px solid rgba(255,255,255,.085);
+          background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.022));
           color:var(--g3);
           cursor:pointer;
           font-size:12px;
@@ -177,7 +178,7 @@ export default function Header({ cartCount, onCartOpen, search, onSearch }) {
           letter-spacing:.01em;
           transition: transform .18s ease, border-color .18s ease, background .18s ease;
         }
-        .wz-cart:hover { transform: translateY(-1px); border-color: rgba(201,168,76,.42); background: linear-gradient(180deg, rgba(201,168,76,.13), rgba(255,255,255,.04)); }
+        .wz-cart:hover { transform: translateY(-1px); border-color: rgba(232,202,131,.35); background: linear-gradient(180deg, rgba(232,202,131,.10), rgba(255,255,255,.032)); }
         .wz-cart:active { transform: translateY(0); }
         .wz-cart__icon { display:block; flex:0 0 auto; }
         .wz-cart__label { display:inline-block; }
@@ -191,17 +192,22 @@ export default function Header({ cartCount, onCartOpen, search, onSearch }) {
         }
         .wz-header__hint {
           color:var(--g4);
-          font-size:10px;
-          letter-spacing:.08em;
+          font-size:9px;
+          letter-spacing:.12em;
           text-transform:uppercase;
           opacity:.75;
           white-space:nowrap;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .wz2-ring-grp, .wz2-ring, .wz2-needle, .wz2-shine, .wz-rocket, .wz-flame { animation:none !important; }
+          .wz-header, .wz-cart, .wz2-logo { transition:none !important; }
+        }
+
         @media (max-width: 640px) {
-          .wz-header { padding:10px 12px; }
+          .wz-header { padding:9px 12px; }
           .wz-mark-mobile .wz2-mark, .wz-mark-mobile .wz2-word { transform: scale(.94); transform-origin:left center; }
           .wz-header__hint { display:none; }
-          .wz-cart { width:42px; padding:0; justify-content:center; border-radius:13px; }
+          .wz-cart { width:42px; height:40px; padding:0; justify-content:center; border-radius:12px; }
           .wz-cart__label { display:none; }
         }
       `}</style>
