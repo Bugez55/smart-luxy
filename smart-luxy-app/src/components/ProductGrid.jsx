@@ -314,6 +314,78 @@ export default function ProductGrid({
         }
       `}</style>
 
+      <div className="wz-products-head">
+        <div className="wz-products-head-main">
+          <div className="wz-products-eyebrow">COLLECTION WAZYO</div>
+          <h2>{activeCat === 'Tous' ? 'Notre sélection' : activeCat}</h2>
+          <p>{activeCat === 'Tous' ? 'Des produits utiles, choisis pour aller à l’essentiel.' : 'Découvrez les produits de cette catégorie.'}</p>
+        </div>
+        <div className="wz-products-count">
+          <span>{products.length}</span> produit{products.length > 1 ? 's' : ''}
+        </div>
+      </div>
+
+      <style>{`
+        .wz-products-head{
+          width:100%;
+          max-width:1320px;
+          margin:0 auto;
+          padding:2px 24px 22px;
+          box-sizing:border-box;
+          display:flex;
+          align-items:flex-end;
+          justify-content:space-between;
+          gap:20px;
+        }
+        .wz-products-head-main{min-width:0;}
+        .wz-products-eyebrow{
+          color:var(--br);
+          font-size:9px;
+          font-weight:900;
+          letter-spacing:.18em;
+          text-transform:uppercase;
+          margin-bottom:7px;
+        }
+        .wz-products-head h2{
+          margin:0;
+          color:#fff;
+          font-size:clamp(25px,3vw,38px);
+          line-height:1.05;
+          letter-spacing:-.035em;
+          font-weight:800;
+        }
+        .wz-products-head p{
+          margin:8px 0 0;
+          color:var(--g4);
+          font-size:12px;
+          line-height:1.55;
+        }
+        .wz-products-count{
+          flex:0 0 auto;
+          padding:8px 12px;
+          border:1px solid rgba(255,255,255,.08);
+          border-radius:999px;
+          background:rgba(255,255,255,.025);
+          color:var(--g4);
+          font-size:10px;
+          font-weight:800;
+          letter-spacing:.04em;
+          white-space:nowrap;
+        }
+        .wz-products-count span{color:var(--br3);}
+        @media(max-width:640px){
+          .wz-products-head{
+            padding:0 14px 16px;
+            align-items:flex-end;
+            gap:12px;
+          }
+          .wz-products-eyebrow{font-size:8px;margin-bottom:6px;}
+          .wz-products-head h2{font-size:25px;}
+          .wz-products-head p{font-size:11px;margin-top:6px;max-width:290px;}
+          .wz-products-count{font-size:9px;padding:7px 10px;}
+        }
+      `}</style>
+
       {loading ? (
         <div className="pgrid">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
@@ -447,7 +519,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
               boxShadow: '0 6px 18px rgba(239,68,68,.25)',
             }}
           >
-            🔥 Plus que {p.stock}
+            Plus que {p.stock}
           </div>
         )}
 
@@ -593,7 +665,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
               cursor: outOfStock ? 'not-allowed' : 'pointer',
             }}
           >
-            🛒 Panier
+            Ajouter
           </button>
 
           <button
@@ -609,7 +681,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
               cursor: outOfStock ? 'not-allowed' : 'pointer',
             }}
           >
-            ⚡ Commander
+            Commander
           </button>
         </div>
       </div>
