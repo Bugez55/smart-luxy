@@ -8,6 +8,7 @@ import ProductGrid from './components/ProductGrid'
 import ProductPage from './components/ProductPage'
 import TrackingPage from './components/TrackingPage'
 import Cart from './components/Cart'
+import OrderModal from './components/OrderModal'
 import SuccessScreen from './components/SuccessScreen'
 import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
@@ -24,42 +25,6 @@ import { sendCapiEvent } from './utils/api'
 // ── Facebook Pixel — Tracking événements ──
 function fbq(...args) {
   if (typeof window !== 'undefined' && window.fbq) window.fbq(...args)
-}
-
-function MaintenanceScreen() {
-  return (
-    <div
-      style={{
-        minHeight: '100svh',
-        background: 'var(--bk)',
-        color: 'var(--g3)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-        textAlign: 'center',
-      }}
-    >
-      <div style={{ width: 'min(460px, 100%)' }}>
-        <img
-          src="/WY-logo-192.png"
-          alt="Wazyo"
-          style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 22px' }}
-        />
-        <div style={{ color: 'var(--br)', fontSize: 11, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 10 }}>
-          Wazyo · Boutique en ligne
-        </div>
-        <h1 style={{ fontFamily: 'var(--ff)', fontSize: 'clamp(30px, 8vw, 48px)', lineHeight: 1.05, marginBottom: 14 }}>
-          Boutique temporairement en maintenance
-        </h1>
-        <p style={{ color: 'var(--g4)', fontSize: 15, lineHeight: 1.7 }}>
-          Nous effectuons actuellement quelques améliorations.
-          <br />
-          La boutique sera de nouveau disponible très bientôt.
-        </p>
-      </div>
-    </div>
-  )
 }
 
 export default function App() {
@@ -80,15 +45,14 @@ export default function App() {
   const [activeCat, setActiveCat] = useState('Tous')
   const [search, setSearch] = useState('')
   const [openProduct, setOpenProduct] = useState(null)
+  const [checkoutProduct, setCheckoutProduct] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [trackingOpen, setTrackingOpen] = useState(false)
-  const [checkoutPromo, setCheckoutPromo] = useState(null)
-  const [checkoutItems, setCheckoutItems] = useState(null)
+  const [promoInfo, setPromoInfo] = useState(null)
+  const [orderItems, setOrderItems] = useState(null)
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
   const [politiqueTab, setPolitiqueTab] = useState(null)
-  const [maintenance, setMaintenance] = useState(false)
-  const [settingsLoading, setSettingsLoading] = useState(true)
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -127,35 +91,75 @@ export default function App() {
       if (!hash.startsWith('#produit-')) {
         // L'utilisateur est revenu en arrière depuis la page produit → on la ferme
         setOpenProduct(null)
-        setCheckoutItems(null)
-        setCheckoutPromo(null)
+        setCheckoutProduct(null)
       }
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  // ── Appliquer les réglages depuis Supabase ──
+  // ── Appliquer le thème + garde-fou de contraste ──
   useEffect(() => {
-    let mounted = true
-
     getSettings().then(s => {
-      if (!mounted) return
-
       const r = document.documentElement
-      if (s.theme_bg)       { r.style.setProperty('--bk', s.theme_bg); r.style.setProperty('--bk2', s.theme_bg); document.body.style.background = s.theme_bg; localStorage.setItem('sl_theme_bg', s.theme_bg) }
-      if (s.theme_card)     { r.style.setProperty('--card', s.theme_card); r.style.setProperty('--card2', s.theme_card); localStorage.setItem('sl_theme_card', s.theme_card) }
-      if (s.theme_accent)   { r.style.setProperty('--br', s.theme_accent); r.style.setProperty('--br2', s.theme_accent); r.style.setProperty('--br3', s.theme_accent); localStorage.setItem('sl_theme_accent', s.theme_accent) }
-      if (s.theme_text)     { r.style.setProperty('--g3', s.theme_text); localStorage.setItem('sl_theme_text', s.theme_text) }
-      if (s.theme_text_sub) { r.style.setProperty('--g4', s.theme_text_sub); localStorage.setItem('sl_theme_text_sub', s.theme_text_sub) }
+      const hexToRgb = (hex) => {
+        if (!hex) return null
+        let h = String(hex).trim().replace('#','')
+        if (h.length === 3) h = h.split('').map(c => c + c).join('')
+        if (!/^[0-9a-fA-F]{6}$/.test(h)) return null
+        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]
+      }
+      const lum = (hex) => {
+        const rgb = hexToRgb(hex)
+        if (!rgb) return .05
+        const c = rgb.map(v => {
+          const x = v / 255
+          return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4)
+        })
+        return .2126*c[0] + .7152*c[1] + .0722*c[2]
+      }
+      const contrast = (a,b) => {
+        const A = lum(a), B = lum(b)
+        const hi = Math.max(A,B), lo = Math.min(A,B)
+        return (hi + .05) / (lo + .05)
+      }
+      const pickText = (bg, preferred, fallbackLight='#fff', fallbackDark='#111') => {
+        if (preferred && contrast(preferred, bg) >= 4.2) return preferred
+        return lum(bg) > .52 ? fallbackDark : fallbackLight
+      }
 
-      setMaintenance(s.maintenance === 'true' || s.maintenance === true)
-      setSettingsLoading(false)
-    }).catch(() => {
-      if (mounted) setSettingsLoading(false)
-    })
+      const bg = s.theme_bg || localStorage.getItem('sl_theme_bg') || '#0a0a0a'
+      const card = s.theme_card || localStorage.getItem('sl_theme_card') || '#141414'
+      const accent = s.theme_accent || localStorage.getItem('sl_theme_accent') || '#C9A84C'
+      const bgLight = lum(bg) > .52
+      const text = pickText(bg, s.theme_text, '#ffffff', '#111111')
+      const sub = pickText(bg, s.theme_text_sub, '#b8b8b8', '#5f5f5f')
+      const cardText = lum(card) > .52 ? '#171717' : '#f7f7f7'
+      const cardSub = lum(card) > .52 ? '#666666' : '#bdbdbd'
 
-    return () => { mounted = false }
+      r.style.setProperty('--bk', bg)
+      r.style.setProperty('--bk2', bg)
+      r.style.setProperty('--card', card)
+      r.style.setProperty('--card2', card)
+      r.style.setProperty('--card3', card)
+      r.style.setProperty('--br', accent)
+      r.style.setProperty('--br2', accent)
+      r.style.setProperty('--br3', accent)
+      r.style.setProperty('--g3', text)
+      r.style.setProperty('--g4', sub)
+      r.style.setProperty('--wz-card-text', cardText)
+      r.style.setProperty('--wz-card-sub', cardSub)
+      r.style.setProperty('--wz-mode', bgLight ? 'light' : 'dark')
+      r.style.setProperty('--wz-page-border', bgLight ? 'rgba(0,0,0,.10)' : 'rgba(255,255,255,.08)')
+      r.style.setProperty('--wz-soft-fill', bgLight ? 'rgba(0,0,0,.035)' : 'rgba(255,255,255,.035)')
+      r.dataset.themeMode = bgLight ? 'light' : 'dark'
+      document.body.style.background = bg
+      localStorage.setItem('sl_theme_bg', bg)
+      localStorage.setItem('sl_theme_card', card)
+      localStorage.setItem('sl_theme_accent', accent)
+      localStorage.setItem('sl_theme_text', text)
+      localStorage.setItem('sl_theme_text_sub', sub)
+    }).catch(() => {})
   }, [])
 
   function toast(msg, type = 'default') {
@@ -257,10 +261,10 @@ export default function App() {
 
       notifyTelegram(order)
       setLastOrder(order)
-      setCheckoutItems(null)
+      setOrderItems(null)
       setCart([])
       setCartOpen(false)
-      setCheckoutPromo(null)
+      setPromoInfo(null)
       loadProducts()
       return true
     } catch (e) {
@@ -330,17 +334,6 @@ export default function App() {
   }
 
   // ── Boutique ─────────────────────────────────────────
-  if (settingsLoading) {
-    return (
-      <div style={{ minHeight:'100svh', background:'var(--bk)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--g4)' }}>
-        Chargement…
-      </div>
-    )
-  }
-
-  if (maintenance) return <MaintenanceScreen />
-  if (isNotFound) return <NotFound />
-
   return (
     <div className="app">
       <AnnouncementBar />
@@ -387,8 +380,6 @@ export default function App() {
           onCatChange={setActiveCat}
           loading={loading}
           onProductClick={(p) => {
-            setCheckoutItems(null)
-            setCheckoutPromo(null)
             setOpenProduct(p)
             window.history.pushState({}, '', '#produit-' + p.id)
             window.fbq && fbq('track', 'ViewContent', {
@@ -400,18 +391,14 @@ export default function App() {
             })
           }}
           onAddToCart={addToCart}
-          onBuyNow={p => {
-            setCheckoutItems([{ ...p, qty: 1 }])
-            setCheckoutPromo(null)
-            setOpenProduct(p)
-          }}
+          onBuyNow={p => { setCheckoutProduct(p); setOpenProduct(null); window.scrollTo({ top:0, behavior:'auto' }) }}
         />
       </main>
 
       {/* ════════════════════════════════════════
           GALERIE PRODUITS DÉFILANTE
       ════════════════════════════════════════ */}
-      {!openProduct && !cartOpen && !checkoutItems && !lastOrder && !trackingOpen && (
+      {!openProduct && !checkoutProduct && !cartOpen && !orderItems && !lastOrder && !trackingOpen && (
         <ProductGallery products={products} onProductClick={setOpenProduct} />
       )}
 
@@ -485,11 +472,25 @@ export default function App() {
         </p>
       </footer>
 
+      {/* Direct checkout depuis la page d'accueil */}
+      {checkoutProduct && (
+        <ProductPage
+          checkoutOnly
+          product={checkoutProduct}
+          allProducts={products}
+          onClose={() => setCheckoutProduct(null)}
+          onSubmitOrder={async (form) => {
+            const ok = await submitOrder(form)
+            if (ok) setCheckoutProduct(null)
+            return ok
+          }}
+          onPolitique={(tab) => setPolitiqueTab(tab)}
+        />
+      )}
+
       {/* Product detail */}
       <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={() => {
           setOpenProduct(null)
-          setCheckoutItems(null)
-          setCheckoutPromo(null)
           window.history.pushState({}, '', window.location.pathname)
         }} />
       {openProduct && (
@@ -497,32 +498,23 @@ export default function App() {
           product={openProduct}
           onClose={() => {
             setOpenProduct(null)
-            setCheckoutItems(null)
-            setCheckoutPromo(null)
             window.history.pushState({}, '', window.location.pathname)
           }}
           onAddToCart={(qty) => {
-            setCheckoutItems(null)
-            setCheckoutPromo(null)
             addToCart(openProduct, qty)
             setOpenProduct(null)
             window.history.pushState({}, '', window.location.pathname)
           }}
           allProducts={products}
           onBuyNow={(qty) => {
-            setCheckoutItems([{ ...openProduct, qty }])
-            setCheckoutPromo(null)
+            setOrderItems([{ ...openProduct, qty }])
+            setOpenProduct(null)
             window.history.pushState({}, '', window.location.pathname)
           }}
-          checkoutItems={checkoutItems}
-          checkoutOnly={!!checkoutItems}
-          promo={checkoutPromo}
           onSubmitOrder={async (form) => {
             const ok = await submitOrder(form)
             if (ok) {
               setOpenProduct(null)
-              setCheckoutItems(null)
-              setCheckoutPromo(null)
               window.history.pushState({}, '', window.location.pathname)
             }
             return ok
@@ -540,19 +532,23 @@ export default function App() {
         onClose={() => setCartOpen(false)}
         onRemove={removeFromCart}
         onChangeQty={changeQty}
-        onOrder={(promo, totalFinal) => {
-          if (!cart.length) return
-          setCartOpen(false)
-          setCheckoutPromo(promo || null)
-          setCheckoutItems(cart)
-          setOpenProduct(cart[0])
-          window.fbq && fbq('track', 'InitiateCheckout', {
-            value: cart.reduce((s,i) => s + i.prix * i.qty, 0),
-            currency: 'DZD',
-            num_items: cart.reduce((s,i) => s + i.qty, 0),
-          })
-        }}
+        onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart)
+            window.fbq && fbq('track', 'InitiateCheckout', {
+              value: cart.reduce((s,i) => s + i.prix * i.qty, 0),
+              currency: 'DZD',
+              num_items: cart.reduce((s,i) => s + i.qty, 0),
+            }) }}
       />
+
+      {/* Order modal */}
+      {orderItems && (
+        <OrderModal
+          items={orderItems}
+          promo={promoInfo}
+          onClose={() => { setOrderItems(null); setPromoInfo(null) }}
+          onSubmit={submitOrder}
+        />
+      )}
 
       {/* Success */}
       {lastOrder && (
