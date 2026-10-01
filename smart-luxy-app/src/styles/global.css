@@ -1641,3 +1641,144 @@ body::before { opacity: .18; }
   .pcard-name { font-size: 11.5px; }
   .pcard-prix { font-size: 16px; }
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   WAZYO THEME CONTRAST LAYER — dark / light safe
+═══════════════════════════════════════════════════════ */
+:root{
+  --wz-card-text:var(--g3);
+  --wz-card-sub:var(--g4);
+  --wz-page-border:rgba(255,255,255,.08);
+  --wz-soft-fill:rgba(255,255,255,.035);
+}
+
+[data-theme-mode="light"] body{
+  color:var(--g3);
+}
+[data-theme-mode="light"] .app{
+  color:var(--g3);
+}
+[data-theme-mode="light"] .cats .cat-btn{
+  background:rgba(0,0,0,.035);
+  border-color:rgba(0,0,0,.10);
+  color:#4a4a4a;
+  box-shadow:none;
+}
+[data-theme-mode="light"] .cats .cat-btn:hover{
+  color:#111;
+  border-color:rgba(0,0,0,.18);
+}
+[data-theme-mode="light"] .cats .cat-btn.active{
+  color:#171717;
+  box-shadow:0 7px 18px rgba(0,0,0,.10);
+}
+[data-theme-mode="light"] .pcard{
+  color:var(--wz-card-text);
+  border-color:rgba(0,0,0,.10);
+  box-shadow:0 8px 28px rgba(0,0,0,.07);
+}
+[data-theme-mode="light"] .pcard::after{
+  background:linear-gradient(135deg,rgba(255,255,255,.68),transparent 34%,transparent 70%,rgba(0,0,0,.025));
+}
+[data-theme-mode="light"] .pcard .pcard-name,
+[data-theme-mode="light"] .pcard .pcard-prix,
+[data-theme-mode="light"] .pcard .pcard-body{
+  color:var(--wz-card-text);
+}
+[data-theme-mode="light"] .pcard-old,
+[data-theme-mode="light"] .pcard-body .pcard-name + div span,
+[data-theme-mode="light"] .pcard-body .pcard-name + div{
+  color:var(--wz-card-sub);
+}
+[data-theme-mode="light"] .btn-cart{
+  background:rgba(0,0,0,.035);
+  border-color:rgba(0,0,0,.12);
+  color:#262626;
+}
+[data-theme-mode="light"] .btn-cart:hover{
+  background:rgba(201,168,76,.10);
+  color:#2a220e;
+}
+[data-theme-mode="light"] .search-big{
+  background:rgba(255,255,255,.86);
+  border-color:rgba(0,0,0,.10);
+  box-shadow:0 10px 30px rgba(0,0,0,.06);
+}
+[data-theme-mode="light"] .search-big input{
+  color:#171717;
+}
+[data-theme-mode="light"] .search-big input::placeholder{
+  color:#8a8a8a;
+}
+[data-theme-mode="light"] .hero-badge{
+  background:rgba(255,255,255,.66);
+  border-color:rgba(0,0,0,.09);
+  color:#4a4a4a;
+}
+[data-theme-mode="light"] .hero-badge span{
+  color:#171717;
+}
+[data-theme-mode="light"] .footer{
+  background:rgba(0,0,0,.035);
+  border-top-color:rgba(0,0,0,.10);
+}
+[data-theme-mode="light"] .ftag,
+[data-theme-mode="light"] .footer a,
+[data-theme-mode="light"] .footer button{
+  color:#555 !important;
+}
+[data-theme-mode="light"] .empty{
+  background:rgba(0,0,0,.025);
+  border-color:rgba(0,0,0,.08);
+  color:#444;
+}
+
+/* Product page */
+[data-theme-mode="light"] .pp-root{
+  color:#171717;
+}
+[data-theme-mode="light"] .pp-root .pp-page{
+  border-color:rgba(0,0,0,.05);
+}
+[data-theme-mode="light"] .pp-root .pp-order-card{
+  border-color:rgba(0,0,0,.10)!important;
+  box-shadow:0 18px 45px rgba(0,0,0,.09)!important;
+}
+[data-theme-mode="light"] .pp-root .pp-form-section-title,
+[data-theme-mode="light"] .pp-root .pp-trust-item,
+[data-theme-mode="light"] .pp-root .pp-faq-item,
+[data-theme-mode="light"] .pp-root .pp-qty-row{
+  border-color:rgba(0,0,0,.10)!important;
+  background:rgba(0,0,0,.025)!important;
+}
+[data-theme-mode="light"] .pp-root input,
+[data-theme-mode="light"] .pp-root textarea,
+[data-theme-mode="light"] .pp-root [role="button"]{
+  border-color:rgba(0,0,0,.14)!important;
+}
+[data-theme-mode="light"] .pp-root .pp-faq-q,
+[data-theme-mode="light"] .pp-root .pp-faq-a{
+  color:#171717;
+  background:#fff;
+}
+[data-theme-mode="light"] .pp-root .pp-order-step-label,
+[data-theme-mode="light"] .pp-root .pp-trust-item small,
+[data-theme-mode="light"] .pp-root .pp-section-title{
+  color:#636363;
+}
+[data-theme-mode="light"] .pp-root .pp-order-step.is-active .pp-order-step-label,
+[data-theme-mode="light"] .pp-root .pp-kicker{
+  color:#7e621c;
+}
+[data-theme-mode="light"] .pp-root .pp-image-hint{
+  background:rgba(255,255,255,.86);
+  color:#171717;
+  border-color:rgba(0,0,0,.10);
+}
+
+@media (prefers-reduced-motion: reduce){
+  [data-theme-mode="light"] .pcard,
+  [data-theme-mode="light"] .btn-cart,
+  [data-theme-mode="light"] .btn-buy{transition:none!important}
+}
