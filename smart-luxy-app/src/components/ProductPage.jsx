@@ -29,7 +29,7 @@ const LIVRAISON = {
   'Bordj Badji Mokhtar':{bureau:1500,domicile:1900},'Ouled Djellal':{bureau:600,domicile:1100},
 }
 
-export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique }) {
+export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
   const [openFaq, setOpenFaq] = useState(null)
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('ar')
@@ -296,7 +296,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null)
 
   return (
-    <div className="pp-root" data-product-id={p.id} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:300, background: p.card_color || 'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+    <div className={`pp-root ${checkoutOnly ? 'checkout-only' : ''}`} data-product-id={p.id} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:checkoutOnly ? 420 : 300, background:'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
 
       {/* ── Header sticky ── */}
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(8,8,8,.90)', backdropFilter:'blur(24px) saturate(150%)', WebkitBackdropFilter:'blur(24px) saturate(150%)', borderBottom:'1px solid rgba(201,168,76,.18)', boxShadow:'0 10px 30px rgba(0,0,0,.18)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
@@ -304,8 +304,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           <div style={{ width:`${scrollProgress}%`, height:'100%', background:'linear-gradient(90deg,#C9A84C,#E9C46A)', boxShadow:'0 0 10px rgba(201,168,76,.45)', transition:'width .12s linear' }} />
         </div>
         <button onClick={onClose} style={{ background:'var(--card2)', border:'1px solid rgba(128,128,128,.25)', borderRadius:10, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--g3)', fontSize:18, flexShrink:0 }}>✕</button>
-        <span style={{ fontSize:13, color:'var(--g3)', fontWeight:600, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Détail produit</span>
-        {p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
+        <span style={{ fontSize:13, color:'var(--g3)', fontWeight:700, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{checkoutOnly ? 'Passer commande' : 'Détail produit'}</span>
+        {!checkoutOnly && p.badge && <span style={{ background:'#C9A84C', color:'#000', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>{p.badge}</span>}
       </div>
 
       <div className="pp-page">
@@ -694,7 +694,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             <div className="pp-delivery-options" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {['domicile','bureau'].map(mode => {
                 const selected = modeLiv === mode
-                const modeFee = wilayaNom && LIVRAISON[wilayaNom] ? LIVRAISON[wilayaNom][mode] : null
+                const modeFee = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][mode] : null
                 const modeLabel = mode==='domicile'
                   ? (lang==='ar' ? 'التوصيل للمنزل' : 'À domicile')
                   : (lang==='ar' ? 'الاستلام من المكتب' : 'Retrait bureau')
@@ -1320,6 +1320,20 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
         @keyframes imgIn{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:scale(1)}}
         @keyframes stockGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3)}}
+
+        /* ═══════════════════════════════════════════════
+           DIRECT CHECKOUT — depuis la page d'accueil
+        ═══════════════════════════════════════════════ */
+        .pp-root.checkout-only .pp-page > *:not(.pp-order-card){display:none!important}
+        .pp-root.checkout-only .pp-page{width:min(760px,100%);border:none;background:transparent;padding-bottom:24px}
+        .pp-root.checkout-only .pp-order-card{margin:0 auto 24px!important;border-radius:0 0 20px 20px;box-shadow:0 18px 55px rgba(0,0,0,.14)}
+        .pp-root.checkout-only .pp-order-card > div:first-child{padding-top:18px;padding-bottom:18px}
+        .pp-root.checkout-only .pp-order-card .pp-order-steps{margin-top:2px}
+        @media(max-width:640px){
+          .pp-root.checkout-only .pp-page{width:100%}
+          .pp-root.checkout-only .pp-order-card{border-radius:0 0 18px 18px}
+        }
+
 
         /* ═══════════════════════════════════════════════
            WAZYO PRODUCT PAGE — PREMIUM 2.1 REFINEMENT
