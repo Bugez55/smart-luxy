@@ -67,7 +67,7 @@ function printInvoice(order) {
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Facture — Wazyo #${escapeHtml(order.id?.toUpperCase())}</title>
+  <title>Facture — Wazyo #${escapeHtml(order.id?.slice(0,8).toUpperCase())}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; background: white; }
@@ -138,7 +138,7 @@ function printInvoice(order) {
     </div>
     <div class="inv-meta">
       <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Bon de commande</div>
-      <div class="inv-num">#${escapeHtml(order.id?.toUpperCase())}</div>
+      <div class="inv-num">#${escapeHtml(order.id?.slice(0,8).toUpperCase())}</div>
       <div class="inv-date">${date}</div>
       <span class="badge badge-${order.statut}">${STATUT_COLORS[order.statut]?.label || order.statut}</span>
     </div>
@@ -850,7 +850,7 @@ function LivraisonManager({ orders, onToast }) {
                 <div>
                   <div style={{ fontSize:12, fontWeight:900, color:'white' }}>{order.nom_client}</div>
                   <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>📞 {order.telephone} · 📍 {order.wilaya}</div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>#{order.id?.toUpperCase()}</div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>#{order.id?.slice(0,8).toUpperCase()}</div>
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0 }}>
                   <div style={{ fontSize:14, fontWeight:900, color:'#C9A84C' }}>{Number(order.total).toLocaleString()} DA</div>
@@ -1386,16 +1386,40 @@ export default function AdminPanel({ onLogout, onToast }) {
     setLoading(false)
   }, [])
 
-  useEffect(() => { loadOrders(); loadProducts() }, [])
+  useEffect(() => {
+    loadOrders()
+    loadProducts()
+  }, [loadOrders, loadProducts])
+
+  // Charger les données des onglets qui ne sont pas nécessaires au démarrage.
+  // Sans ces appels, les onglets Promos et Bannière restaient vides même si les
+  // données existaient dans Supabase.
+  useEffect(() => {
+    if (tab === 'promos') loadPromos()
+    if (tab === 'banner') loadBanner()
+  }, [tab])
 
   const filteredOrders = orders.filter(o => {
     if (filter !== 'all' && o.statut !== filter) return false
     if (search) {
-      const q = search.toLowerCase()
-      return o.id?.toLowerCase().includes(q) ||
-        o.nom_client?.toLowerCase().includes(q) ||
-        o.telephone?.includes(q) ||
-        o.wilaya?.toLowerCase().includes(q)
+      // Recherche tolérante : accepte #SL-FAA66, SL-FAA66,
+      // téléphone avec espaces, nom, wilaya ou commune.
+      const q = search.trim().toLowerCase()
+      const qId = q.replace(/^#/, '').replace(/\s+/g, '')
+      const id = String(o.id || '').toLowerCase().replace(/^#/, '')
+      const phone = String(o.telephone || '').replace(/\D/g, '')
+      const qPhone = q.replace(/\D/g, '')
+      const haystack = [
+        id,
+        String(o.nom_client || '').toLowerCase(),
+        String(o.wilaya || '').toLowerCase(),
+        String(o.commune || '').toLowerCase(),
+      ]
+      return (
+        id.includes(qId) ||
+        haystack.some(v => v.includes(q)) ||
+        (qPhone.length >= 3 && phone.includes(qPhone))
+      )
     }
     return true
   })
@@ -1430,7 +1454,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     const invalidOrders = ordersToUpdate.filter(o => !canTransitionOrderStatus(o.statut, statut))
 
     if (invalidOrders.length > 0) {
-      const names = invalidOrders.slice(0, 3).map(o => `#${o.id?.toUpperCase()}`).join(', ')
+      const names = invalidOrders.slice(0, 3).map(o => `#${o.id || ''}`).join(', ')
       const suffix = invalidOrders.length > 3 ? ` +${invalidOrders.length - 3}` : ''
       onToast && onToast(`⚠️ Transition impossible pour ${names}${suffix}`, 'error')
       return
@@ -1562,19 +1586,47 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   async function setStatus(id, statut) {
     const order = orders.find(o => o.id === id)
-    if (!order) return
-
-    if (!canTransitionOrderStatus(order.statut, statut)) {
-      onToast && onToast(`⚠️ Impossible : ${STATUT_COLORS[order.statut]?.label || order.statut} → ${STATUT_COLORS[statut]?.label || statut}`, 'error')
+    if (!order) {
+      onToast && onToast('❌ Commande introuvable', 'error')
       return
     }
 
-    const { error } = await supabase.from('orders').update({ statut }).eq('id', id)
-    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, statut } : o))
+    if (!canTransitionOrderStatus(order.statut, statut)) {
+      onToast && onToast(
+        `⚠️ Impossible : ${STATUT_COLORS[order.statut]?.label || order.statut} → ${STATUT_COLORS[statut]?.label || statut}`,
+        'error'
+      )
+      return
+    }
 
-    // "Purchase" envoyé à Meta seulement ici — à la vraie livraison confirmée,
-    // pas à la simple commande.
+    // Demande explicite à Supabase + retour de la ligne modifiée.
+    // On n'affiche le nouveau statut localement que si la base l'a réellement accepté.
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ statut })
+      .eq('id', id)
+      .select('id, statut')
+      .maybeSingle()
+
+    if (error) {
+      console.error('setStatus error:', error)
+      onToast && onToast(`❌ Impossible de modifier la commande : ${error.message}`, 'error')
+      return
+    }
+
+    if (!data) {
+      onToast && onToast(
+        '❌ La commande n’a pas été modifiée. Vérifie les droits Supabase de mise à jour des commandes.',
+        'error'
+      )
+      return
+    }
+
+    setOrders(prev => prev.map(o =>
+      o.id === id ? { ...o, statut: data.statut } : o
+    ))
+
+    // "Purchase" uniquement à la vraie livraison.
     if (statut === 'delivered') {
       sendCapiEvent({
         eventName: 'Purchase',
@@ -1589,6 +1641,7 @@ export default function AdminPanel({ onLogout, onToast }) {
       delivered: 'livrée',
       cancelled: 'annulée',
     }[statut] || 'mise à jour'
+
     onToast && onToast(`✅ Commande ${successLabel}`, 'default')
   }
 
@@ -1639,19 +1692,24 @@ export default function AdminPanel({ onLogout, onToast }) {
   async function addMsg() {
     const msg = newMsg.trim()
     if (!msg) return
-    const pos = (bannerMsgs.length + 1)
-    await supabase.from('banner_messages').insert({ message: msg, actif: true, position: pos })
+    const pos = bannerMsgs.length + 1
+    const { error } = await supabase.from('banner_messages').insert({ message: msg, actif: true, position: pos })
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setNewMsg('')
-    loadBanner()
+    await loadBanner()
+    onToast && onToast('✅ Message ajouté', 'default')
   }
 
   async function toggleMsg(id, actif) {
-    await supabase.from('banner_messages').update({ actif }).eq('id', id)
+    const { error } = await supabase.from('banner_messages').update({ actif }).eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setBannerMsgs(prev => prev.map(m => m.id === id ? { ...m, actif } : m))
   }
 
   async function deleteMsg(id) {
-    await supabase.from('banner_messages').delete().eq('id', id)
+    if (!window.confirm('Supprimer ce message de bannière ?')) return
+    const { error } = await supabase.from('banner_messages').delete().eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setBannerMsgs(prev => prev.filter(m => m.id !== id))
   }
 
@@ -1673,25 +1731,36 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   async function addPromo() {
     const code = newPromo.code.trim().toUpperCase()
+    const reduction = Number(newPromo.reduction)
+    const maxUses = newPromo.max_uses ? Number(newPromo.max_uses) : null
     if (!code) return
-    await supabase.from('promos').insert({
-      code, reduction: Number(newPromo.reduction),
-      max_uses: newPromo.max_uses ? Number(newPromo.max_uses) : null,
-      actif: true, uses: 0,
+    if (!Number.isFinite(reduction) || reduction <= 0) { onToast && onToast('❌ Réduction invalide', 'error'); return }
+    if (maxUses !== null && (!Number.isFinite(maxUses) || maxUses < 1)) { onToast && onToast('❌ Nombre d’utilisations invalide', 'error'); return }
+
+    const { error } = await supabase.from('promos').insert({
+      code, reduction, max_uses: maxUses, actif: true, uses: 0,
     })
+    if (error) {
+      onToast && onToast('❌ ' + (error.message || 'Impossible de créer le code promo'), 'error')
+      return
+    }
     setNewPromo({ code:'', reduction:10, max_uses:'' })
-    loadPromos()
-    loadBanner()
+    await loadPromos()
+    onToast && onToast('✅ Code promo créé', 'default')
   }
 
   async function togglePromo(id, actif) {
-    await supabase.from('promos').update({ actif }).eq('id', id)
+    const { error } = await supabase.from('promos').update({ actif }).eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setPromos(prev => prev.map(p => p.id===id ? {...p, actif} : p))
   }
 
   async function deletePromo(id) {
-    await supabase.from('promos').delete().eq('id', id)
+    if (!window.confirm('Supprimer ce code promo ?')) return
+    const { error } = await supabase.from('promos').delete().eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setPromos(prev => prev.filter(p => p.id!==id))
+    onToast && onToast('🗑️ Code promo supprimé', 'default')
   }
 
   // ── Export Excel ──
@@ -1739,15 +1808,18 @@ export default function AdminPanel({ onLogout, onToast }) {
   }
 
   async function toggleActive(id, val) {
-    await supabase.from('products').update({ is_active: val }).eq('id', id)
+    const { error } = await supabase.from('products').update({ is_active: val }).eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: val } : p))
+    onToast && onToast(val ? '👁️ Produit affiché' : '👁️ Produit masqué', 'default')
   }
 
   async function deleteProd(id) {
     if (!confirm('Supprimer ce produit définitivement ?')) return
-    await supabase.from('products').delete().eq('id', id)
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setProducts(prev => prev.filter(p => p.id !== id))
-    onToast('🗑️ Produit supprimé')
+    onToast && onToast('🗑️ Produit supprimé', 'default')
   }
 
   async function saveProd(data) {
@@ -1962,7 +2034,7 @@ export default function AdminPanel({ onLogout, onToast }) {
                     >{selectedOrders.has(o.id) ? '✓' : ''}</div>
                   <div style={{ flex: 1 }} onClick={() => setExpanded(isOpen ? null : o.id)}>
                     <div style={{flex:1}}>
-                      <div className="ocard-id">#{o.id?.toUpperCase()}</div>
+                      <div className="ocard-id">#{o.id?.slice(0,8).toUpperCase()}</div>
                       <div className="ocard-client">{o.nom_client}</div>
                       <div className="ocard-loc">📍 {o.wilaya} — {o.commune}</div>
                       <div style={{fontSize:11, color:'#555', marginTop:2}}>
@@ -2104,6 +2176,68 @@ export default function AdminPanel({ onLogout, onToast }) {
           </div>
         )}
       </div>
+
+        {/* ── PROMOS TAB ── */}
+        {tab === 'promos' && (
+          <div>
+            <h3 style={{ color:'white', fontSize:15, fontWeight:800, marginBottom:6 }}>🎟️ Codes promo</h3>
+            <p style={{ color:'rgba(255,255,255,.4)', fontSize:12, marginBottom:18 }}>
+              Crée, active ou désactive les codes promo utilisés sur la boutique.
+            </p>
+
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1.4fr) 120px 120px auto', gap:8, marginBottom:18, alignItems:'center' }}>
+              <input
+                value={newPromo.code}
+                onChange={e => setNewPromo(p => ({ ...p, code:e.target.value.toUpperCase() }))}
+                onKeyDown={e => e.key === 'Enter' && addPromo()}
+                placeholder="CODE (ex: WAZYO10)"
+                style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:13, outline:'none' }}
+              />
+              <input
+                type="number" min="0"
+                value={newPromo.reduction}
+                onChange={e => setNewPromo(p => ({ ...p, reduction:e.target.value }))}
+                placeholder="Réduction"
+                style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:13, outline:'none' }}
+              />
+              <input
+                type="number" min="1"
+                value={newPromo.max_uses}
+                onChange={e => setNewPromo(p => ({ ...p, max_uses:e.target.value }))}
+                placeholder="Max utilisations"
+                style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:13, outline:'none' }}
+              />
+              <button
+                onClick={addPromo}
+                disabled={!newPromo.code.trim()}
+                className="act-btn"
+                style={{ background:'var(--br)', color:'#000', border:'none', fontWeight:800, padding:'10px 16px', whiteSpace:'nowrap', opacity:newPromo.code.trim()?1:.45 }}
+              >+ Ajouter</button>
+            </div>
+
+            {promos.length === 0 ? (
+              <div className="empty"><div style={{fontSize:36}}>🎟️</div><p>Aucun code promo.</p></div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {promos.map(p => (
+                  <div key={p.id} style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto auto auto', alignItems:'center', gap:12, background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:10, padding:'11px 14px' }}>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontSize:14, fontWeight:900, color:'white', letterSpacing:'.04em' }}>{p.code}</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginTop:3 }}>
+                        {Number(p.reduction || 0).toLocaleString('fr-DZ')} DA de réduction · {p.uses || 0}{p.max_uses ? ` / ${p.max_uses}` : ''} utilisation(s)
+                      </div>
+                    </div>
+                    <button onClick={() => togglePromo(p.id, !p.actif)} className="act-btn" style={{ color:p.actif?'#86efac':'#888', background:p.actif?'rgba(34,197,94,.1)':'rgba(255,255,255,.04)', borderColor:p.actif?'rgba(34,197,94,.25)':'rgba(255,255,255,.08)' }}>
+                      {p.actif ? '✅ Actif' : '⏸ Inactif'}
+                    </button>
+                    <span style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>{p.max_uses ? `Max ${p.max_uses}` : 'Illimité'}</span>
+                    <button onClick={() => deletePromo(p.id)} className="act-btn danger">🗑️</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── BANNIÈRE TAB ── */}
         {tab === 'banner' && (
