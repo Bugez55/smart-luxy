@@ -46,11 +46,38 @@ export default function SuccessScreen({ order, onClose }) {
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
+    const historyState = window.history.state
+    const successHistoryKey = `wazyo-success-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    let closingFromHistory = false
+
     document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previousOverflow
+
+    // Add one temporary history entry so the Android/browser back action
+    // closes the success screen instead of leaving the checkout abruptly.
+    window.history.pushState(
+      { ...(historyState || {}), __wazyoSuccessScreen: successHistoryKey },
+      '',
+      window.location.href
+    )
+
+    const handlePopState = () => {
+      closingFromHistory = true
+      onClose?.()
     }
-  }, [])
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      document.body.style.overflow = previousOverflow
+
+      // If the screen is closed by its own button, remove the temporary
+      // history entry so it does not create a duplicate page in history.
+      if (!closingFromHistory && window.history.state?.__wazyoSuccessScreen === successHistoryKey) {
+        window.history.back()
+      }
+    }
+  }, [onClose])
 
   const steps = [
     { icon: '✓', label: 'Commande reçue', done: true },
@@ -203,7 +230,7 @@ export default function SuccessScreen({ order, onClose }) {
           }}>
             Confirmer sur WhatsApp
           </button>
-          <button onClick={onClose} style={{
+          <button onClick={() => window.history.back()} style={{
             width:'100%', padding:'12px', background:'transparent', border:'1px solid rgba(255,255,255,.11)',
             borderRadius:13, color:'var(--g3)', fontSize:13, fontWeight:750, cursor:'pointer'
           }}>
