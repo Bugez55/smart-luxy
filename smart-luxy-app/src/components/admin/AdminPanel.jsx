@@ -1565,62 +1565,83 @@ export default function AdminPanel({ onLogout, onToast }) {
     if (!window.confirm(`Passer ${selectedOrders.size} commande${selectedOrders.size > 1 ? 's' : ''} à « ${STATUT_COLORS[statut]?.label || statut} » ?`)) return
     setBulkLoading(true)
 
-    const { data: updatedRows, error } = await supabase.from('orders')
-      .update({ statut })
-      .in('id', Array.from(selectedOrders))
-      .select('id, statut')
+    try {
+      const ids = Array.from(selectedOrders)
+      const { data: updatedRows, error } = await supabase.from('orders')
+        .update({ statut })
+        .in('id', ids)
+        .select('id, statut')
 
-    if (error) {
-      onToast && onToast('❌ ' + error.message, 'error')
-      setBulkLoading(false)
-      return
-    }
+      if (error) throw error
 
-    const updatedIds = new Set((updatedRows || []).map(row => row.id))
-    if (updatedIds.size !== selectedOrders.size) {
-      onToast && onToast(`⚠️ ${updatedIds.size}/${selectedOrders.size} commande(s) modifiée(s). Vérifie les droits Supabase.`, 'error')
-    }
-
-    setOrders(prev => prev.map(o =>
-      updatedIds.has(o.id) ? { ...o, statut } : o
-    ))
-
-    if (statut === 'delivered') {
-      for (const order of ordersToUpdate.filter(o => updatedIds.has(o.id))) {
-        sendCapiEvent({
-          eventName: 'Purchase',
-          orderId: order.id,
-          eventId: `${order.id}-purchase`,
-        }, true).catch(e => console.error(`❌ CAPI Purchase (${order.id}):`, e))
+      const updatedIds = new Set((updatedRows || []).map(row => row.id))
+      if (updatedIds.size !== ids.length) {
+        onToast && onToast(`⚠️ ${updatedIds.size}/${ids.length} commande(s) modifiée(s). Certaines n'ont pas été acceptées par Supabase.`, 'error')
       }
+
+      setOrders(prev => prev.map(o =>
+        updatedIds.has(o.id) ? { ...o, statut } : o
+      ))
+
+      if (statut === 'delivered') {
+        for (const order of ordersToUpdate.filter(o => updatedIds.has(o.id))) {
+          sendCapiEvent({
+            eventName: 'Purchase',
+            orderId: order.id,
+            eventId: `${order.id}-purchase`,
+          }, true).catch(e => console.error(`❌ CAPI Purchase (${order.id}):`, e))
+        }
+      }
+
+      const successLabel = {
+        confirmed: 'confirmées',
+        shipped: 'expédiées',
+        delivered: 'livrées',
+        cancelled: 'annulées',
+      }[statut] || 'mises à jour'
+
+      if (updatedIds.size > 0) {
+        onToast && onToast(`✅ ${updatedIds.size} commande${updatedIds.size > 1 ? 's' : ''} ${successLabel}`, 'default')
+      }
+      setSelectedOrders(new Set())
+    } catch (error) {
+      console.error('bulkSetStatus error:', error)
+      onToast && onToast(`❌ Impossible de modifier les commandes : ${error.message || 'Erreur inconnue'}`, 'error')
+    } finally {
+      setBulkLoading(false)
     }
-
-    const successLabel = {
-      confirmed: 'confirmées',
-      shipped: 'expédiées',
-      delivered: 'livrées',
-      cancelled: 'annulées',
-    }[statut] || 'mises à jour'
-
-    onToast && onToast(`✅ ${updatedIds.size} commande${updatedIds.size > 1 ? 's' : ''} ${successLabel}`, 'default')
-    setSelectedOrders(new Set())
-    setBulkLoading(false)
   }
 
   async function bulkDelete() {
     if (selectedOrders.size === 0) return
     if (!window.confirm(`Supprimer ${selectedOrders.size} commandes définitivement ?`)) return
     setBulkLoading(true)
-    const { error } = await supabase.from('orders').delete().in('id', Array.from(selectedOrders))
-    if (error) {
-      onToast && onToast('❌ ' + error.message, 'error')
+
+    try {
+      const ids = Array.from(selectedOrders)
+      const { data: deletedRows, error } = await supabase
+        .from('orders')
+        .delete()
+        .in('id', ids)
+        .select('id')
+
+      if (error) throw error
+
+      const deletedIds = new Set((deletedRows || []).map(row => row.id))
+      setOrders(prev => prev.filter(o => !deletedIds.has(o.id)))
+      setSelectedOrders(new Set())
+
+      if (deletedIds.size !== ids.length) {
+        onToast && onToast(`⚠️ ${deletedIds.size}/${ids.length} commande(s) supprimée(s). Vérifie les droits Supabase.`, 'error')
+      } else {
+        onToast && onToast(`🗑️ ${deletedIds.size} commande${deletedIds.size > 1 ? 's' : ''} supprimée${deletedIds.size > 1 ? 's' : ''}`, 'default')
+      }
+    } catch (error) {
+      console.error('bulkDelete error:', error)
+      onToast && onToast(`❌ Impossible de supprimer les commandes : ${error.message || 'Erreur inconnue'}`, 'error')
+    } finally {
       setBulkLoading(false)
-      return
     }
-    setOrders(prev => prev.filter(o => !selectedOrders.has(o.id)))
-    onToast && onToast(`🗑️ ${selectedOrders.size} commandes supprimées`, 'default')
-    setSelectedOrders(new Set())
-    setBulkLoading(false)
   }
 
   function printSelected() {
