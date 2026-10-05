@@ -93,16 +93,33 @@ function LogoWazyo() {
       {launching && (
         <div className="wz-launch-overlay" aria-hidden="true">
           <style>{`
-            .wz-launch-overlay { position: fixed; inset: 0; z-index: 9999; pointer-events: none; overflow: hidden; display: flex; justify-content: center; align-items: flex-end; }
-            .wz-rocket { position: relative; animation: wz-fly 1150ms cubic-bezier(.55,0,.15,1) forwards; }
-            @keyframes wz-fly { 0% { transform: translateY(10vh) scale(.6); opacity: 0; } 8% { opacity: 1; } 70% { transform: translateY(-95vh) scale(1.15); opacity: 1; } 100% { transform: translateY(-135vh) scale(.9); opacity: 0; } }
+            .wz-launch-overlay { position: fixed; inset: 0; z-index: 9999; pointer-events: none; overflow: hidden; }
+            .wz-rocket {
+              position: absolute;
+              left: 50%;
+              bottom: -88px;
+              width: 72px;
+              height: 72px;
+              margin-left: -36px;
+              animation: wz-fly 1550ms cubic-bezier(.22,.78,.18,1) forwards;
+              transform-origin: 50% 50%;
+              will-change: transform, opacity;
+            }
+            /* Monte depuis le bas → petit tour au milieu → remonte → rebondit sur le haut. */
+            @keyframes wz-fly {
+              0% { transform: translate3d(0, 0, 0) scale(.58) rotate(-8deg); opacity: 0; }
+              9% { transform: translate3d(0, -7vh, 0) scale(.82) rotate(-3deg); opacity: 1; }
+              34% { transform: translate3d(0, -48vh, 0) scale(1.05) rotate(0deg); opacity: 1; }
+              48% { transform: translate3d(0, -48vh, 0) scale(1.05) rotate(360deg); opacity: 1; }
+              73% { transform: translate3d(0, -91vh, 0) scale(1.12) rotate(710deg); opacity: 1; }
+              86% { transform: translate3d(0, -101vh, 0) scale(.98) rotate(710deg); opacity: 1; }
+              93% { transform: translate3d(0, -96vh, 0) scale(.92) rotate(700deg); opacity: 1; }
+              100% { transform: translate3d(0, -106vh, 0) scale(.72) rotate(690deg); opacity: 0; }
+            }
             .wz-rocket-w { width: 72px; height: 72px; position: relative; z-index: 2; filter: drop-shadow(0 0 10px rgba(233,196,106,.85)); }
-            .wz-flame { position: absolute; left: 50%; bottom: -34px; transform: translateX(-50%); width: 20px; height: 60px; z-index: 1; border-radius: 50% 50% 45% 45% / 65% 65% 35% 35%; background: linear-gradient(180deg, #FFF3C9 0%, #E9C46A 35%, rgba(169,128,58,0) 85%); filter: blur(3px); animation: wz-flicker 130ms ease-in-out infinite alternate; }
-            @keyframes wz-flicker { 0% { transform: translateX(-50%) scaleY(1) scaleX(1); } 100% { transform: translateX(-50%) scaleY(1.3) scaleX(.8); } }
-            @media (prefers-reduced-motion: reduce) { .wz-rocket, .wz-flame { animation: none !important; } }
+            @media (prefers-reduced-motion: reduce) { .wz-rocket { animation: none !important; } }
           `}</style>
           <div className="wz-rocket" onAnimationEnd={handleRocketAnimEnd}>
-            <div className="wz-flame" />
             <svg className="wz-rocket-w" viewBox="0 0 44 44" fill="none">
               <defs><linearGradient id="wzr-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#F4D98A" /><stop offset="100%" stopColor="#A9803A" /></linearGradient></defs>
               <circle cx="22" cy="22" r="18" stroke="#E9C46A" strokeWidth="1.4" />
