@@ -1222,27 +1222,56 @@ function ImageOptimizer({ products, supabase }) {
   async function compressImg(url) {
     return new Promise((resolve) => {
       const img = new Image()
+      let settled = false
+      const finish = (value) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeoutId)
+        resolve(value)
+      }
+      const timeoutId = setTimeout(() => finish(null), 15000)
+
       img.crossOrigin = 'anonymous'
       img.onload = () => {
-        const MAX = 1200
-        let { width, height } = img
-        if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
-        const canvas = document.createElement('canvas')
-        canvas.width = width; canvas.height = height
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-        canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.82)
+        try {
+          const MAX = 1200
+          let { width, height } = img
+          if (!width || !height) return finish(null)
+          if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
+          const canvas = document.createElement('canvas')
+          canvas.width = width; canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return finish(null)
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(blob => finish(blob || null), 'image/jpeg', 0.82)
+        } catch (error) {
+          console.error('Image compression error:', error)
+          finish(null)
+        }
       }
-      img.onerror = () => resolve(null)
+      img.onerror = () => finish(null)
       img.src = url
     })
   }
 
+  function getStoragePath(publicUrl) {
+    if (!publicUrl) return null
+    try {
+      const url = new URL(publicUrl)
+      const marker = '/storage/v1/object/public/product-images/'
+      const index = url.pathname.indexOf(marker)
+      return index === -1 ? null : decodeURIComponent(url.pathname.slice(index + marker.length))
+    } catch {
+      return null
+    }
+  }
+
   async function reupload(blob, originalPath) {
-    const path = `products/opt-${Date.now()}.jpg`
+    const path = `products/opt-${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`
     const { error } = await supabase.storage.from('product-images').upload(path, blob, { contentType: 'image/jpeg', upsert: false })
     if (error) return null
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
-    return publicUrl
+    return { publicUrl, path, originalPath: getStoragePath(originalPath) }
   }
 
   async function run() {
@@ -1264,10 +1293,19 @@ function ImageOptimizer({ products, supabase }) {
           if (blob && blob.size < size) {
             const saved = size - blob.size
             totalSaved += saved
-            const newUrl = await reupload(blob)
-            if (newUrl) {
-              await supabase.from('products').update({ img: newUrl }).eq('id', prod.id)
-              res.push({ nom: prod.nom, avant: size, apres: blob.size, url: newUrl, ok: true })
+            const uploaded = await reupload(blob, prod.img)
+            if (uploaded) {
+              const { error: updateError } = await supabase.from('products').update({ img: uploaded.publicUrl }).eq('id', prod.id)
+              if (updateError) {
+                await supabase.storage.from('product-images').remove([uploaded.path])
+                res.push({ nom: prod.nom, avant: size, apres: blob.size, ok: false, err: 'Mise à jour du produit échouée' })
+              } else {
+                if (uploaded.originalPath) {
+                  const { error: removeError } = await supabase.storage.from('product-images').remove([uploaded.originalPath])
+                  if (removeError) console.warn('Ancienne image non supprimée:', removeError.message)
+                }
+                res.push({ nom: prod.nom, avant: size, apres: blob.size, url: uploaded.publicUrl, ok: true })
+              }
             } else {
               res.push({ nom: prod.nom, avant: size, apres: blob?.size, ok: false, err: 'Upload échoué' })
             }
@@ -1405,6 +1443,8 @@ export default function AdminPanel({ onLogout, onToast }) {
   const [selectedOrders, setSelectedOrders] = useState(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
   const [editProd, setEditProd] = useState(null)
+  const [ordersPage, setOrdersPage] = useState(1)
+  const ORDERS_PER_PAGE = 25
 
   const loadOrders = useCallback(async () => {
     const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
@@ -1466,6 +1506,13 @@ export default function AdminPanel({ onLogout, onToast }) {
     return true
   })
 
+  useEffect(() => {
+    setOrdersPage(1)
+  }, [filter, search])
+
+  const totalOrderPages = Math.max(1, Math.ceil(filteredOrders.length / ORDERS_PER_PAGE))
+  const safeOrdersPage = Math.min(ordersPage, totalOrderPages)
+  const paginatedOrders = filteredOrders.slice((safeOrdersPage - 1) * ORDERS_PER_PAGE, safeOrdersPage * ORDERS_PER_PAGE)
   const selectedOrderRows = orders.filter(o => selectedOrders.has(o.id))
   const canBulkConfirm = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'confirmed'))
   const canBulkShip = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'shipped'))
@@ -2066,7 +2113,7 @@ export default function AdminPanel({ onLogout, onToast }) {
 
             {filteredOrders.length === 0 ? (
               <div className="empty"><div style={{fontSize:40}}>📭</div><p>Aucune commande trouvée.</p></div>
-            ) : filteredOrders.map(o => {
+            ) : paginatedOrders.map(o => {
               const items = (() => { try { return typeof o.items === 'string' ? JSON.parse(o.items) : (o.items||[]) } catch { return [] } })()
               const isOpen = expanded === o.id
               const sc = STATUT_COLORS[o.statut] || { bg:'#2a2a2a', color:'#aaa', label: o.statut }
@@ -2080,7 +2127,18 @@ export default function AdminPanel({ onLogout, onToast }) {
                   <div className="ocard-hdr" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {/* Checkbox sélection */}
                     <div
+                      role="checkbox"
+                      tabIndex={0}
+                      aria-checked={selectedOrders.has(o.id)}
+                      aria-label={`Sélectionner la commande ${o.id || ''}`}
                       onClick={e => { e.stopPropagation(); toggleSelect(o.id) }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleSelect(o.id)
+                        }
+                      }}
                       style={{
                         width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                         border: `2px solid ${selectedOrders.has(o.id) ? '#C9A84C' : 'rgba(255,255,255,.2)'}`,
@@ -2183,6 +2241,26 @@ export default function AdminPanel({ onLogout, onToast }) {
                 </div>
               )
             })}
+
+            {totalOrderPages > 1 && (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'14px 0 4px' }}>
+                <button
+                  onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
+                  disabled={safeOrdersPage === 1}
+                  aria-label="Page précédente"
+                  style={{ padding:'6px 10px', borderRadius:8, border:'1px solid rgba(255,255,255,.1)', background:'rgba(255,255,255,.04)', color:'white', cursor:safeOrdersPage === 1 ? 'not-allowed' : 'pointer', opacity:safeOrdersPage === 1 ? .4 : 1 }}
+                >‹</button>
+                <span style={{ fontSize:11, color:'rgba(255,255,255,.55)', minWidth:90, textAlign:'center' }}>
+                  Page {safeOrdersPage} / {totalOrderPages}
+                </span>
+                <button
+                  onClick={() => setOrdersPage(p => Math.min(totalOrderPages, p + 1))}
+                  disabled={safeOrdersPage === totalOrderPages}
+                  aria-label="Page suivante"
+                  style={{ padding:'6px 10px', borderRadius:8, border:'1px solid rgba(255,255,255,.1)', background:'rgba(255,255,255,.04)', color:'white', cursor:safeOrdersPage === totalOrderPages ? 'not-allowed' : 'pointer', opacity:safeOrdersPage === totalOrderPages ? .4 : 1 }}
+                >›</button>
+              </div>
+            )}
           </div>
         )}
 
