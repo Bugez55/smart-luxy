@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { openWA } from '../utils/notify'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
@@ -13,7 +14,7 @@ function Confetti() {
     color: ['#C9A84C','#E9C46A','#fff','#F4A261','#86efac'][Math.floor(Math.random() * 5)],
     size: 6 + Math.random() * 6,
   }))
-  return (
+  const content = (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
       {pieces.map(p => (
         <div key={p.id} style={{
@@ -34,16 +35,21 @@ function Confetti() {
       `}</style>
     </div>
   )
+
+  return createPortal(content, document.body)
 }
 
 export default function SuccessScreen({ order, onClose }) {
-  const [show, setShow] = useState(false)
+  const [show, setShow] = useState(true)
   const [copied, setCopied] = useState(false)
   const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
 
   useEffect(() => {
-    const t = setTimeout(() => setShow(true), 50)
-    return () => clearTimeout(t)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
   }, [])
 
   const steps = [
@@ -64,7 +70,7 @@ export default function SuccessScreen({ order, onClose }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 500,
-      background: 'rgba(0,0,0,.94)',
+      background: '#0a0a0a',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '14px', overflow: 'auto',
       backdropFilter: 'blur(12px)',
