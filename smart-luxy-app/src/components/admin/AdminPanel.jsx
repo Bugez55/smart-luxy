@@ -1706,6 +1706,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     new: orders.filter(o => o.statut === 'new').length,
     confirmed: orders.filter(o => o.statut === 'confirmed').length,
     ca: orders.filter(o => o.statut !== 'cancelled').reduce((s, o) => s + Number(o.total || 0), 0),
+    nonCancelled: orders.filter(o => o.statut !== 'cancelled').length,
   }
 
   // Stats avancées
@@ -1721,7 +1722,11 @@ export default function AdminPanel({ onLogout, onToast }) {
   const topProds = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
   // Ventes par jour en heure locale d'Alger (et non en UTC).
-  const localDateKey = value => new Date(value).toLocaleDateString('fr-CA', { timeZone: 'Africa/Algiers' })
+  const localDateKey = value => {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return ''
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Algiers', year:'numeric', month:'2-digit', day:'2-digit' }).format(d)
+  }
   const last7 = Array.from({length:7}, (_,i) => {
     const d = new Date()
     d.setHours(12, 0, 0, 0)
@@ -1732,6 +1737,9 @@ export default function AdminPanel({ onLogout, onToast }) {
                       .reduce((s,o)=>s+Number(o.total||0),0)
     return { key, label, ca }
   }).reverse()
+  // Évite une division par zéro et garantit qu'une valeur est toujours disponible
+  // pour le rendu du graphique, même lorsqu'il n'y a encore aucune vente.
+  const maxCA = Math.max(...last7.map(d => d.ca), 1)
 
   // ── Bannière défilante ──
   async function loadBanner() {
@@ -2233,7 +2241,7 @@ export default function AdminPanel({ onLogout, onToast }) {
             <p style={{ color:'rgba(255,255,255,.4)', fontSize:12, marginBottom:18 }}>Vue synthétique des ventes calculée à partir des commandes chargées.</p>
             <div className="adm-stats">
               <div className="stat-card"><div className="label">CA 7 derniers jours</div><div className="value gold">{fmt(last7.reduce((s,d) => s + d.ca, 0))}</div></div>
-              <div className="stat-card"><div className="label">Panier moyen</div><div className="value">{fmt(orders.filter(o => o.statut !== 'cancelled').length ? stats.ca / orders.filter(o => o.statut !== 'cancelled').length : 0)}</div></div>
+              <div className="stat-card"><div className="label">Panier moyen</div><div className="value">{fmt(stats.nonCancelled ? stats.ca / stats.nonCancelled : 0)}</div></div>
               <div className="stat-card"><div className="label">📦 Livrées</div><div className="value" style={{color:'#C9A84C'}}>{orders.filter(o => o.statut === 'delivered').length}</div></div>
               <div className="stat-card"><div className="label">❌ Annulées</div><div className="value" style={{color:'#fca5a5'}}>{orders.filter(o => o.statut === 'cancelled').length}</div></div>
             </div>
