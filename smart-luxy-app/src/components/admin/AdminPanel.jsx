@@ -785,11 +785,15 @@ function LivraisonManager({ orders, onToast }) {
     win.document.close()
   }
 
-  // Mapper wilaya → ID Yalidine (simplifié)
+  // Mapper wilaya → ID Yalidine. Accepte "16. Alger", "16 - Alger" et "Alger (16)".
   function getWilayaId(wilayaStr) {
-    if (!wilayaStr) return 1
-    const num = wilayaStr.match(/^(\d+)/)?.[1]
-    return num ? parseInt(num) : 1
+    const value = String(wilayaStr || '').trim()
+    if (!value) return null
+    const leading = value.match(/^(\d{1,2})(?:\s*[.\-–—:]|\s+)/)?.[1]
+    const trailing = value.match(/[\(\[]\s*(\d{1,2})\s*[\)\]]$/)?.[1]
+    const raw = leading || trailing
+    const num = raw ? Number(raw) : NaN
+    return Number.isInteger(num) && num >= 1 && num <= 58 ? num : null
   }
 
   const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
@@ -942,7 +946,9 @@ function ThemeEditor({ onToast }) {
   const DEFAULT_THEME = { theme_bg:'#0a0a0a', theme_card:'#141414', theme_accent:'#C9A84C', theme_text:'#e0e0e0', theme_text_sub:'#888888' }
 
   useEffect(() => {
+    let cancelled = false
     getSettings().then(s => {
+      if (cancelled) return
       const loadedTheme = {
         theme_bg:       s.theme_bg       || DEFAULT_THEME.theme_bg,
         theme_card:     s.theme_card     || DEFAULT_THEME.theme_card,
@@ -957,10 +963,12 @@ function ThemeEditor({ onToast }) {
         setCustomThemes(Array.isArray(parsed) ? parsed : [])
       } catch { setCustomThemes([]) }
     }).catch(e => {
+      if (cancelled) return
       console.error('ThemeEditor load error:', e)
       onToast && onToast('❌ Impossible de charger le thème sauvegardé', 'error')
     })
-  }, [])
+    return () => { cancelled = true }
+  }, [onToast])
 
   // Applique un objet CSS complet au DOM en une seule passe
   function applyToDOM(t) {
@@ -1035,9 +1043,14 @@ function ThemeEditor({ onToast }) {
 
   async function deleteCustomTheme(id) {
     const updated = customThemes.filter(t => t.id !== id)
-    await saveSetting('custom_themes', JSON.stringify(updated))
-    setCustomThemes(updated)
-    onToast && onToast('🗑️ Thème supprimé', 'default')
+    try {
+      await saveSetting('custom_themes', JSON.stringify(updated))
+      setCustomThemes(updated)
+      onToast && onToast('🗑️ Thème supprimé', 'default')
+    } catch (e) {
+      console.error('deleteCustomTheme error:', e)
+      onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de supprimer le thème'), 'error')
+    }
   }
 
   function restoreDefault() {
