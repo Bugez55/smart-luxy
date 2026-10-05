@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../supabase'
 import { alertStockBas, resumeQuotidien } from '../../utils/notify'
 import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
@@ -140,7 +140,7 @@ function printInvoice(order) {
       <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Bon de commande</div>
       <div class="inv-num">#${escapeHtml(order.id?.slice(0,8).toUpperCase())}</div>
       <div class="inv-date">${date}</div>
-      <span class="badge badge-${order.statut}">${STATUT_COLORS[order.statut]?.label || order.statut}</span>
+      <span class="badge badge-${escapeHtml(STATUT_COLORS[order.statut] ? order.statut : 'new')}">${escapeHtml(STATUT_COLORS[order.statut]?.label || order.statut || '')}</span>
     </div>
   </div>
 
@@ -272,13 +272,19 @@ function AdminSettings({ onLogout, onToast }) {
 
   async function savePaiement() {
     setPaiementSaving(true)
-    await saveSetting('ccp_numero', paiement.ccp_numero)
-    await saveSetting('ccp_nom', paiement.ccp_nom)
-    await saveSetting('baridimob_numero', paiement.baridimob_numero)
-    await saveSetting('ccp_actif', String(paiement.ccp_actif))
-    await saveSetting('baridimob_actif', String(paiement.baridimob_actif))
-    setPaiementSaving(false)
-    onToast && onToast('✅ Moyens de paiement sauvegardés', 'default')
+    try {
+      await saveSetting('ccp_numero', paiement.ccp_numero)
+      await saveSetting('ccp_nom', paiement.ccp_nom)
+      await saveSetting('baridimob_numero', paiement.baridimob_numero)
+      await saveSetting('ccp_actif', String(paiement.ccp_actif))
+      await saveSetting('baridimob_actif', String(paiement.baridimob_actif))
+      onToast && onToast('✅ Moyens de paiement sauvegardés', 'default')
+    } catch (e) {
+      console.error('savePaiement error:', e)
+      onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de sauvegarder'), 'error')
+    } finally {
+      setPaiementSaving(false)
+    }
   }
   const [shopSaving, setShopSaving] = useState(false)
 
@@ -323,13 +329,24 @@ function AdminSettings({ onLogout, onToast }) {
   async function toggleMaintenance() {
     const val = !maintenance
     setMaintenance(val)
-    await saveSettings({ maintenance: String(val) })
-    onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
+    try {
+      await saveSettings({ maintenance: String(val) })
+      onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
+    } catch (e) {
+      setMaintenance(!val)
+      console.error('toggleMaintenance error:', e)
+      onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de modifier le mode maintenance'), 'error')
+    }
   }
 
   async function saveFreeShip() {
-    await saveSettings({ free_ship: freeShip })
-    onToast && onToast('✅ Seuil livraison gratuite sauvegardé', 'default')
+    try {
+      await saveSettings({ free_ship: freeShip })
+      onToast && onToast('✅ Seuil livraison gratuite sauvegardé', 'default')
+    } catch (e) {
+      console.error('saveFreeShip error:', e)
+      onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de sauvegarder'), 'error')
+    }
   }
 
   const inp = {
@@ -926,18 +943,22 @@ function ThemeEditor({ onToast }) {
 
   useEffect(() => {
     getSettings().then(s => {
-      setTheme(t => ({
-        ...t,
-        theme_bg:       s.theme_bg       || t.theme_bg,
-        theme_card:     s.theme_card     || t.theme_card,
-        theme_accent:   s.theme_accent   || t.theme_accent,
-        theme_text:     s.theme_text     || t.theme_text,
-        theme_text_sub: s.theme_text_sub || t.theme_text_sub,
-      }))
+      const loadedTheme = {
+        theme_bg:       s.theme_bg       || DEFAULT_THEME.theme_bg,
+        theme_card:     s.theme_card     || DEFAULT_THEME.theme_card,
+        theme_accent:   s.theme_accent   || DEFAULT_THEME.theme_accent,
+        theme_text:     s.theme_text     || DEFAULT_THEME.theme_text,
+        theme_text_sub: s.theme_text_sub || DEFAULT_THEME.theme_text_sub,
+      }
+      setTheme(loadedTheme)
+      applyToDOM(loadedTheme)
       try {
         const parsed = JSON.parse(s.custom_themes || '[]')
         setCustomThemes(Array.isArray(parsed) ? parsed : [])
       } catch { setCustomThemes([]) }
+    }).catch(e => {
+      console.error('ThemeEditor load error:', e)
+      onToast && onToast('❌ Impossible de charger le thème sauvegardé', 'error')
     })
   }, [])
 
@@ -958,11 +979,9 @@ function ThemeEditor({ onToast }) {
 
   // Pour un seul champ modifié manuellement (color picker)
   function apply(key, val) {
-    setTheme(prev => {
-      const next = { ...prev, [key]: val }
-      applyToDOM(next)
-      return next
-    })
+    const next = { ...theme, [key]: val }
+    setTheme(next)
+    applyToDOM(next)
     setActivePreset(null)
   }
 
@@ -979,9 +998,15 @@ function ThemeEditor({ onToast }) {
 
   async function save() {
     setSaving(true)
-    for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
-    setSaving(false)
-    onToast && onToast('✅ Thème sauvegardé ! Visible pour tous les clients.', 'default')
+    try {
+      for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
+      onToast && onToast('✅ Thème sauvegardé ! Visible pour tous les clients.', 'default')
+    } catch (e) {
+      console.error('ThemeEditor save error:', e)
+      onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de sauvegarder le thème'), 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   // Sauvegarder la combinaison actuelle comme thème personnalisé réutilisable
@@ -994,12 +1019,18 @@ function ThemeEditor({ onToast }) {
       text: theme.theme_text, sub: theme.theme_text_sub,
       id: Date.now(),
     }
-    const updated = [...customThemes, newCustom]
-    await saveSetting('custom_themes', JSON.stringify(updated))
-    setCustomThemes(updated)
-    setNewThemeName('')
-    setSavingCustom(false)
-    onToast && onToast(`✅ Thème "${newCustom.name}" enregistré ! Tu peux le réutiliser à tout moment.`, 'default')
+    try {
+      const updated = [...customThemes, newCustom]
+      await saveSetting('custom_themes', JSON.stringify(updated))
+      setCustomThemes(updated)
+      setNewThemeName('')
+      onToast && onToast(`✅ Thème "${newCustom.name}" enregistré ! Tu peux le réutiliser à tout moment.`, 'default')
+    } catch (e) {
+      console.error('saveCustomTheme error:', e)
+      onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de sauvegarder le thème'), 'error')
+    } finally {
+      setSavingCustom(false)
+    }
   }
 
   async function deleteCustomTheme(id) {
@@ -1376,15 +1407,26 @@ export default function AdminPanel({ onLogout, onToast }) {
   const [editProd, setEditProd] = useState(null)
 
   const loadOrders = useCallback(async () => {
-    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
+    if (error) {
+      console.error('loadOrders error:', error)
+      onToast && onToast('❌ Impossible de charger les commandes : ' + error.message, 'error')
+      return
+    }
     setOrders(data || [])
-  }, [])
+  }, [onToast])
 
   const loadProducts = useCallback(async () => {
-    const { data } = await supabase.from('products').select('*').order('display_order')
+    const { data, error } = await supabase.from('products').select('*').order('display_order')
+    if (error) {
+      console.error('loadProducts error:', error)
+      onToast && onToast('❌ Impossible de charger les produits : ' + error.message, 'error')
+      setLoading(false)
+      return
+    }
     setProducts(data || [])
     setLoading(false)
-  }, [])
+  }, [onToast])
 
   useEffect(() => {
     loadOrders()
@@ -1463,9 +1505,10 @@ export default function AdminPanel({ onLogout, onToast }) {
     if (!window.confirm(`Passer ${selectedOrders.size} commande${selectedOrders.size > 1 ? 's' : ''} à « ${STATUT_COLORS[statut]?.label || statut} » ?`)) return
     setBulkLoading(true)
 
-    const { error } = await supabase.from('orders')
+    const { data: updatedRows, error } = await supabase.from('orders')
       .update({ statut })
       .in('id', Array.from(selectedOrders))
+      .select('id, statut')
 
     if (error) {
       onToast && onToast('❌ ' + error.message, 'error')
@@ -1473,12 +1516,17 @@ export default function AdminPanel({ onLogout, onToast }) {
       return
     }
 
+    const updatedIds = new Set((updatedRows || []).map(row => row.id))
+    if (updatedIds.size !== selectedOrders.size) {
+      onToast && onToast(`⚠️ ${updatedIds.size}/${selectedOrders.size} commande(s) modifiée(s). Vérifie les droits Supabase.`, 'error')
+    }
+
     setOrders(prev => prev.map(o =>
-      selectedOrders.has(o.id) ? { ...o, statut } : o
+      updatedIds.has(o.id) ? { ...o, statut } : o
     ))
 
     if (statut === 'delivered') {
-      for (const order of ordersToUpdate) {
+      for (const order of ordersToUpdate.filter(o => updatedIds.has(o.id))) {
         sendCapiEvent({
           eventName: 'Purchase',
           orderId: order.id,
@@ -1494,7 +1542,7 @@ export default function AdminPanel({ onLogout, onToast }) {
       cancelled: 'annulées',
     }[statut] || 'mises à jour'
 
-    onToast && onToast(`✅ ${selectedOrders.size} commande${selectedOrders.size > 1 ? 's' : ''} ${successLabel}`, 'default')
+    onToast && onToast(`✅ ${updatedIds.size} commande${updatedIds.size > 1 ? 's' : ''} ${successLabel}`, 'default')
     setSelectedOrders(new Set())
     setBulkLoading(false)
   }
@@ -1672,16 +1720,18 @@ export default function AdminPanel({ onLogout, onToast }) {
   })
   const topProds = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
-  // Ventes par jour (7 derniers jours)
+  // Ventes par jour en heure locale d'Alger (et non en UTC).
+  const localDateKey = value => new Date(value).toLocaleDateString('fr-CA', { timeZone: 'Africa/Algiers' })
   const last7 = Array.from({length:7}, (_,i) => {
-    const d = new Date(); d.setDate(d.getDate()-i)
-    const key = d.toISOString().slice(0,10)
+    const d = new Date()
+    d.setHours(12, 0, 0, 0)
+    d.setDate(d.getDate()-i)
+    const key = localDateKey(d)
     const label = d.toLocaleDateString('fr-DZ',{weekday:'short'})
-    const ca = orders.filter(o => o.created_at?.slice(0,10)===key && o.statut!=='cancelled')
+    const ca = orders.filter(o => o.created_at && localDateKey(o.created_at)===key && o.statut!=='cancelled')
                       .reduce((s,o)=>s+Number(o.total||0),0)
     return { key, label, ca }
   }).reverse()
-  const maxCA = Math.max(...last7.map(d=>d.ca), 1)
 
   // ── Bannière défilante ──
   async function loadBanner() {
@@ -2175,7 +2225,56 @@ export default function AdminPanel({ onLogout, onToast }) {
             )}
           </div>
         )}
-      </div>
+
+        {/* ── STATS TAB ── */}
+        {tab === 'stats' && (
+          <div>
+            <h3 style={{ color:'white', fontSize:15, fontWeight:800, marginBottom:6 }}>📊 Statistiques</h3>
+            <p style={{ color:'rgba(255,255,255,.4)', fontSize:12, marginBottom:18 }}>Vue synthétique des ventes calculée à partir des commandes chargées.</p>
+            <div className="adm-stats">
+              <div className="stat-card"><div className="label">CA 7 derniers jours</div><div className="value gold">{fmt(last7.reduce((s,d) => s + d.ca, 0))}</div></div>
+              <div className="stat-card"><div className="label">Panier moyen</div><div className="value">{fmt(orders.filter(o => o.statut !== 'cancelled').length ? stats.ca / orders.filter(o => o.statut !== 'cancelled').length : 0)}</div></div>
+              <div className="stat-card"><div className="label">📦 Livrées</div><div className="value" style={{color:'#C9A84C'}}>{orders.filter(o => o.statut === 'delivered').length}</div></div>
+              <div className="stat-card"><div className="label">❌ Annulées</div><div className="value" style={{color:'#fca5a5'}}>{orders.filter(o => o.statut === 'cancelled').length}</div></div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1.5fr) minmax(280px,1fr)', gap:14 }}>
+              <div style={{ background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:18 }}>
+                <div style={{ color:'white', fontWeight:800, marginBottom:16 }}>CA — 7 derniers jours</div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(7,minmax(0,1fr))', gap:8, alignItems:'end', height:190 }}>
+                  {last7.map(d => (
+                    <div key={d.key} style={{ height:'100%', display:'flex', flexDirection:'column', justifyContent:'flex-end', alignItems:'center', gap:7 }}>
+                      <div style={{ fontSize:10, color:'rgba(255,255,255,.55)', minHeight:14, textAlign:'center' }}>{fmt(d.ca)}</div>
+                      <div title={`${d.label} · ${fmt(d.ca)}`} style={{ width:'70%', maxWidth:42, height:`${Math.max(6, Math.round((d.ca / maxCA) * 125))}px`, background:'var(--br)', borderRadius:'6px 6px 2px 2px' }} />
+                      <div style={{ fontSize:10, color:'rgba(255,255,255,.45)', textTransform:'capitalize' }}>{d.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:18 }}>
+                <div style={{ color:'white', fontWeight:800, marginBottom:14 }}>🏆 Top wilayas</div>
+                {topWilayas.length ? topWilayas.map(([name,count], i) => (
+                  <div key={name || i} style={{ display:'flex', justifyContent:'space-between', gap:12, padding:'9px 0', borderBottom:'1px solid rgba(255,255,255,.05)', color:'rgba(255,255,255,.75)', fontSize:12 }}>
+                    <span>{i + 1}. {name || '—'}</span><strong style={{color:'var(--br)'}}>{count}</strong>
+                  </div>
+                )) : <div style={{color:'rgba(255,255,255,.35)', fontSize:12}}>Aucune donnée.</div>}
+              </div>
+            </div>
+            <div style={{ marginTop:14, background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:18 }}>
+              <div style={{ color:'white', fontWeight:800, marginBottom:14 }}>🛍️ Produits les plus vendus</div>
+              {topProds.length ? (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8 }}>
+                  {topProds.map(([name,qty], i) => (
+                    <div key={name || i} style={{ background:'rgba(255,255,255,.03)', borderRadius:9, padding:'10px 12px' }}>
+                      <div style={{fontSize:11,color:'rgba(255,255,255,.45)'}}>#{i+1}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:'white',marginTop:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={name}>{name || '—'}</div>
+                      <div style={{fontSize:12,color:'var(--br)',marginTop:5}}>{qty} unité(s)</div>
+                    </div>
+                  ))}
+                </div>
+              ) : <div style={{color:'rgba(255,255,255,.35)', fontSize:12}}>Aucune donnée.</div>}
+            </div>
+          </div>
+        )}
 
         {/* ── PROMOS TAB ── */}
         {tab === 'promos' && (
@@ -2353,6 +2452,7 @@ export default function AdminPanel({ onLogout, onToast }) {
         {tab === 'settings' && (
           <AdminSettings onLogout={onLogout} onToast={onToast} />
         )}
+      </div>
 
       {editProd !== null && (
         <ProductForm
