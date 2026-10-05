@@ -54,6 +54,27 @@ export default function App() {
   const [toasts, setToasts] = useState([])
   const [politiqueTab, setPolitiqueTab] = useState(null)
 
+  // ── Mode maintenance (piloté par le réglage Supabase) ──
+  const [maintenanceMode, setMaintenanceMode] = useState(false)
+  const [maintenanceChecked, setMaintenanceChecked] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    getSettings().then(s => {
+      if (!mounted) return
+      setMaintenanceMode(String(s?.maintenance || 'false').toLowerCase() === 'true')
+      setMaintenanceChecked(true)
+    }).catch(err => {
+      // En cas d'erreur de lecture des settings, ne jamais bloquer la boutique.
+      console.error('maintenance settings:', err)
+      if (mounted) {
+        setMaintenanceMode(false)
+        setMaintenanceChecked(true)
+      }
+    })
+    return () => { mounted = false }
+  }, [])
+
   const loadProducts = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
@@ -334,6 +355,28 @@ export default function App() {
   }
 
   // ── Boutique ─────────────────────────────────────────
+  if (!maintenanceChecked) {
+    return (
+      <div style={{ minHeight:'100vh', background:'var(--bk)', color:'var(--g4)', display:'flex', alignItems:'center', justifyContent:'center', padding:24, textAlign:'center' }}>
+        Chargement…
+      </div>
+    )
+  }
+
+  if (maintenanceMode) {
+    return (
+      <div style={{ minHeight:'100vh', background:'var(--bk)', color:'white', display:'flex', alignItems:'center', justifyContent:'center', padding:24, textAlign:'center' }}>
+        <div style={{ maxWidth:520, width:'100%', padding:'48px 28px', border:'1px solid rgba(201,168,76,.22)', borderRadius:20, background:'rgba(20,20,20,.9)', boxShadow:'0 20px 60px rgba(0,0,0,.35)' }}>
+          <div style={{ fontSize:48, marginBottom:16 }}>🔧</div>
+          <h1 style={{ margin:'0 0 12px', fontSize:28 }}>Site en maintenance</h1>
+          <p style={{ margin:0, color:'var(--g3)', lineHeight:1.7 }}>
+            Notre boutique est momentanément indisponible. Nous revenons très bientôt. Merci pour votre patience.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <AnnouncementBar />
