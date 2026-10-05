@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { openWA } from '../utils/notify'
 
@@ -44,24 +44,27 @@ export default function SuccessScreen({ order, onClose }) {
   const [copied, setCopied] = useState(false)
   const items = (() => { try { return typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []) } catch { return [] } })()
 
+  const historyKeyRef = useRef(`wazyo-success-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
-    const historyState = window.history.state
-    const successHistoryKey = `wazyo-success-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    let closingFromHistory = false
+    const successHistoryKey = historyKeyRef.current
 
     document.body.style.overflow = 'hidden'
 
-    // Add one temporary history entry so the Android/browser back action
-    // closes the success screen instead of leaving the checkout abruptly.
-    window.history.pushState(
-      { ...(historyState || {}), __wazyoSuccessScreen: successHistoryKey },
-      '',
-      window.location.href
-    )
+    // Add exactly one temporary history entry. This is intentionally not
+    // removed from the cleanup: calling history.back() during unmount can
+    // immediately navigate away from the success screen (especially under
+    // React StrictMode, where effects are mounted/cleaned up twice in dev).
+    if (window.history.state?.__wazyoSuccessScreen !== successHistoryKey) {
+      window.history.pushState(
+        { ...(window.history.state || {}), __wazyoSuccessScreen: successHistoryKey },
+        '',
+        window.location.href
+      )
+    }
 
     const handlePopState = () => {
-      closingFromHistory = true
       onClose?.()
     }
 
@@ -70,12 +73,6 @@ export default function SuccessScreen({ order, onClose }) {
     return () => {
       window.removeEventListener('popstate', handlePopState)
       document.body.style.overflow = previousOverflow
-
-      // If the screen is closed by its own button, remove the temporary
-      // history entry so it does not create a duplicate page in history.
-      if (!closingFromHistory && window.history.state?.__wazyoSuccessScreen === successHistoryKey) {
-        window.history.back()
-      }
     }
   }, [onClose])
 
