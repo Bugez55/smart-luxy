@@ -878,6 +878,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                   aria-invalid={telError}
                   style={{
                     ...inp,
+                    direction: 'ltr',
+                    textAlign: 'left',
+                    unicodeBidi: 'plaintext',
                     paddingRight: telValid ? 42 : inp.padding,
                     border: `1px solid ${telError ? '#ef4444' : telValid ? 'rgba(34,197,94,.55)' : '#2a2a2a'}`,
                     boxShadow: telValid ? '0 0 0 3px rgba(34,197,94,.06)' : 'none',
@@ -1213,8 +1216,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
         </div>
         <button
-          disabled={outOfStock}
-          onClick={() => formRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })}
+          disabled={outOfStock || ordering}
+          onClick={() => {
+            if (canOrder) {
+              handleOrder()
+            } else {
+              formRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })
+            }
+          }}
           style={{
             minWidth:132, background:outOfStock?'#2a2a2a':'linear-gradient(135deg,#C9A84C,#E9C46A)',
             border:'none', borderRadius:13, padding:'12px 14px',
@@ -1223,7 +1232,13 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             whiteSpace:'nowrap', boxShadow:outOfStock?'none':'0 6px 18px rgba(201,168,76,.18)'
           }}
         >
-          {outOfStock ? '🚫 Épuisé' : '🛒 Commander maintenant'}
+          {outOfStock
+            ? '🚫 Épuisé'
+            : ordering
+              ? '⏳ Envoi…'
+              : canOrder
+                ? '✅ Confirmer la commande'
+                : '🛒 Commander maintenant'}
         </button>
       </div>
 
