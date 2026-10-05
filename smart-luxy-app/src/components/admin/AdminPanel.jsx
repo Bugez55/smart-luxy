@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../supabase'
 import { alertStockBas, resumeQuotidien } from '../../utils/notify'
-import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
+import { getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
 import ClientsCRM from './ClientsCRM'
@@ -230,6 +230,28 @@ function printInvoice(order) {
 //  OUTIL COMPRESSION IMAGES EXISTANTES
 // ═══════════════════════════════════════════════════
 
+
+// Sauvegarde admin robuste : UPDATE puis INSERT si la clé n'existe pas.
+// Le helper vérifie explicitement qu'une ligne a réellement été modifiée.
+async function saveAdminSetting(key, value) {
+  const payload = { value: String(value), updated_at: new Date().toISOString() }
+  const { data, error } = await supabase
+    .from('settings')
+    .update(payload)
+    .eq('key', key)
+    .select('key')
+    .maybeSingle()
+
+  if (error) throw error
+  if (data) return true
+
+  const { error: insertError } = await supabase
+    .from('settings')
+    .insert({ key, ...payload })
+  if (insertError) throw insertError
+  return true
+}
+
 // ═══════════════════════════════════════════════════
 //  ADMIN SETTINGS — Paramètres complets
 // ═══════════════════════════════════════════════════
@@ -251,7 +273,9 @@ function AdminSettings({ onLogout, onToast }) {
 
   // Charger depuis Supabase au montage
   useEffect(() => {
+    let cancelled = false
     getSettings().then(s => {
+      if (cancelled) return
       setShop({
         name:    s.shop_name    || 'Wazyo',
         phone:   s.shop_phone   || '213556688810',
@@ -267,17 +291,22 @@ function AdminSettings({ onLogout, onToast }) {
         ccp_actif:        s.ccp_actif === 'true',
         baridimob_actif:  s.baridimob_actif === 'true',
       })
+    }).catch(e => {
+      if (cancelled) return
+      console.error('AdminSettings load error:', e)
+      onToast && onToast('❌ Impossible de charger les paramètres', 'error')
     })
-  }, [])
+    return () => { cancelled = true }
+  }, [onToast])
 
   async function savePaiement() {
     setPaiementSaving(true)
     try {
-      await saveSetting('ccp_numero', paiement.ccp_numero)
-      await saveSetting('ccp_nom', paiement.ccp_nom)
-      await saveSetting('baridimob_numero', paiement.baridimob_numero)
-      await saveSetting('ccp_actif', String(paiement.ccp_actif))
-      await saveSetting('baridimob_actif', String(paiement.baridimob_actif))
+      await saveAdminSetting('ccp_numero', paiement.ccp_numero)
+      await saveAdminSetting('ccp_nom', paiement.ccp_nom)
+      await saveAdminSetting('baridimob_numero', paiement.baridimob_numero)
+      await saveAdminSetting('ccp_actif', String(paiement.ccp_actif))
+      await saveAdminSetting('baridimob_actif', String(paiement.baridimob_actif))
       onToast && onToast('✅ Moyens de paiement sauvegardés', 'default')
     } catch (e) {
       console.error('savePaiement error:', e)
@@ -289,14 +318,10 @@ function AdminSettings({ onLogout, onToast }) {
   const [shopSaving, setShopSaving] = useState(false)
 
   // ── Mode maintenance ──
-  const [maintenance, setMaintenance] = useState(
-    localStorage.getItem('sl_maintenance') === '1'
-  )
+  const [maintenance, setMaintenance] = useState(false)
 
   // ── Livraison gratuite seuil ──
-  const [freeShip, setFreeShip] = useState(
-    localStorage.getItem('sl_free_ship') || ''
-  )
+  const [freeShip, setFreeShip] = useState('')
 
   // ── Paiement CCP / BaridiMob ──
   const [paiement, setPaiement] = useState({
@@ -310,10 +335,10 @@ function AdminSettings({ onLogout, onToast }) {
     setShopSaving(true)
     try {
       // Sauvegarder chaque champ séparément
-      await saveSetting('shop_name',    shop.name)
-      await saveSetting('shop_phone',   shop.phone)
-      await saveSetting('shop_email',   shop.email)
-      await saveSetting('shop_address', shop.address)
+      await saveAdminSetting('shop_name',    shop.name)
+      await saveAdminSetting('shop_phone',   shop.phone)
+      await saveAdminSetting('shop_email',   shop.email)
+      await saveAdminSetting('shop_address', shop.address)
 
       // Relire depuis Supabase pour confirmer
       const check = await getSettings()
@@ -322,15 +347,16 @@ function AdminSettings({ onLogout, onToast }) {
     } catch(e) {
       console.error('saveShop error:', e)
       onToast && onToast('❌ Erreur : ' + (e?.message || JSON.stringify(e)), 'error')
+    } finally {
+      setShopSaving(false)
     }
-    setShopSaving(false)
   }
 
   async function toggleMaintenance() {
     const val = !maintenance
     setMaintenance(val)
     try {
-      await saveSettings({ maintenance: String(val) })
+      await saveAdminSetting('maintenance', String(val))
       onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
     } catch (e) {
       setMaintenance(!val)
@@ -341,7 +367,7 @@ function AdminSettings({ onLogout, onToast }) {
 
   async function saveFreeShip() {
     try {
-      await saveSettings({ free_ship: freeShip })
+      await saveAdminSetting('free_ship', freeShip)
       onToast && onToast('✅ Seuil livraison gratuite sauvegardé', 'default')
     } catch (e) {
       console.error('saveFreeShip error:', e)
@@ -608,12 +634,18 @@ function ShippingRatesEditor({ onToast }) {
     const row = rates.find(r => r.wilaya === wilaya)
     if (!row) return
     setSavingId(wilaya)
-    const { error } = await supabase.from('shipping_rates')
-      .update({ bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 })
-      .eq('wilaya', wilaya)
-    setSavingId(null)
-    if (error) onToast && onToast(`❌ Erreur pour ${wilaya}`, 'error')
-    else onToast && onToast(`✅ ${wilaya} mis à jour`, 'default')
+    try {
+      const { error } = await supabase.from('shipping_rates')
+        .update({ bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 })
+        .eq('wilaya', wilaya)
+      if (error) throw error
+      onToast && onToast(`✅ ${wilaya} mis à jour`, 'default')
+    } catch (e) {
+      console.error('save shipping rate error:', e)
+      onToast && onToast(`❌ Erreur pour ${wilaya}: ${e?.message || 'Impossible de sauvegarder'}`, 'error')
+    } finally {
+      setSavingId(null)
+    }
   }
 
   const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
@@ -700,9 +732,11 @@ function LivraisonManager({ orders, onToast }) {
       if (data.label_url) window.open(data.label_url, '_blank', 'noopener,noreferrer')
       else window.open(`https://yalidine.app/app/particulier/bordereau.php?tracking=${encodeURIComponent(data.tracking)}`, '_blank', 'noopener,noreferrer')
     } catch(e) {
-      onToast && onToast('❌ Yalidine: ' + e.message, 'error')
+      console.error('sendToYalidine error:', e)
+      onToast && onToast('❌ Yalidine: ' + (e?.message || 'Erreur inconnue'), 'error')
+    } finally {
+      setSending(p => ({ ...p, [order.id]: false }))
     }
-    setSending(p => ({ ...p, [order.id]: false }))
   }
 
 
@@ -1007,7 +1041,7 @@ function ThemeEditor({ onToast }) {
   async function save() {
     setSaving(true)
     try {
-      for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
+      for (const [k, v] of Object.entries(theme)) await saveAdminSetting(k, v)
       onToast && onToast('✅ Thème sauvegardé ! Visible pour tous les clients.', 'default')
     } catch (e) {
       console.error('ThemeEditor save error:', e)
@@ -1029,7 +1063,7 @@ function ThemeEditor({ onToast }) {
     }
     try {
       const updated = [...customThemes, newCustom]
-      await saveSetting('custom_themes', JSON.stringify(updated))
+      await saveAdminSetting('custom_themes', JSON.stringify(updated))
       setCustomThemes(updated)
       setNewThemeName('')
       onToast && onToast(`✅ Thème "${newCustom.name}" enregistré ! Tu peux le réutiliser à tout moment.`, 'default')
@@ -1044,7 +1078,7 @@ function ThemeEditor({ onToast }) {
   async function deleteCustomTheme(id) {
     const updated = customThemes.filter(t => t.id !== id)
     try {
-      await saveSetting('custom_themes', JSON.stringify(updated))
+      await saveAdminSetting('custom_themes', JSON.stringify(updated))
       setCustomThemes(updated)
       onToast && onToast('🗑️ Thème supprimé', 'default')
     } catch (e) {
@@ -1523,6 +1557,14 @@ export default function AdminPanel({ onLogout, onToast }) {
     setOrdersPage(1)
   }, [filter, search])
 
+  useEffect(() => {
+    const validIds = new Set(orders.map(o => o.id))
+    setSelectedOrders(prev => {
+      const next = new Set([...prev].filter(id => validIds.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [orders])
+
   const totalOrderPages = Math.max(1, Math.ceil(filteredOrders.length / ORDERS_PER_PAGE))
   const safeOrdersPage = Math.min(ordersPage, totalOrderPages)
   const paginatedOrders = filteredOrders.slice((safeOrdersPage - 1) * ORDERS_PER_PAGE, safeOrdersPage * ORDERS_PER_PAGE)
@@ -1824,8 +1866,14 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   // ── Bannière défilante ──
   async function loadBanner() {
-    const { data } = await supabase.from('banner_messages').select('*').order('position', { ascending: true })
+    const { data, error } = await supabase.from('banner_messages').select('*').order('position', { ascending: true })
+    if (error) {
+      console.error('loadBanner error:', error)
+      onToast && onToast('❌ Impossible de charger la bannière : ' + error.message, 'error')
+      return false
+    }
     setBannerMsgs(data || [])
+    return true
   }
 
   async function addMsg() {
@@ -1857,15 +1905,29 @@ export default function AdminPanel({ onLogout, onToast }) {
     const swapIdx = dir === 'up' ? idx - 1 : idx + 1
     if (swapIdx < 0 || swapIdx >= bannerMsgs.length) return
     const a = bannerMsgs[idx], b = bannerMsgs[swapIdx]
-    await supabase.from('banner_messages').update({ position: b.position }).eq('id', a.id)
-    await supabase.from('banner_messages').update({ position: a.position }).eq('id', b.id)
-    loadBanner()
+    try {
+      const first = await supabase.from('banner_messages').update({ position: b.position }).eq('id', a.id)
+      if (first.error) throw first.error
+      const second = await supabase.from('banner_messages').update({ position: a.position }).eq('id', b.id)
+      if (second.error) throw second.error
+      await loadBanner()
+    } catch (e) {
+      console.error('moveMsg error:', e)
+      onToast && onToast('❌ Impossible de réorganiser la bannière : ' + (e?.message || 'Erreur inconnue'), 'error')
+      await loadBanner()
+    }
   }
 
   // Chargement promos
   async function loadPromos() {
-    const { data } = await supabase.from('promos').select('*').order('created_at', { ascending:false })
-    setPromos(data||[])
+    const { data, error } = await supabase.from('promos').select('*').order('created_at', { ascending:false })
+    if (error) {
+      console.error('loadPromos error:', error)
+      onToast && onToast('❌ Impossible de charger les codes promo : ' + error.message, 'error')
+      return false
+    }
+    setPromos(data || [])
+    return true
   }
 
   async function addPromo() {
@@ -2079,7 +2141,10 @@ export default function AdminPanel({ onLogout, onToast }) {
               flexWrap: 'wrap',
             }}>
               {/* Tout sélectionner */}
-              <button onClick={selectAll} style={{
+              <button
+                onClick={selectAll}
+                aria-pressed={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
+                style={{
                 background: selectedOrders.size > 0 ? 'rgba(201,168,76,.15)' : 'rgba(255,255,255,.05)',
                 border: `1px solid ${selectedOrders.size > 0 ? 'rgba(201,168,76,.4)' : 'rgba(255,255,255,.1)'}`,
                 borderRadius: 8, padding: '5px 12px',
