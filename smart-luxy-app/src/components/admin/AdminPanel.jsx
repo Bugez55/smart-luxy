@@ -1220,74 +1220,116 @@ function ImageOptimizer({ products, supabase }) {
   const [savings, setSavings] = useState(0)
 
   async function compressImg(url) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      let settled = false
+      let timer
+      const finish = (fn, value) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        fn(value)
+      }
+      timer = setTimeout(() => finish(reject, new Error('Image timeout')), 15000)
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.onload = () => {
-        const MAX = 1200
-        let { width, height } = img
-        if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
-        const canvas = document.createElement('canvas')
-        canvas.width = width; canvas.height = height
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-        canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.82)
+        try {
+          const MAX = 1200
+          let { width, height } = img
+          if (!width || !height) throw new Error('Dimensions invalides')
+          if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
+          const canvas = document.createElement('canvas')
+          canvas.width = width; canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) throw new Error('Canvas indisponible')
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(blob => {
+            if (!blob) return finish(reject, new Error('Compression impossible'))
+            finish(resolve, blob)
+          }, 'image/jpeg', 0.82)
+        } catch (e) {
+          finish(reject, e)
+        }
       }
-      img.onerror = () => resolve(null)
+      img.onerror = () => finish(reject, new Error('Image inaccessible ou CORS refusé'))
       img.src = url
     })
   }
 
-  async function reupload(blob, originalPath) {
-    const path = `products/opt-${Date.now()}.jpg`
+  function getStoragePath(publicUrl) {
+    try {
+      const marker = '/storage/v1/object/public/product-images/'
+      const idx = String(publicUrl || '').indexOf(marker)
+      if (idx === -1) return null
+      return decodeURIComponent(String(publicUrl).slice(idx + marker.length).split('?')[0])
+    } catch { return null }
+  }
+
+  async function reupload(blob) {
+    const path = `products/opt-${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`
     const { error } = await supabase.storage.from('product-images').upload(path, blob, { contentType: 'image/jpeg', upsert: false })
-    if (error) return null
-    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
-    return publicUrl
+    if (error) throw error
+    const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+    if (!data?.publicUrl) {
+      await supabase.storage.from('product-images').remove([path])
+      throw new Error('URL publique introuvable')
+    }
+    return { path, publicUrl: data.publicUrl }
   }
 
   async function run() {
+    if (running) return
     setRunning(true); setDone(false); setResults([]); setSavings(0)
     let totalSaved = 0
     const res = []
 
-    for (const prod of products) {
-      if (!prod.img) continue
-      setCurrent(prod.nom)
+    try {
+      for (const prod of products) {
+        if (!prod.img) continue
+        setCurrent(prod.nom)
+        let uploadedPath = null
 
-      // Vérifier taille via fetch HEAD
-      try {
-        const r = await fetch(prod.img, { method: 'HEAD' })
-        const size = parseInt(r.headers.get('content-length') || '0')
+        try {
+          const r = await fetch(prod.img, { method: 'HEAD' })
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          const size = parseInt(r.headers.get('content-length') || '0', 10)
 
-        if (size > 300 * 1024) { // > 300KB → compresser
-          const blob = await compressImg(prod.img)
-          if (blob && blob.size < size) {
-            const saved = size - blob.size
-            totalSaved += saved
-            const newUrl = await reupload(blob)
-            if (newUrl) {
-              await supabase.from('products').update({ img: newUrl }).eq('id', prod.id)
-              res.push({ nom: prod.nom, avant: size, apres: blob.size, url: newUrl, ok: true })
+          if (size > 300 * 1024) {
+            const blob = await compressImg(prod.img)
+            if (blob && blob.size < size) {
+              const saved = size - blob.size
+              const uploaded = await reupload(blob)
+              uploadedPath = uploaded.path
+              const { error: updateError } = await supabase.from('products').update({ img: uploaded.publicUrl }).eq('id', prod.id)
+              if (updateError) throw updateError
+
+              const oldPath = getStoragePath(prod.img)
+              if (oldPath && oldPath !== uploadedPath) {
+                const { error: removeError } = await supabase.storage.from('product-images').remove([oldPath])
+                if (removeError) console.warn('Ancienne image non supprimée:', removeError)
+              }
+
+              totalSaved += saved
+              res.push({ nom: prod.nom, avant: size, apres: blob.size, url: uploaded.publicUrl, ok: true })
             } else {
-              res.push({ nom: prod.nom, avant: size, apres: blob?.size, ok: false, err: 'Upload échoué' })
+              res.push({ nom: prod.nom, avant: size, apres: blob?.size || size, skipped: true })
             }
           } else {
-            res.push({ nom: prod.nom, avant: size, apres: size, skipped: true })
+            res.push({ nom: prod.nom, avant: size, skipped: true, reason: 'Déjà optimisée' })
           }
-        } else {
-          res.push({ nom: prod.nom, avant: size, skipped: true, reason: 'Déjà optimisée' })
+        } catch(e) {
+          if (uploadedPath) await supabase.storage.from('product-images').remove([uploadedPath]).catch(() => {})
+          res.push({ nom: prod.nom, skipped: true, reason: e?.message || 'Inaccessible' })
         }
-      } catch(e) {
-        res.push({ nom: prod.nom, skipped: true, reason: 'Inaccessible' })
+
+        setResults([...res])
+        setSavings(totalSaved)
       }
-
-      setResults([...res])
-      setSavings(totalSaved)
+    } finally {
+      setCurrent('')
+      setRunning(false)
+      setDone(true)
     }
-
-    setCurrent('')
-    setRunning(false)
-    setDone(true)
   }
 
   function fmtSize(b) {
@@ -1414,7 +1456,7 @@ export default function AdminPanel({ onLogout, onToast }) {
       return
     }
     setOrders(data || [])
-  }, [onToast])
+  }, [])
 
   const loadProducts = useCallback(async () => {
     const { data, error } = await supabase.from('products').select('*').order('display_order')
@@ -1426,7 +1468,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     }
     setProducts(data || [])
     setLoading(false)
-  }, [onToast])
+  }, [])
 
   useEffect(() => {
     loadOrders()
@@ -1721,17 +1763,19 @@ export default function AdminPanel({ onLogout, onToast }) {
   const topProds = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
   // Ventes par jour en heure locale d'Alger (et non en UTC).
-  const localDateKey = value => new Date(value).toLocaleDateString('fr-CA', { timeZone: 'Africa/Algiers' })
+  const localDateKey = value => {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('fr-CA', { timeZone:'Africa/Algiers' })
+  }
   const last7 = Array.from({length:7}, (_,i) => {
-    const d = new Date()
-    d.setHours(12, 0, 0, 0)
-    d.setDate(d.getDate()-i)
+    const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-i)
     const key = localDateKey(d)
     const label = d.toLocaleDateString('fr-DZ',{weekday:'short'})
     const ca = orders.filter(o => o.created_at && localDateKey(o.created_at)===key && o.statut!=='cancelled')
                       .reduce((s,o)=>s+Number(o.total||0),0)
     return { key, label, ca }
   }).reverse()
+  const maxCA = Math.max(...last7.map(d=>d.ca), 1)
 
   // ── Bannière défilante ──
   async function loadBanner() {
@@ -2072,7 +2116,11 @@ export default function AdminPanel({ onLogout, onToast }) {
                   <div className="ocard-hdr" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {/* Checkbox sélection */}
                     <div
+                      role="checkbox"
+                      tabIndex={0}
+                      aria-checked={selectedOrders.has(o.id)}
                       onClick={e => { e.stopPropagation(); toggleSelect(o.id) }}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); toggleSelect(o.id) } }}
                       style={{
                         width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                         border: `2px solid ${selectedOrders.has(o.id) ? '#C9A84C' : 'rgba(255,255,255,.2)'}`,
@@ -2232,7 +2280,7 @@ export default function AdminPanel({ onLogout, onToast }) {
             <h3 style={{ color:'white', fontSize:15, fontWeight:800, marginBottom:6 }}>📊 Statistiques</h3>
             <p style={{ color:'rgba(255,255,255,.4)', fontSize:12, marginBottom:18 }}>Vue synthétique des ventes calculée à partir des commandes chargées.</p>
             <div className="adm-stats">
-              <div className="stat-card"><div className="label">CA 7 derniers jours</div><div className="value gold">{fmt(last7.reduce((s,d) => s + d.ca, 0))}</div></div>
+              <div className="stat-card"><div className="label">CA 7 derniers jours</div><div className="value gold">{fmt(last7.reduce((sum,d) => sum+d.ca,0))}</div></div>
               <div className="stat-card"><div className="label">Panier moyen</div><div className="value">{fmt(orders.filter(o => o.statut !== 'cancelled').length ? stats.ca / orders.filter(o => o.statut !== 'cancelled').length : 0)}</div></div>
               <div className="stat-card"><div className="label">📦 Livrées</div><div className="value" style={{color:'#C9A84C'}}>{orders.filter(o => o.statut === 'delivered').length}</div></div>
               <div className="stat-card"><div className="label">❌ Annulées</div><div className="value" style={{color:'#fca5a5'}}>{orders.filter(o => o.statut === 'cancelled').length}</div></div>
@@ -2244,7 +2292,7 @@ export default function AdminPanel({ onLogout, onToast }) {
                   {last7.map(d => (
                     <div key={d.key} style={{ height:'100%', display:'flex', flexDirection:'column', justifyContent:'flex-end', alignItems:'center', gap:7 }}>
                       <div style={{ fontSize:10, color:'rgba(255,255,255,.55)', minHeight:14, textAlign:'center' }}>{fmt(d.ca)}</div>
-                      <div title={`${d.label} · ${fmt(d.ca)}`} style={{ width:'70%', maxWidth:42, height:`${Math.max(6, Math.round((d.ca / maxCA) * 125))}px`, background:'var(--br)', borderRadius:'6px 6px 2px 2px' }} />
+                      <div title={`${d.label} · ${fmt(d.ca)}`} style={{ width:'70%', maxWidth:42, height:`${Math.max(6, Math.round((d.ca/maxCA)*125))}px`, background:'var(--br)', borderRadius:'6px 6px 2px 2px' }} />
                       <div style={{ fontSize:10, color:'rgba(255,255,255,.45)', textTransform:'capitalize' }}>{d.label}</div>
                     </div>
                   ))}
@@ -2252,26 +2300,20 @@ export default function AdminPanel({ onLogout, onToast }) {
               </div>
               <div style={{ background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:18 }}>
                 <div style={{ color:'white', fontWeight:800, marginBottom:14 }}>🏆 Top wilayas</div>
-                {topWilayas.length ? topWilayas.map(([name,count], i) => (
+                {topWilayas.length ? topWilayas.map(([name,count],i) => (
                   <div key={name || i} style={{ display:'flex', justifyContent:'space-between', gap:12, padding:'9px 0', borderBottom:'1px solid rgba(255,255,255,.05)', color:'rgba(255,255,255,.75)', fontSize:12 }}>
-                    <span>{i + 1}. {name || '—'}</span><strong style={{color:'var(--br)'}}>{count}</strong>
+                    <span>{i+1}. {name || '—'}</span><strong style={{color:'var(--br)'}}>{count}</strong>
                   </div>
-                )) : <div style={{color:'rgba(255,255,255,.35)', fontSize:12}}>Aucune donnée.</div>}
+                )) : <div style={{color:'rgba(255,255,255,.35)',fontSize:12}}>Aucune donnée.</div>}
               </div>
             </div>
             <div style={{ marginTop:14, background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:18 }}>
               <div style={{ color:'white', fontWeight:800, marginBottom:14 }}>🛍️ Produits les plus vendus</div>
-              {topProds.length ? (
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8 }}>
-                  {topProds.map(([name,qty], i) => (
-                    <div key={name || i} style={{ background:'rgba(255,255,255,.03)', borderRadius:9, padding:'10px 12px' }}>
-                      <div style={{fontSize:11,color:'rgba(255,255,255,.45)'}}>#{i+1}</div>
-                      <div style={{fontSize:13,fontWeight:700,color:'white',marginTop:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={name}>{name || '—'}</div>
-                      <div style={{fontSize:12,color:'var(--br)',marginTop:5}}>{qty} unité(s)</div>
-                    </div>
-                  ))}
+              {topProds.length ? topProds.map(([name,count],i) => (
+                <div key={name || i} style={{ display:'flex', justifyContent:'space-between', gap:12, padding:'9px 0', borderBottom:'1px solid rgba(255,255,255,.05)', color:'rgba(255,255,255,.75)', fontSize:12 }}>
+                  <span>{i+1}. {name || '—'}</span><strong style={{color:'var(--br)'}}>{count}</strong>
                 </div>
-              ) : <div style={{color:'rgba(255,255,255,.35)', fontSize:12}}>Aucune donnée.</div>}
+              )) : <div style={{color:'rgba(255,255,255,.35)',fontSize:12}}>Aucune donnée.</div>}
             </div>
           </div>
         )}
