@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../supabase'
 import { alertStockBas, resumeQuotidien } from '../../utils/notify'
-import { getSettings } from '../../utils/useSettings'
+import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
 import ClientsCRM from './ClientsCRM'
@@ -230,28 +230,6 @@ function printInvoice(order) {
 //  OUTIL COMPRESSION IMAGES EXISTANTES
 // ═══════════════════════════════════════════════════
 
-
-// Sauvegarde admin robuste : UPDATE puis INSERT si la clé n'existe pas.
-// Le helper vérifie explicitement qu'une ligne a réellement été modifiée.
-async function saveAdminSetting(key, value) {
-  const payload = { value: String(value), updated_at: new Date().toISOString() }
-  const { data, error } = await supabase
-    .from('settings')
-    .update(payload)
-    .eq('key', key)
-    .select('key')
-    .maybeSingle()
-
-  if (error) throw error
-  if (data) return true
-
-  const { error: insertError } = await supabase
-    .from('settings')
-    .insert({ key, ...payload })
-  if (insertError) throw insertError
-  return true
-}
-
 // ═══════════════════════════════════════════════════
 //  ADMIN SETTINGS — Paramètres complets
 // ═══════════════════════════════════════════════════
@@ -273,9 +251,7 @@ function AdminSettings({ onLogout, onToast }) {
 
   // Charger depuis Supabase au montage
   useEffect(() => {
-    let cancelled = false
     getSettings().then(s => {
-      if (cancelled) return
       setShop({
         name:    s.shop_name    || 'Wazyo',
         phone:   s.shop_phone   || '213556688810',
@@ -291,22 +267,17 @@ function AdminSettings({ onLogout, onToast }) {
         ccp_actif:        s.ccp_actif === 'true',
         baridimob_actif:  s.baridimob_actif === 'true',
       })
-    }).catch(e => {
-      if (cancelled) return
-      console.error('AdminSettings load error:', e)
-      onToast && onToast('❌ Impossible de charger les paramètres', 'error')
     })
-    return () => { cancelled = true }
-  }, [onToast])
+  }, [])
 
   async function savePaiement() {
     setPaiementSaving(true)
     try {
-      await saveAdminSetting('ccp_numero', paiement.ccp_numero)
-      await saveAdminSetting('ccp_nom', paiement.ccp_nom)
-      await saveAdminSetting('baridimob_numero', paiement.baridimob_numero)
-      await saveAdminSetting('ccp_actif', String(paiement.ccp_actif))
-      await saveAdminSetting('baridimob_actif', String(paiement.baridimob_actif))
+      await saveSetting('ccp_numero', paiement.ccp_numero)
+      await saveSetting('ccp_nom', paiement.ccp_nom)
+      await saveSetting('baridimob_numero', paiement.baridimob_numero)
+      await saveSetting('ccp_actif', String(paiement.ccp_actif))
+      await saveSetting('baridimob_actif', String(paiement.baridimob_actif))
       onToast && onToast('✅ Moyens de paiement sauvegardés', 'default')
     } catch (e) {
       console.error('savePaiement error:', e)
@@ -318,10 +289,14 @@ function AdminSettings({ onLogout, onToast }) {
   const [shopSaving, setShopSaving] = useState(false)
 
   // ── Mode maintenance ──
-  const [maintenance, setMaintenance] = useState(false)
+  const [maintenance, setMaintenance] = useState(
+    localStorage.getItem('sl_maintenance') === '1'
+  )
 
   // ── Livraison gratuite seuil ──
-  const [freeShip, setFreeShip] = useState('')
+  const [freeShip, setFreeShip] = useState(
+    localStorage.getItem('sl_free_ship') || ''
+  )
 
   // ── Paiement CCP / BaridiMob ──
   const [paiement, setPaiement] = useState({
@@ -335,10 +310,10 @@ function AdminSettings({ onLogout, onToast }) {
     setShopSaving(true)
     try {
       // Sauvegarder chaque champ séparément
-      await saveAdminSetting('shop_name',    shop.name)
-      await saveAdminSetting('shop_phone',   shop.phone)
-      await saveAdminSetting('shop_email',   shop.email)
-      await saveAdminSetting('shop_address', shop.address)
+      await saveSetting('shop_name',    shop.name)
+      await saveSetting('shop_phone',   shop.phone)
+      await saveSetting('shop_email',   shop.email)
+      await saveSetting('shop_address', shop.address)
 
       // Relire depuis Supabase pour confirmer
       const check = await getSettings()
@@ -347,16 +322,15 @@ function AdminSettings({ onLogout, onToast }) {
     } catch(e) {
       console.error('saveShop error:', e)
       onToast && onToast('❌ Erreur : ' + (e?.message || JSON.stringify(e)), 'error')
-    } finally {
-      setShopSaving(false)
     }
+    setShopSaving(false)
   }
 
   async function toggleMaintenance() {
     const val = !maintenance
     setMaintenance(val)
     try {
-      await saveAdminSetting('maintenance', String(val))
+      await saveSettings({ maintenance: String(val) })
       onToast && onToast(val ? '🔧 Mode maintenance activé' : '✅ Site remis en ligne', 'default')
     } catch (e) {
       setMaintenance(!val)
@@ -367,7 +341,7 @@ function AdminSettings({ onLogout, onToast }) {
 
   async function saveFreeShip() {
     try {
-      await saveAdminSetting('free_ship', freeShip)
+      await saveSettings({ free_ship: freeShip })
       onToast && onToast('✅ Seuil livraison gratuite sauvegardé', 'default')
     } catch (e) {
       console.error('saveFreeShip error:', e)
@@ -634,18 +608,12 @@ function ShippingRatesEditor({ onToast }) {
     const row = rates.find(r => r.wilaya === wilaya)
     if (!row) return
     setSavingId(wilaya)
-    try {
-      const { error } = await supabase.from('shipping_rates')
-        .update({ bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 })
-        .eq('wilaya', wilaya)
-      if (error) throw error
-      onToast && onToast(`✅ ${wilaya} mis à jour`, 'default')
-    } catch (e) {
-      console.error('save shipping rate error:', e)
-      onToast && onToast(`❌ Erreur pour ${wilaya}: ${e?.message || 'Impossible de sauvegarder'}`, 'error')
-    } finally {
-      setSavingId(null)
-    }
+    const { error } = await supabase.from('shipping_rates')
+      .update({ bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 })
+      .eq('wilaya', wilaya)
+    setSavingId(null)
+    if (error) onToast && onToast(`❌ Erreur pour ${wilaya}`, 'error')
+    else onToast && onToast(`✅ ${wilaya} mis à jour`, 'default')
   }
 
   const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
@@ -732,11 +700,9 @@ function LivraisonManager({ orders, onToast }) {
       if (data.label_url) window.open(data.label_url, '_blank', 'noopener,noreferrer')
       else window.open(`https://yalidine.app/app/particulier/bordereau.php?tracking=${encodeURIComponent(data.tracking)}`, '_blank', 'noopener,noreferrer')
     } catch(e) {
-      console.error('sendToYalidine error:', e)
-      onToast && onToast('❌ Yalidine: ' + (e?.message || 'Erreur inconnue'), 'error')
-    } finally {
-      setSending(p => ({ ...p, [order.id]: false }))
+      onToast && onToast('❌ Yalidine: ' + e.message, 'error')
     }
+    setSending(p => ({ ...p, [order.id]: false }))
   }
 
 
@@ -819,15 +785,11 @@ function LivraisonManager({ orders, onToast }) {
     win.document.close()
   }
 
-  // Mapper wilaya → ID Yalidine. Accepte "16. Alger", "16 - Alger" et "Alger (16)".
+  // Mapper wilaya → ID Yalidine (simplifié)
   function getWilayaId(wilayaStr) {
-    const value = String(wilayaStr || '').trim()
-    if (!value) return null
-    const leading = value.match(/^(\d{1,2})(?:\s*[.\-–—:]|\s+)/)?.[1]
-    const trailing = value.match(/[\(\[]\s*(\d{1,2})\s*[\)\]]$/)?.[1]
-    const raw = leading || trailing
-    const num = raw ? Number(raw) : NaN
-    return Number.isInteger(num) && num >= 1 && num <= 58 ? num : null
+    if (!wilayaStr) return 1
+    const num = wilayaStr.match(/^(\d+)/)?.[1]
+    return num ? parseInt(num) : 1
   }
 
   const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
@@ -980,9 +942,7 @@ function ThemeEditor({ onToast }) {
   const DEFAULT_THEME = { theme_bg:'#0a0a0a', theme_card:'#141414', theme_accent:'#C9A84C', theme_text:'#e0e0e0', theme_text_sub:'#888888' }
 
   useEffect(() => {
-    let cancelled = false
     getSettings().then(s => {
-      if (cancelled) return
       const loadedTheme = {
         theme_bg:       s.theme_bg       || DEFAULT_THEME.theme_bg,
         theme_card:     s.theme_card     || DEFAULT_THEME.theme_card,
@@ -997,12 +957,10 @@ function ThemeEditor({ onToast }) {
         setCustomThemes(Array.isArray(parsed) ? parsed : [])
       } catch { setCustomThemes([]) }
     }).catch(e => {
-      if (cancelled) return
       console.error('ThemeEditor load error:', e)
       onToast && onToast('❌ Impossible de charger le thème sauvegardé', 'error')
     })
-    return () => { cancelled = true }
-  }, [onToast])
+  }, [])
 
   // Applique un objet CSS complet au DOM en une seule passe
   function applyToDOM(t) {
@@ -1041,7 +999,7 @@ function ThemeEditor({ onToast }) {
   async function save() {
     setSaving(true)
     try {
-      for (const [k, v] of Object.entries(theme)) await saveAdminSetting(k, v)
+      for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
       onToast && onToast('✅ Thème sauvegardé ! Visible pour tous les clients.', 'default')
     } catch (e) {
       console.error('ThemeEditor save error:', e)
@@ -1063,7 +1021,7 @@ function ThemeEditor({ onToast }) {
     }
     try {
       const updated = [...customThemes, newCustom]
-      await saveAdminSetting('custom_themes', JSON.stringify(updated))
+      await saveSetting('custom_themes', JSON.stringify(updated))
       setCustomThemes(updated)
       setNewThemeName('')
       onToast && onToast(`✅ Thème "${newCustom.name}" enregistré ! Tu peux le réutiliser à tout moment.`, 'default')
@@ -1077,14 +1035,9 @@ function ThemeEditor({ onToast }) {
 
   async function deleteCustomTheme(id) {
     const updated = customThemes.filter(t => t.id !== id)
-    try {
-      await saveAdminSetting('custom_themes', JSON.stringify(updated))
-      setCustomThemes(updated)
-      onToast && onToast('🗑️ Thème supprimé', 'default')
-    } catch (e) {
-      console.error('deleteCustomTheme error:', e)
-      onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de supprimer le thème'), 'error')
-    }
+    await saveSetting('custom_themes', JSON.stringify(updated))
+    setCustomThemes(updated)
+    onToast && onToast('🗑️ Thème supprimé', 'default')
   }
 
   function restoreDefault() {
@@ -1269,56 +1222,27 @@ function ImageOptimizer({ products, supabase }) {
   async function compressImg(url) {
     return new Promise((resolve) => {
       const img = new Image()
-      let settled = false
-      const finish = (value) => {
-        if (settled) return
-        settled = true
-        clearTimeout(timeoutId)
-        resolve(value)
-      }
-      const timeoutId = setTimeout(() => finish(null), 15000)
-
       img.crossOrigin = 'anonymous'
       img.onload = () => {
-        try {
-          const MAX = 1200
-          let { width, height } = img
-          if (!width || !height) return finish(null)
-          if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
-          const canvas = document.createElement('canvas')
-          canvas.width = width; canvas.height = height
-          const ctx = canvas.getContext('2d')
-          if (!ctx) return finish(null)
-          ctx.drawImage(img, 0, 0, width, height)
-          canvas.toBlob(blob => finish(blob || null), 'image/jpeg', 0.82)
-        } catch (error) {
-          console.error('Image compression error:', error)
-          finish(null)
-        }
+        const MAX = 1200
+        let { width, height } = img
+        if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.82)
       }
-      img.onerror = () => finish(null)
+      img.onerror = () => resolve(null)
       img.src = url
     })
   }
 
-  function getStoragePath(publicUrl) {
-    if (!publicUrl) return null
-    try {
-      const url = new URL(publicUrl)
-      const marker = '/storage/v1/object/public/product-images/'
-      const index = url.pathname.indexOf(marker)
-      return index === -1 ? null : decodeURIComponent(url.pathname.slice(index + marker.length))
-    } catch {
-      return null
-    }
-  }
-
   async function reupload(blob, originalPath) {
-    const path = `products/opt-${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`
+    const path = `products/opt-${Date.now()}.jpg`
     const { error } = await supabase.storage.from('product-images').upload(path, blob, { contentType: 'image/jpeg', upsert: false })
     if (error) return null
     const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
-    return { publicUrl, path, originalPath: getStoragePath(originalPath) }
+    return publicUrl
   }
 
   async function run() {
@@ -1340,19 +1264,10 @@ function ImageOptimizer({ products, supabase }) {
           if (blob && blob.size < size) {
             const saved = size - blob.size
             totalSaved += saved
-            const uploaded = await reupload(blob, prod.img)
-            if (uploaded) {
-              const { error: updateError } = await supabase.from('products').update({ img: uploaded.publicUrl }).eq('id', prod.id)
-              if (updateError) {
-                await supabase.storage.from('product-images').remove([uploaded.path])
-                res.push({ nom: prod.nom, avant: size, apres: blob.size, ok: false, err: 'Mise à jour du produit échouée' })
-              } else {
-                if (uploaded.originalPath) {
-                  const { error: removeError } = await supabase.storage.from('product-images').remove([uploaded.originalPath])
-                  if (removeError) console.warn('Ancienne image non supprimée:', removeError.message)
-                }
-                res.push({ nom: prod.nom, avant: size, apres: blob.size, url: uploaded.publicUrl, ok: true })
-              }
+            const newUrl = await reupload(blob)
+            if (newUrl) {
+              await supabase.from('products').update({ img: newUrl }).eq('id', prod.id)
+              res.push({ nom: prod.nom, avant: size, apres: blob.size, url: newUrl, ok: true })
             } else {
               res.push({ nom: prod.nom, avant: size, apres: blob?.size, ok: false, err: 'Upload échoué' })
             }
@@ -1490,8 +1405,6 @@ export default function AdminPanel({ onLogout, onToast }) {
   const [selectedOrders, setSelectedOrders] = useState(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
   const [editProd, setEditProd] = useState(null)
-  const [ordersPage, setOrdersPage] = useState(1)
-  const ORDERS_PER_PAGE = 25
 
   const loadOrders = useCallback(async () => {
     const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
@@ -1553,21 +1466,6 @@ export default function AdminPanel({ onLogout, onToast }) {
     return true
   })
 
-  useEffect(() => {
-    setOrdersPage(1)
-  }, [filter, search])
-
-  useEffect(() => {
-    const validIds = new Set(orders.map(o => o.id))
-    setSelectedOrders(prev => {
-      const next = new Set([...prev].filter(id => validIds.has(id)))
-      return next.size === prev.size ? prev : next
-    })
-  }, [orders])
-
-  const totalOrderPages = Math.max(1, Math.ceil(filteredOrders.length / ORDERS_PER_PAGE))
-  const safeOrdersPage = Math.min(ordersPage, totalOrderPages)
-  const paginatedOrders = filteredOrders.slice((safeOrdersPage - 1) * ORDERS_PER_PAGE, safeOrdersPage * ORDERS_PER_PAGE)
   const selectedOrderRows = orders.filter(o => selectedOrders.has(o.id))
   const canBulkConfirm = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'confirmed'))
   const canBulkShip = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'shipped'))
@@ -1607,83 +1505,62 @@ export default function AdminPanel({ onLogout, onToast }) {
     if (!window.confirm(`Passer ${selectedOrders.size} commande${selectedOrders.size > 1 ? 's' : ''} à « ${STATUT_COLORS[statut]?.label || statut} » ?`)) return
     setBulkLoading(true)
 
-    try {
-      const ids = Array.from(selectedOrders)
-      const { data: updatedRows, error } = await supabase.from('orders')
-        .update({ statut })
-        .in('id', ids)
-        .select('id, statut')
+    const { data: updatedRows, error } = await supabase.from('orders')
+      .update({ statut })
+      .in('id', Array.from(selectedOrders))
+      .select('id, statut')
 
-      if (error) throw error
-
-      const updatedIds = new Set((updatedRows || []).map(row => row.id))
-      if (updatedIds.size !== ids.length) {
-        onToast && onToast(`⚠️ ${updatedIds.size}/${ids.length} commande(s) modifiée(s). Certaines n'ont pas été acceptées par Supabase.`, 'error')
-      }
-
-      setOrders(prev => prev.map(o =>
-        updatedIds.has(o.id) ? { ...o, statut } : o
-      ))
-
-      if (statut === 'delivered') {
-        for (const order of ordersToUpdate.filter(o => updatedIds.has(o.id))) {
-          sendCapiEvent({
-            eventName: 'Purchase',
-            orderId: order.id,
-            eventId: `${order.id}-purchase`,
-          }, true).catch(e => console.error(`❌ CAPI Purchase (${order.id}):`, e))
-        }
-      }
-
-      const successLabel = {
-        confirmed: 'confirmées',
-        shipped: 'expédiées',
-        delivered: 'livrées',
-        cancelled: 'annulées',
-      }[statut] || 'mises à jour'
-
-      if (updatedIds.size > 0) {
-        onToast && onToast(`✅ ${updatedIds.size} commande${updatedIds.size > 1 ? 's' : ''} ${successLabel}`, 'default')
-      }
-      setSelectedOrders(new Set())
-    } catch (error) {
-      console.error('bulkSetStatus error:', error)
-      onToast && onToast(`❌ Impossible de modifier les commandes : ${error.message || 'Erreur inconnue'}`, 'error')
-    } finally {
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
       setBulkLoading(false)
+      return
     }
+
+    const updatedIds = new Set((updatedRows || []).map(row => row.id))
+    if (updatedIds.size !== selectedOrders.size) {
+      onToast && onToast(`⚠️ ${updatedIds.size}/${selectedOrders.size} commande(s) modifiée(s). Vérifie les droits Supabase.`, 'error')
+    }
+
+    setOrders(prev => prev.map(o =>
+      updatedIds.has(o.id) ? { ...o, statut } : o
+    ))
+
+    if (statut === 'delivered') {
+      for (const order of ordersToUpdate.filter(o => updatedIds.has(o.id))) {
+        sendCapiEvent({
+          eventName: 'Purchase',
+          orderId: order.id,
+          eventId: `${order.id}-purchase`,
+        }, true).catch(e => console.error(`❌ CAPI Purchase (${order.id}):`, e))
+      }
+    }
+
+    const successLabel = {
+      confirmed: 'confirmées',
+      shipped: 'expédiées',
+      delivered: 'livrées',
+      cancelled: 'annulées',
+    }[statut] || 'mises à jour'
+
+    onToast && onToast(`✅ ${updatedIds.size} commande${updatedIds.size > 1 ? 's' : ''} ${successLabel}`, 'default')
+    setSelectedOrders(new Set())
+    setBulkLoading(false)
   }
 
   async function bulkDelete() {
     if (selectedOrders.size === 0) return
     if (!window.confirm(`Supprimer ${selectedOrders.size} commandes définitivement ?`)) return
     setBulkLoading(true)
-
-    try {
-      const ids = Array.from(selectedOrders)
-      const { data: deletedRows, error } = await supabase
-        .from('orders')
-        .delete()
-        .in('id', ids)
-        .select('id')
-
-      if (error) throw error
-
-      const deletedIds = new Set((deletedRows || []).map(row => row.id))
-      setOrders(prev => prev.filter(o => !deletedIds.has(o.id)))
-      setSelectedOrders(new Set())
-
-      if (deletedIds.size !== ids.length) {
-        onToast && onToast(`⚠️ ${deletedIds.size}/${ids.length} commande(s) supprimée(s). Vérifie les droits Supabase.`, 'error')
-      } else {
-        onToast && onToast(`🗑️ ${deletedIds.size} commande${deletedIds.size > 1 ? 's' : ''} supprimée${deletedIds.size > 1 ? 's' : ''}`, 'default')
-      }
-    } catch (error) {
-      console.error('bulkDelete error:', error)
-      onToast && onToast(`❌ Impossible de supprimer les commandes : ${error.message || 'Erreur inconnue'}`, 'error')
-    } finally {
+    const { error } = await supabase.from('orders').delete().in('id', Array.from(selectedOrders))
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
       setBulkLoading(false)
+      return
     }
+    setOrders(prev => prev.filter(o => !selectedOrders.has(o.id)))
+    onToast && onToast(`🗑️ ${selectedOrders.size} commandes supprimées`, 'default')
+    setSelectedOrders(new Set())
+    setBulkLoading(false)
   }
 
   function printSelected() {
@@ -1829,7 +1706,6 @@ export default function AdminPanel({ onLogout, onToast }) {
     new: orders.filter(o => o.statut === 'new').length,
     confirmed: orders.filter(o => o.statut === 'confirmed').length,
     ca: orders.filter(o => o.statut !== 'cancelled').reduce((s, o) => s + Number(o.total || 0), 0),
-    nonCancelled: orders.filter(o => o.statut !== 'cancelled').length,
   }
 
   // Stats avancées
@@ -1845,11 +1721,7 @@ export default function AdminPanel({ onLogout, onToast }) {
   const topProds = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
   // Ventes par jour en heure locale d'Alger (et non en UTC).
-  const localDateKey = value => {
-    const d = new Date(value)
-    if (Number.isNaN(d.getTime())) return ''
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Algiers', year:'numeric', month:'2-digit', day:'2-digit' }).format(d)
-  }
+  const localDateKey = value => new Date(value).toLocaleDateString('fr-CA', { timeZone: 'Africa/Algiers' })
   const last7 = Array.from({length:7}, (_,i) => {
     const d = new Date()
     d.setHours(12, 0, 0, 0)
@@ -1860,20 +1732,11 @@ export default function AdminPanel({ onLogout, onToast }) {
                       .reduce((s,o)=>s+Number(o.total||0),0)
     return { key, label, ca }
   }).reverse()
-  // Évite une division par zéro et garantit qu'une valeur est toujours disponible
-  // pour le rendu du graphique, même lorsqu'il n'y a encore aucune vente.
-  const maxCA = Math.max(...last7.map(d => d.ca), 1)
 
   // ── Bannière défilante ──
   async function loadBanner() {
-    const { data, error } = await supabase.from('banner_messages').select('*').order('position', { ascending: true })
-    if (error) {
-      console.error('loadBanner error:', error)
-      onToast && onToast('❌ Impossible de charger la bannière : ' + error.message, 'error')
-      return false
-    }
+    const { data } = await supabase.from('banner_messages').select('*').order('position', { ascending: true })
     setBannerMsgs(data || [])
-    return true
   }
 
   async function addMsg() {
@@ -1905,29 +1768,15 @@ export default function AdminPanel({ onLogout, onToast }) {
     const swapIdx = dir === 'up' ? idx - 1 : idx + 1
     if (swapIdx < 0 || swapIdx >= bannerMsgs.length) return
     const a = bannerMsgs[idx], b = bannerMsgs[swapIdx]
-    try {
-      const first = await supabase.from('banner_messages').update({ position: b.position }).eq('id', a.id)
-      if (first.error) throw first.error
-      const second = await supabase.from('banner_messages').update({ position: a.position }).eq('id', b.id)
-      if (second.error) throw second.error
-      await loadBanner()
-    } catch (e) {
-      console.error('moveMsg error:', e)
-      onToast && onToast('❌ Impossible de réorganiser la bannière : ' + (e?.message || 'Erreur inconnue'), 'error')
-      await loadBanner()
-    }
+    await supabase.from('banner_messages').update({ position: b.position }).eq('id', a.id)
+    await supabase.from('banner_messages').update({ position: a.position }).eq('id', b.id)
+    loadBanner()
   }
 
   // Chargement promos
   async function loadPromos() {
-    const { data, error } = await supabase.from('promos').select('*').order('created_at', { ascending:false })
-    if (error) {
-      console.error('loadPromos error:', error)
-      onToast && onToast('❌ Impossible de charger les codes promo : ' + error.message, 'error')
-      return false
-    }
-    setPromos(data || [])
-    return true
+    const { data } = await supabase.from('promos').select('*').order('created_at', { ascending:false })
+    setPromos(data||[])
   }
 
   async function addPromo() {
@@ -2141,10 +1990,7 @@ export default function AdminPanel({ onLogout, onToast }) {
               flexWrap: 'wrap',
             }}>
               {/* Tout sélectionner */}
-              <button
-                onClick={selectAll}
-                aria-pressed={selectedOrders.size === filteredOrders.length && filteredOrders.length > 0}
-                style={{
+              <button onClick={selectAll} style={{
                 background: selectedOrders.size > 0 ? 'rgba(201,168,76,.15)' : 'rgba(255,255,255,.05)',
                 border: `1px solid ${selectedOrders.size > 0 ? 'rgba(201,168,76,.4)' : 'rgba(255,255,255,.1)'}`,
                 borderRadius: 8, padding: '5px 12px',
@@ -2212,7 +2058,7 @@ export default function AdminPanel({ onLogout, onToast }) {
 
             {filteredOrders.length === 0 ? (
               <div className="empty"><div style={{fontSize:40}}>📭</div><p>Aucune commande trouvée.</p></div>
-            ) : paginatedOrders.map(o => {
+            ) : filteredOrders.map(o => {
               const items = (() => { try { return typeof o.items === 'string' ? JSON.parse(o.items) : (o.items||[]) } catch { return [] } })()
               const isOpen = expanded === o.id
               const sc = STATUT_COLORS[o.statut] || { bg:'#2a2a2a', color:'#aaa', label: o.statut }
@@ -2226,18 +2072,7 @@ export default function AdminPanel({ onLogout, onToast }) {
                   <div className="ocard-hdr" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {/* Checkbox sélection */}
                     <div
-                      role="checkbox"
-                      tabIndex={0}
-                      aria-checked={selectedOrders.has(o.id)}
-                      aria-label={`Sélectionner la commande ${o.id || ''}`}
                       onClick={e => { e.stopPropagation(); toggleSelect(o.id) }}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          toggleSelect(o.id)
-                        }
-                      }}
                       style={{
                         width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                         border: `2px solid ${selectedOrders.has(o.id) ? '#C9A84C' : 'rgba(255,255,255,.2)'}`,
@@ -2340,26 +2175,6 @@ export default function AdminPanel({ onLogout, onToast }) {
                 </div>
               )
             })}
-
-            {totalOrderPages > 1 && (
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'14px 0 4px' }}>
-                <button
-                  onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
-                  disabled={safeOrdersPage === 1}
-                  aria-label="Page précédente"
-                  style={{ padding:'6px 10px', borderRadius:8, border:'1px solid rgba(255,255,255,.1)', background:'rgba(255,255,255,.04)', color:'white', cursor:safeOrdersPage === 1 ? 'not-allowed' : 'pointer', opacity:safeOrdersPage === 1 ? .4 : 1 }}
-                >‹</button>
-                <span style={{ fontSize:11, color:'rgba(255,255,255,.55)', minWidth:90, textAlign:'center' }}>
-                  Page {safeOrdersPage} / {totalOrderPages}
-                </span>
-                <button
-                  onClick={() => setOrdersPage(p => Math.min(totalOrderPages, p + 1))}
-                  disabled={safeOrdersPage === totalOrderPages}
-                  aria-label="Page suivante"
-                  style={{ padding:'6px 10px', borderRadius:8, border:'1px solid rgba(255,255,255,.1)', background:'rgba(255,255,255,.04)', color:'white', cursor:safeOrdersPage === totalOrderPages ? 'not-allowed' : 'pointer', opacity:safeOrdersPage === totalOrderPages ? .4 : 1 }}
-                >›</button>
-              </div>
-            )}
           </div>
         )}
 
@@ -2418,7 +2233,7 @@ export default function AdminPanel({ onLogout, onToast }) {
             <p style={{ color:'rgba(255,255,255,.4)', fontSize:12, marginBottom:18 }}>Vue synthétique des ventes calculée à partir des commandes chargées.</p>
             <div className="adm-stats">
               <div className="stat-card"><div className="label">CA 7 derniers jours</div><div className="value gold">{fmt(last7.reduce((s,d) => s + d.ca, 0))}</div></div>
-              <div className="stat-card"><div className="label">Panier moyen</div><div className="value">{fmt(stats.nonCancelled ? stats.ca / stats.nonCancelled : 0)}</div></div>
+              <div className="stat-card"><div className="label">Panier moyen</div><div className="value">{fmt(orders.filter(o => o.statut !== 'cancelled').length ? stats.ca / orders.filter(o => o.statut !== 'cancelled').length : 0)}</div></div>
               <div className="stat-card"><div className="label">📦 Livrées</div><div className="value" style={{color:'#C9A84C'}}>{orders.filter(o => o.statut === 'delivered').length}</div></div>
               <div className="stat-card"><div className="label">❌ Annulées</div><div className="value" style={{color:'#fca5a5'}}>{orders.filter(o => o.statut === 'cancelled').length}</div></div>
             </div>
