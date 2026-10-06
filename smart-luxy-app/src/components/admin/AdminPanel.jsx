@@ -177,6 +177,7 @@ function printInvoice(order) {
         <td>
           <div class="article-name">${escapeHtml(item.nom)}</div>
           ${item.categorie ? `<div class="article-prix">${escapeHtml(item.categorie)}</div>` : ''}
+          ${item.color || item.couleur ? `<div class="article-prix" style="color:#C9A84C;font-weight:700">🎨 Couleur : ${escapeHtml(item.color || item.couleur)}</div>` : ''}
         </td>
         <td style="text-align:center;font-weight:700">${escapeHtml(String(item.qty))}</td>
         <td style="text-align:right;color:#666">${fmtDA(item.prix)}</td>
@@ -1871,7 +1872,7 @@ export default function AdminPanel({ onLogout, onToast }) {
         'Commune':          o.commune,
         'Adresse':          o.adresse || '',
         'Mode livraison':   o.mode_livraison === 'bureau' ? 'Bureau' : 'Domicile',
-        'Articles':         items.map(i => `${i.nom} x${i.qty}`).join(' | '),
+        'Articles':         items.map(i => `${i.nom}${(i.color || i.couleur) ? ` — Couleur: ${i.color || i.couleur}` : ''} x${i.qty}`).join(' | '),
         'Sous-total (DA)':  items.reduce((s,i) => s + Number(i.prix)*i.qty, 0),
         'Frais liv. (DA)':  o.frais_livraison || 0,
         'Total (DA)':       o.total,
@@ -2159,7 +2160,14 @@ export default function AdminPanel({ onLogout, onToast }) {
                         <strong style={{color:'white', fontSize:12, textTransform:'uppercase', letterSpacing:'.05em'}}>Articles</strong>
                         {items.map((item, i) => (
                           <div key={i} style={{display:'flex', justifyContent:'space-between', marginTop:6}}>
-                            <span>{item.nom} <span style={{color:'#555'}}>×{item.qty}</span></span>
+                            <span>
+                              {item.nom} <span style={{color:'#555'}}>×{item.qty}</span>
+                              {(item.color || item.couleur) && (
+                                <span style={{ display:'block', marginTop:2, color:'#C9A84C', fontSize:11, fontWeight:700 }}>
+                                  🎨 {item.color || item.couleur}
+                                </span>
+                              )}
+                            </span>
                             <span style={{color:'var(--br)'}}>{fmt(Number(item.prix)*item.qty)}</span>
                           </div>
                         ))}
