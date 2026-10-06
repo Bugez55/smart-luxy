@@ -108,6 +108,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     ? Number(activeColor.stock)
     : null
   const selectedColorOutOfStock = colorStock !== null && Number.isFinite(colorStock) && colorStock <= 0
+  const selectedColorAlreadyQty = hasColors && selectedColor !== null ? currentColorAlreadyQty() : 0
+  const remainingColorStock = colorStock !== null && Number.isFinite(colorStock)
+    ? Math.max(0, colorStock - selectedColorAlreadyQty)
+    : null
+  const selectedColorMaxReached = hasColors && selectedColor !== null && remainingColorStock !== null && remainingColorStock <= 0
 
   const mainImg = imgs[0]?.url || p.img
   const hasBundles = bundles.length > 0
@@ -675,7 +680,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     onClick={() => {
                       if (soldOut) return
                       setSelectedColor(name)
-                      if (hasFiniteStock) setQty(q => Math.max(1, Math.min(q, stock)))
+                      const alreadyAdded = colorOrderItems.reduce((sum, item) =>
+                        sum + (normalizeColorName(item.color || item.couleur) === normalizeColorName(name) ? Number(item.qty) || 0 : 0), 0
+                      )
+                      const remaining = hasFiniteStock ? Math.max(0, stock - alreadyAdded) : null
+                      setQty(q => Math.max(1, remaining !== null ? Math.min(q, remaining || 1) : q))
                     }}
                     aria-label={`${name}${soldOut ? ' — Rupture de stock' : ''}`}
                     disabled={soldOut}
@@ -708,13 +717,61 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
               </div>
             )}
 
-            {/* Bouton d'ajout placé juste sous les couleurs pour être visible immédiatement. */}
+            {/* Quantité de la couleur choisie : visible immédiatement sous les couleurs. */}
+            {selectedColor && !selectedColorOutOfStock && (
+              <div style={{ marginTop:10, padding:'9px 10px', background:'var(--card2)', border:'1px solid rgba(255,255,255,.08)', borderRadius:14 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:7 }}>
+                  <span style={{ color:'var(--g3)', fontSize:11, fontWeight:900 }}>
+                    {lang==='ar' ? 'الكمية لهذا اللون' : `Quantité — ${activeColor?.name || selectedColor}`}
+                  </span>
+                  <span style={{ color:'var(--g4)', fontSize:9, fontWeight:800 }}>
+                    {remainingColorStock !== null ? `${remainingColorStock} disponible${remainingColorStock > 1 ? 's' : ''}` : (lang==='ar' ? 'متوفر' : 'Disponible')}
+                  </span>
+                </div>
+
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+                  <button
+                    type="button"
+                    aria-label={lang==='ar' ? 'إنقاص الكمية' : 'Diminuer la quantité'}
+                    disabled={qty <= 1}
+                    onClick={() => setQty(q => Math.max(1, q - 1))}
+                    style={{ background:qty<=1?'rgba(255,255,255,.04)':'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)', borderRadius:10, width:42, height:42, color:qty<=1?'#555':'var(--g3)', fontSize:21, cursor:qty<=1?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s', flexShrink:0 }}
+                  >−</button>
+
+                  <div style={{ minWidth:100, textAlign:'center' }}>
+                    <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:5 }}>
+                      <span style={{ color:'var(--g3)', fontWeight:900, fontSize:21, lineHeight:1 }}>{qty}</span>
+                      <span style={{ color:'var(--g4)', fontSize:9, fontWeight:800 }}>{qty > 1 ? 'unités' : 'unité'}</span>
+                    </div>
+                    <div style={{ marginTop:4, fontSize:9, color:'var(--br)', fontWeight:800 }}>
+                      {fmt(currentPrix * qty)}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label={lang==='ar' ? 'زيادة الكمية' : 'Augmenter la quantité'}
+                    disabled={selectedColorMaxReached}
+                    onClick={() => setQty(q => remainingColorStock !== null ? Math.min(remainingColorStock, q + 1) : q + 1)}
+                    style={{ background:selectedColorMaxReached?'rgba(255,255,255,.04)':'rgba(201,168,76,.10)', border:'1px solid rgba(201,168,76,.18)', borderRadius:10, width:42, height:42, color:selectedColorMaxReached?'#555':'var(--br)', fontSize:21, cursor:selectedColorMaxReached?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s', flexShrink:0 }}
+                  >+</button>
+                </div>
+
+                {selectedColorMaxReached && (
+                  <div style={{ marginTop:6, fontSize:9.5, color:'#fbbf24', fontWeight:700, textAlign:'center' }}>
+                    {lang==='ar' ? 'الكمية القصوى لهذا اللون' : 'Quantité maximale disponible pour cette couleur'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Bouton d'ajout placé juste sous la quantité pour être visible immédiatement. */}
             {!checkoutOnly && (
               <>
                 <button
                   type="button"
                   onClick={handleAddCurrentSelectionToCart}
-                  disabled={ordering || selectedColor === null || selectedColorOutOfStock}
+                  disabled={ordering || selectedColor === null || selectedColorOutOfStock || selectedColorMaxReached}
                   style={{
                     width:'100%', marginTop:10, padding:'14px 14px',
                     background:(selectedColor !== null && !selectedColorOutOfStock)
@@ -735,11 +792,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 </button>
 
                 {selectedColor && !selectedColorOutOfStock && (
-              <div style={{ marginTop:6, fontSize:10, color:'var(--g4)', textAlign:'center', lineHeight:1.4 }}>
-                {colorOrderItems.length > 0
-                  ? 'Tu peux ensuite choisir une autre couleur.'
-                  : 'Après l’ajout, tu peux choisir une autre couleur avec une quantité différente.'}
-              </div>
+                  <div style={{ marginTop:6, fontSize:10, color:'var(--g4)', textAlign:'center', lineHeight:1.4 }}>
+                    {colorOrderItems.length > 0
+                      ? 'Tu peux ensuite choisir une autre couleur.'
+                      : 'Après l’ajout, tu peux choisir une autre couleur avec une quantité différente.'}
+                  </div>
                 )}
               </>
             )}
@@ -866,8 +923,9 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             </div>
           )}
 
-          {/* Quantité si pas de bundles */}
-          {!hasBundles && (
+          {/* Quantité générale si pas de bundles et sans variantes de couleur.
+              Pour les produits avec couleurs, la quantité est choisie directement sous la couleur. */}
+          {!hasBundles && !hasColors && (
             <div className="pp-qty-block" style={{ marginBottom:14 }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:7 }}>
                 <label style={{ ...lbl, marginBottom:0 }}>{lang==='ar' ? 'الكمية' : 'Quantité' }</label>
