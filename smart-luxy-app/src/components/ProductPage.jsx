@@ -40,6 +40,10 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [selectedBundle, setSelectedBundle] = useState(null)
   const [selectedColor, setSelectedColor] = useState(null)
   const [qty, setQty] = useState(1)
+
+  // Mini-panier local pour une même référence avec plusieurs couleurs.
+  // Exemple : Rouge ×2 + Noir ×5 dans une seule commande.
+  const [colorOrderItems, setColorOrderItems] = useState([])
   const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'', website:'' })
   const [modeLiv, setModeLiv] = useState('domicile')
   const [modePaiement, setModePaiement] = useState('livraison')
@@ -279,26 +283,169 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     }
   }
 
+  function normalizeColorName(value) {
+    return String(value || '').trim().toLowerCase()
+  }
+
+  function currentColorAlreadyQty() {
+    if (!hasColors || !selectedColor) return 0
+    const key = normalizeColorName(selectedColor)
+    return colorOrderItems.reduce((sum, item) => {
+      return sum + (normalizeColorName(item.color || item.couleur) === key ? Number(item.qty) || 0 : 0)
+    }, 0)
+  }
+
+  function handleAddCurrentSelectionToCart() {
+    if (!hasColors) return
+    if (hasBundles && selectedBundle === null) return
+    if (selectedColor === null) return
+    if (selectedColorOutOfStock) return
+
+    const wantedQty = Number(currentQty) || 0
+    if (wantedQty < 1) return
+
+    const alreadyQty = currentColorAlreadyQty()
+    const remainingStock =
+      effectiveStock !== null && Number.isFinite(effectiveStock)
+        ? Math.max(0, Number(effectiveStock) - alreadyQty)
+        : null
+
+    if (remainingStock !== null && wantedQty > remainingStock) {
+      if (remainingStock > 0) setQty(remainingStock)
+      return
+    }
+
+    const prixUnit = activeBundle
+      ? Math.round(activeBundle.prix / activeBundle.qty)
+      : p.prix
+
+    const colorName = String(activeColor?.name || selectedColor).trim()
+    const colorKey = normalizeColorName(colorName)
+
+    setColorOrderItems(prev => {
+      const existingIndex = prev.findIndex(
+        item => normalizeColorName(item.color || item.couleur) === colorKey
+      )
+
+      if (existingIndex >= 0) {
+        return prev.map((item, index) =>
+          index === existingIndex
+            ? { ...item, qty: Number(item.qty) + wantedQty }
+            : item
+        )
+      }
+
+      return [
+        ...prev,
+        {
+          ...p,
+          qty: wantedQty,
+          prix: prixUnit,
+          color: colorName,
+          couleur: colorName,
+        },
+      ]
+    })
+
+    // Prépare immédiatement la prochaine couleur.
+    setSelectedColor(null)
+    setQty(1)
+  }
+
+  function removeColorOrderItem(colorName) {
+    const key = normalizeColorName(colorName)
+    setColorOrderItems(prev =>
+      prev.filter(item => normalizeColorName(item.color || item.couleur) !== key)
+    )
+  }
+
+  function buildOrderItems() {
+    // Avec couleurs : le client doit ajouter chaque couleur souhaitée.
+    if (hasColors) {
+      return colorOrderItems.map(item => ({
+        ...item,
+        qty: Number(item.qty) || 1,
+        color: String(item.color || item.couleur || '').trim() || null,
+        couleur: String(item.color || item.couleur || '').trim() || null,
+      }))
+    }
+
+    const prixUnit = activeBundle
+      ? Math.round(activeBundle.prix / activeBundle.qty)
+      : p.prix
+
+    return [
+      {
+        ...p,
+        qty: currentQty,
+        prix: prixUnit,
+        color: null,
+        couleur: null,
+      },
+    ]
+  }
+
   async function handleOrder() {
     if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
     if (!isValidTel(form.tel)) { setTelError(true); setTelShake(true); setTimeout(() => setTelShake(false), 500); return }
     // Anti-bot honeypot — si ce champ caché est rempli, c'est un robot
     if (form.website) { console.warn('Bot détecté'); return }
     if (hasBundles && selectedBundle === null) return
-    if (hasColors && selectedColor === null) return
-    if (hasColors && selectedColorOutOfStock) return
-    if (effectiveStock !== null && currentQty > effectiveStock) {
+
+    // Pour un produit avec couleurs, au moins une couleur doit avoir été ajoutée.
+    if (hasColors) {
+      if (colorOrderItems.length === 0) {
+        // Permet de commander directement la couleur actuellement sélectionnée
+        // sans obliger l'utilisateur à cliquer sur « Ajouter » une première fois.
+        if (selectedColor === null || selectedColorOutOfStock) return
+        if (effectiveStock !== null && currentQty > effectiveStock) {
+          setQty(Math.max(1, effectiveStock))
+          return
+        }
+
+        const prixUnit = activeBundle
+          ? Math.round(activeBundle.prix / activeBundle.qty)
+          : p.prix
+
+        const directItem = {
+          ...p,
+          qty: currentQty,
+          prix: prixUnit,
+          color: String(activeColor?.name || selectedColor).trim(),
+          couleur: String(activeColor?.name || selectedColor).trim(),
+        }
+        const orderItems = [directItem]
+        setOrdering(true)
+        try {
+          await onSubmitOrder({
+            ...form,
+            items: orderItems,
+            mode_livraison: modeLiv,
+            mode_paiement: modePaiement,
+            preuve_paiement: preuvePaiement || null,
+            frais_livraison: fraisLiv || 0,
+            total: totalFinal,
+          })
+        } finally {
+          setOrdering(false)
+        }
+        return
+      }
+    } else if (effectiveStock !== null && currentQty > effectiveStock) {
       setQty(Math.max(1, effectiveStock))
       return
     }
+
+    const orderItems = buildOrderItems()
+    if (orderItems.length === 0) return
+
     setOrdering(true)
-    const prixUnit = activeBundle ? Math.round(activeBundle.prix / activeBundle.qty) : p.prix
     try {
       await onSubmitOrder({
         ...form,
-        items: [{ ...p, qty: currentQty, prix: prixUnit, color: activeColor?.name || null, couleur: activeColor?.name || null }],
+        items: orderItems,
         mode_livraison: modeLiv,
-        mode_paiement:  modePaiement,
+        mode_paiement: modePaiement,
         preuve_paiement: preuvePaiement || null,
         frais_livraison: fraisLiv || 0,
         total: totalFinal,
@@ -317,7 +464,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   }
   const lbl = { fontSize:11, fontWeight:800, color:'var(--g3)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
 
-  const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null) && (!hasColors || selectedColor !== null)
+  const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null) && (!hasColors || selectedColor !== null || colorOrderItems.length > 0)
 
   return (
     <div className={`pp-root ${checkoutOnly ? 'checkout-only' : ''}`} data-product-id={p.id} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:checkoutOnly ? 420 : 300, background:'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
@@ -1111,6 +1258,73 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             tabIndex={-1} autoComplete="off"
           />
 
+          {/* ── Mini-panier des couleurs ── */}
+          {hasColors && (
+            <div style={{ marginBottom:10 }}>
+              {colorOrderItems.length > 0 && (
+                <div style={{
+                  background:'rgba(201,168,76,.06)',
+                  border:'1px solid rgba(201,168,76,.20)',
+                  borderRadius:12,
+                  padding:'10px 12px',
+                  marginBottom:9,
+                }}>
+                  <div style={{ fontSize:10, fontWeight:900, color:'#E9C46A', marginBottom:7 }}>
+                    🛒 Sélections de couleurs
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {colorOrderItems.map((item, index) => {
+                      const colorName = item.color || item.couleur || 'Couleur'
+                      return (
+                        <div key={`${normalizeColorName(colorName)}-${index}`} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, fontSize:12 }}>
+                          <span style={{ color:'var(--g3)', minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            🎨 {colorName} <strong style={{ color:'#E9C46A' }}>×{item.qty}</strong>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeColorOrderItem(colorName)}
+                            style={{ border:'none', background:'transparent', color:'#fca5a5', cursor:'pointer', fontWeight:900, padding:'2px 5px' }}
+                            aria-label={`Retirer ${colorName}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ marginTop:7, fontSize:10, color:'var(--g4)', lineHeight:1.4 }}>
+                    Ajoute une autre couleur ci-dessus pour l'inclure dans la même commande.
+                  </div>
+                </div>
+              )}
+
+              {!checkoutOnly && (
+                <button
+                  type="button"
+                  onClick={handleAddCurrentSelectionToCart}
+                  disabled={outOfStock || ordering || selectedColor === null}
+                  style={{
+                    width:'100%', padding:'13px 14px',
+                    background:'rgba(201,168,76,.10)',
+                    border:'1px solid rgba(201,168,76,.38)',
+                    borderRadius:14,
+                    color:outOfStock || selectedColor === null ? '#555' : '#E9C46A',
+                    fontSize:14, fontWeight:900,
+                    cursor:outOfStock || selectedColor === null ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  🛒 Ajouter cette couleur ×{currentQty} à la commande
+                </button>
+              )}
+
+              {colorOrderItems.length === 0 && (
+                <div style={{ marginTop:6, fontSize:10, color:'var(--g4)', textAlign:'center', lineHeight:1.4 }}>
+                  Choisis une couleur + quantité, puis ajoute-la. Tu peux ensuite choisir une autre couleur.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Bouton confirmer ── */}
           <button
             onClick={handleOrder}
@@ -1132,6 +1346,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
               {ordering ? '⏳ Envoi en cours…'
                 : outOfStock ? '🚫 Épuisé'
                 : hasBundles && selectedBundle===null ? '⬆️ Choisir une offre ci-dessus'
+                : hasColors && colorOrderItems.length > 0 && selectedColor === null ? '✅ Confirmer les couleurs sélectionnées'
                 : '🛒 Confirmer la commande'}
             </span>
           </button>
@@ -1338,7 +1553,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             : ordering
               ? '⏳ Envoi…'
               : canOrder
-                ? '✅ Confirmer la commande'
+                ? (hasColors && colorOrderItems.length > 0 && selectedColor === null ? '✅ Confirmer les couleurs' : '✅ Confirmer la commande')
                 : '🛒 Commander maintenant'}
         </button>
       </div>
