@@ -464,7 +464,22 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   }
   const lbl = { fontSize:11, fontWeight:800, color:'var(--g3)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
 
-  const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null) && (!hasColors || selectedColor !== null || colorOrderItems.length > 0)
+  const hasPendingColorSelections = hasColors && colorOrderItems.length > 0
+  const selectedColorUnavailable = hasColors && selectedColor !== null && selectedColorOutOfStock
+  const productOutOfStock = !hasColors && p.stock !== null && p.stock !== undefined && Number(p.stock) <= 0
+  const canOrder = Boolean(
+    form.nom &&
+    form.tel &&
+    form.wilaya &&
+    form.commune &&
+    (!hasBundles || selectedBundle !== null) &&
+    (hasColors
+      ? (hasPendingColorSelections || (selectedColor !== null && !selectedColorUnavailable))
+      : !productOutOfStock)
+  )
+  const displayOutOfStock = hasColors
+    ? selectedColorUnavailable && !hasPendingColorSelections
+    : productOutOfStock
 
   return (
     <div className={`pp-root ${checkoutOnly ? 'checkout-only' : ''}`} data-product-id={p.id} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:checkoutOnly ? 420 : 300, background:'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
@@ -1269,8 +1284,11 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                   padding:'10px 12px',
                   marginBottom:9,
                 }}>
-                  <div style={{ fontSize:10, fontWeight:900, color:'#E9C46A', marginBottom:7 }}>
-                    🛒 Sélections de couleurs
+                  <div style={{ fontSize:10, fontWeight:900, color:'#E9C46A', marginBottom:7, display:'flex', justifyContent:'space-between', gap:8 }}>
+                    <span>🛒 Sélections de couleurs</span>
+                    <span style={{ color:'var(--g4)' }}>
+                      {colorOrderItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)} article{colorOrderItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0) > 1 ? 's' : ''}
+                    </span>
                   </div>
                   <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                     {colorOrderItems.map((item, index) => {
@@ -1293,7 +1311,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     })}
                   </div>
                   <div style={{ marginTop:7, fontSize:10, color:'var(--g4)', lineHeight:1.4 }}>
-                    Ajoute une autre couleur ci-dessus pour l'inclure dans la même commande.
+                    Toutes ces couleurs seront envoyées ensemble dans une seule commande.
                   </div>
                 </div>
               )}
@@ -1302,15 +1320,15 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 <button
                   type="button"
                   onClick={handleAddCurrentSelectionToCart}
-                  disabled={outOfStock || ordering || selectedColor === null}
+                  disabled={ordering || selectedColor === null || selectedColorOutOfStock}
                   style={{
                     width:'100%', padding:'13px 14px',
                     background:'rgba(201,168,76,.10)',
                     border:'1px solid rgba(201,168,76,.38)',
                     borderRadius:14,
-                    color:outOfStock || selectedColor === null ? '#555' : '#E9C46A',
+                    color:selectedColor === null || selectedColorOutOfStock ? '#555' : '#E9C46A',
                     fontSize:14, fontWeight:900,
-                    cursor:outOfStock || selectedColor === null ? 'not-allowed' : 'pointer',
+                    cursor:selectedColor === null || selectedColorOutOfStock ? 'not-allowed' : 'pointer',
                   }}
                 >
                   🛒 Ajouter cette couleur ×{currentQty} à la commande
@@ -1344,7 +1362,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             )}
             <span style={{ position:'relative', zIndex:1 }}>
               {ordering ? '⏳ Envoi en cours…'
-                : outOfStock ? '🚫 Épuisé'
+                : displayOutOfStock ? '🚫 Épuisé'
                 : hasBundles && selectedBundle===null ? '⬆️ Choisir une offre ci-dessus'
                 : hasColors && colorOrderItems.length > 0 && selectedColor === null ? '✅ Confirmer les couleurs sélectionnées'
                 : '🛒 Confirmer la commande'}
@@ -1532,7 +1550,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
         </div>
         <button
-          disabled={outOfStock || ordering}
+          disabled={displayOutOfStock || ordering}
           onClick={() => {
             if (canOrder) {
               handleOrder()
@@ -1541,14 +1559,14 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
             }
           }}
           style={{
-            minWidth:132, background:outOfStock?'#2a2a2a':'linear-gradient(135deg,#C9A84C,#E9C46A)',
+            minWidth:132, background:displayOutOfStock?'#2a2a2a':'linear-gradient(135deg,#C9A84C,#E9C46A)',
             border:'none', borderRadius:13, padding:'12px 14px',
-            color:outOfStock?'#666':'#000', fontSize:13, fontWeight:900,
-            cursor:outOfStock?'not-allowed':'pointer', flexShrink:0,
+            color:displayOutOfStock?'#666':'#000', fontSize:13, fontWeight:900,
+            cursor:displayOutOfStock?'not-allowed':'pointer', flexShrink:0,
             whiteSpace:'nowrap', boxShadow:outOfStock?'none':'0 6px 18px rgba(201,168,76,.18)'
           }}
         >
-          {outOfStock
+          {displayOutOfStock
             ? '🚫 Épuisé'
             : ordering
               ? '⏳ Envoi…'
