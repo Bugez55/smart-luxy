@@ -38,7 +38,10 @@ export default function ProductForm({ product, onClose, onSave }) {
     bundles:       product?.bundles ? (typeof product.bundles === 'string' ? JSON.parse(product.bundles) : product.bundles) : [],
     faq:           product?.faq ? (typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq) : [],
     show_colors:   product?.show_colors === true,
-    colors:        product?.colors ? (typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors) : [],
+    colors:        product?.colors ? (typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors).map(c => ({
+      ...c,
+      stock: c?.stock !== undefined && c?.stock !== null ? String(c.stock) : '',
+    })) : [],
   })
 
   const [newSpec, setNewSpec] = useState('')
@@ -1318,7 +1321,7 @@ export default function ProductForm({ product, onClose, onSave }) {
             <div
               style={{
                 display:'grid',
-                gridTemplateColumns:'minmax(0,1fr) 72px auto',
+                gridTemplateColumns:'minmax(0,1fr) 72px 92px auto',
                 gap:8,
                 alignItems:'end',
                 marginBottom:12,
@@ -1347,23 +1350,41 @@ export default function ProductForm({ product, onClose, onSave }) {
                 />
               </div>
 
+              <div className="form-field" style={{ margin:0 }}>
+                <label>Stock</label>
+                <input
+                  id="pf-color-stock"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Ex: 9"
+                  aria-label="Stock de cette couleur"
+                  style={{ width:'100%', height:42, boxSizing:'border-box' }}
+                />
+              </div>
+
               <button
                 type="button"
                 className="act-btn"
                 onClick={() => {
                   const nameEl = document.getElementById('pf-color-name')
                   const hexEl = document.getElementById('pf-color-hex')
+                  const stockEl = document.getElementById('pf-color-stock')
                   const name = nameEl?.value.trim() || ''
                   const hex = hexEl?.value || '#111111'
+                  const stockRaw = stockEl?.value ?? ''
+                  const stock = stockRaw === '' ? '' : Math.max(0, Math.floor(Number(stockRaw)))
                   if (!name) return
+                  if (stockRaw !== '' && !Number.isFinite(Number(stockRaw))) return
 
                   const duplicate = (form.colors || []).some(c =>
                     String(c?.name || '').trim().toLowerCase() === name.toLowerCase()
                   )
                   if (duplicate) return
 
-                  set('colors', [...(form.colors || []), { name, hex }])
+                  set('colors', [...(form.colors || []), { name, hex, stock }])
                   if (nameEl) nameEl.value = ''
+                  if (stockEl) stockEl.value = ''
                 }}
                 style={{ minHeight:42, whiteSpace:'nowrap' }}
               >
@@ -1398,6 +1419,23 @@ export default function ProductForm({ product, onClose, onSave }) {
                       <div style={{ color:'white', fontSize:12, fontWeight:800 }}>{color.name}</div>
                       <div style={{ color:'rgba(255,255,255,.3)', fontSize:9, marginTop:2 }}>{color.hex}</div>
                     </div>
+                    <div style={{ width:92, flexShrink:0 }}>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={color.stock ?? ''}
+                        onChange={e => {
+                          const raw = e.target.value
+                          const next = [...form.colors]
+                          next[index] = { ...next[index], stock: raw === '' ? '' : Math.max(0, Math.floor(Number(raw))) }
+                          set('colors', next)
+                        }}
+                        aria-label={`Stock ${color.name}`}
+                        placeholder="Stock"
+                        style={{ width:'100%', height:34, boxSizing:'border-box', background:'var(--card)', color:'var(--g3)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, padding:'7px 8px', fontSize:12, outline:'none' }}
+                      />
+                    </div>
                     <button
                       type="button"
                       aria-label={`Supprimer la couleur ${color.name}`}
@@ -1425,7 +1463,7 @@ export default function ProductForm({ product, onClose, onSave }) {
             )}
 
             <div style={{ marginTop:10, color:'rgba(255,255,255,.28)', fontSize:10, lineHeight:1.45 }}>
-              Tu peux ajouter autant de couleurs que nécessaire. Il n’y a pas de limite de 5 ou 10 couleurs.
+              Tu peux ajouter autant de couleurs que nécessaire. Stock vide = le produit utilise son stock général ; 0 = couleur en rupture.
             </div>
           </div>
 
