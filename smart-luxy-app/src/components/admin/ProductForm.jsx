@@ -37,6 +37,8 @@ export default function ProductForm({ product, onClose, onSave }) {
     nb_commandes:  product?.nb_commandes || 0,
     bundles:       product?.bundles ? (typeof product.bundles === 'string' ? JSON.parse(product.bundles) : product.bundles) : [],
     faq:           product?.faq ? (typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq) : [],
+    show_colors:   product?.show_colors === true,
+    colors:        product?.colors ? (typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors) : [],
   })
 
   const [newSpec, setNewSpec] = useState('')
@@ -542,6 +544,13 @@ export default function ProductForm({ product, onClose, onSave }) {
         form.faq.length > 0
           ? form.faq
           : null,
+
+      show_colors: Boolean(form.show_colors),
+
+      colors:
+        Array.isArray(form.colors) && form.colors.length > 0
+          ? form.colors
+          : [],
     })
   }
 
@@ -1253,6 +1262,170 @@ export default function ProductForm({ product, onClose, onSave }) {
                   }
                 />
               </div>
+            </div>
+          </div>
+
+          {/* ── COULEURS DU PRODUIT ── */}
+          <div
+            className="pf-section"
+            style={{
+              border: '1px solid rgba(201,168,76,.2)',
+              borderRadius: 14,
+            }}
+          >
+            <h3>🎨 Couleurs disponibles</h3>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '10px 12px',
+                marginBottom: 14,
+                borderRadius: 10,
+                background: 'rgba(255,255,255,.03)',
+                border: '1px solid rgba(255,255,255,.07)',
+              }}
+            >
+              <div>
+                <div style={{ color:'white', fontSize:13, fontWeight:800 }}>Afficher les couleurs sur le site</div>
+                <div style={{ color:'rgba(255,255,255,.35)', fontSize:10, marginTop:3, lineHeight:1.4 }}>
+                  Active cette option seulement pour les produits qui ont plusieurs variantes de couleur.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => set('show_colors', !form.show_colors)}
+                aria-pressed={form.show_colors}
+                style={{
+                  flexShrink:0,
+                  border: `1px solid ${form.show_colors ? 'rgba(201,168,76,.45)' : 'rgba(255,255,255,.12)'}`,
+                  background: form.show_colors ? 'rgba(201,168,76,.14)' : 'rgba(255,255,255,.05)',
+                  color: form.show_colors ? '#E9C46A' : 'rgba(255,255,255,.55)',
+                  borderRadius:999,
+                  padding:'7px 12px',
+                  fontSize:11,
+                  fontWeight:900,
+                  cursor:'pointer',
+                }}
+              >
+                {form.show_colors ? '✓ Activé' : 'Désactivé'}
+              </button>
+            </div>
+
+            <div
+              style={{
+                display:'grid',
+                gridTemplateColumns:'minmax(0,1fr) 72px auto',
+                gap:8,
+                alignItems:'end',
+                marginBottom:12,
+              }}
+            >
+              <div className="form-field" style={{ margin:0 }}>
+                <label>Nom de la couleur</label>
+                <input
+                  id="pf-color-name"
+                  placeholder="Ex: Noir"
+                />
+              </div>
+
+              <div className="form-field" style={{ margin:0 }}>
+                <label>Couleur</label>
+                <input
+                  id="pf-color-hex"
+                  type="color"
+                  defaultValue="#111111"
+                  aria-label="Choisir la couleur"
+                  style={{
+                    width:'100%', height:42, padding:3, cursor:'pointer',
+                    background:'var(--card)', border:'1px solid var(--brd)',
+                    borderRadius:8,
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                className="act-btn"
+                onClick={() => {
+                  const nameEl = document.getElementById('pf-color-name')
+                  const hexEl = document.getElementById('pf-color-hex')
+                  const name = nameEl?.value.trim() || ''
+                  const hex = hexEl?.value || '#111111'
+                  if (!name) return
+
+                  const duplicate = (form.colors || []).some(c =>
+                    String(c?.name || '').trim().toLowerCase() === name.toLowerCase()
+                  )
+                  if (duplicate) return
+
+                  set('colors', [...(form.colors || []), { name, hex }])
+                  if (nameEl) nameEl.value = ''
+                }}
+                style={{ minHeight:42, whiteSpace:'nowrap' }}
+              >
+                + Ajouter
+              </button>
+            </div>
+
+            {form.colors?.length > 0 ? (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {form.colors.map((color, index) => (
+                  <div
+                    key={`${color.name}-${index}`}
+                    style={{
+                      display:'flex',
+                      alignItems:'center',
+                      gap:10,
+                      padding:'9px 10px',
+                      border:'1px solid rgba(255,255,255,.07)',
+                      background:'rgba(255,255,255,.025)',
+                      borderRadius:10,
+                    }}
+                  >
+                    <span
+                      title={color.hex}
+                      style={{
+                        width:24, height:24, borderRadius:'50%', flexShrink:0,
+                        background:color.hex, border:'2px solid rgba(255,255,255,.6)',
+                        boxShadow:'0 0 0 1px rgba(0,0,0,.35)',
+                      }}
+                    />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ color:'white', fontSize:12, fontWeight:800 }}>{color.name}</div>
+                      <div style={{ color:'rgba(255,255,255,.3)', fontSize:9, marginTop:2 }}>{color.hex}</div>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={`Supprimer la couleur ${color.name}`}
+                      onClick={() => set('colors', form.colors.filter((_, i) => i !== index))}
+                      style={{
+                        border:'1px solid rgba(239,68,68,.2)',
+                        background:'rgba(239,68,68,.08)',
+                        color:'#fca5a5',
+                        borderRadius:8,
+                        padding:'6px 9px',
+                        cursor:'pointer',
+                        fontSize:12,
+                        fontWeight:900,
+                      }}
+                    >
+                      🗑
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding:'12px 10px', color:'rgba(255,255,255,.3)', fontSize:11, textAlign:'center', border:'1px dashed rgba(255,255,255,.1)', borderRadius:10 }}>
+                Aucune couleur ajoutée pour ce produit.
+              </div>
+            )}
+
+            <div style={{ marginTop:10, color:'rgba(255,255,255,.28)', fontSize:10, lineHeight:1.45 }}>
+              Tu peux ajouter autant de couleurs que nécessaire. Il n’y a pas de limite de 5 ou 10 couleurs.
             </div>
           </div>
 
