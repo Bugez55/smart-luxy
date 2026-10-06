@@ -38,6 +38,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const [lb, setLb] = useState(false)
   const imgRef2 = useRef()
   const [selectedBundle, setSelectedBundle] = useState(null)
+  const [selectedColor, setSelectedColor] = useState(null)
   const [qty, setQty] = useState(1)
   const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'', website:'' })
   const [modeLiv, setModeLiv] = useState('domicile')
@@ -91,6 +92,18 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const specs = (() => { try { return typeof p.specs==='string' ? JSON.parse(p.specs) : (p.specs||[]) } catch { return [] } })()
   const bundles = (() => { try { return typeof p.bundles==='string' ? JSON.parse(p.bundles) : (p.bundles||[]) } catch { return [] } })()
   const faq = (() => { try { return typeof p.faq==='string' ? JSON.parse(p.faq) : (p.faq||[]) } catch { return [] } })()
+  const colors = (() => {
+    try {
+      const raw = typeof p.colors === 'string' ? JSON.parse(p.colors) : (p.colors || [])
+      return Array.isArray(raw) ? raw.filter(c => c && String(c.name || '').trim()) : []
+    } catch { return [] }
+  })()
+  const hasColors = p.show_colors === true && colors.length > 0
+  const activeColor = hasColors ? colors.find(c => String(c.name) === String(selectedColor)) || null : null
+  const colorStock = activeColor && activeColor.stock !== '' && activeColor.stock !== null && activeColor.stock !== undefined
+    ? Number(activeColor.stock)
+    : null
+  const selectedColorOutOfStock = colorStock !== null && Number.isFinite(colorStock) && colorStock <= 0
 
   const mainImg = imgs[0]?.url || p.img
   const hasBundles = bundles.length > 0
@@ -98,8 +111,13 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const currentPrix = activeBundle ? activeBundle.prix : p.prix
   const currentQty = activeBundle ? activeBundle.qty : qty
 
-  const outOfStock = p.stock !== null && p.stock !== undefined && p.stock <= 0
-  const lowStock = p.stock !== null && p.stock !== undefined && p.stock > 0 && p.stock <= 5
+  const outOfStock = hasColors && selectedColor !== null
+    ? selectedColorOutOfStock
+    : p.stock !== null && p.stock !== undefined && p.stock <= 0
+  const effectiveStock = hasColors && selectedColor !== null && colorStock !== null && Number.isFinite(colorStock)
+    ? colorStock
+    : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : null)
+  const lowStock = effectiveStock !== null && Number.isFinite(effectiveStock) && effectiveStock > 0 && effectiveStock <= 5
   const isPromo = p.badge?.includes('Promo') || p.prix_old
   const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100-(p.prix/p.prix_old)*100) : 0
 
@@ -267,12 +285,18 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
     // Anti-bot honeypot — si ce champ caché est rempli, c'est un robot
     if (form.website) { console.warn('Bot détecté'); return }
     if (hasBundles && selectedBundle === null) return
+    if (hasColors && selectedColor === null) return
+    if (hasColors && selectedColorOutOfStock) return
+    if (effectiveStock !== null && currentQty > effectiveStock) {
+      setQty(Math.max(1, effectiveStock))
+      return
+    }
     setOrdering(true)
     const prixUnit = activeBundle ? Math.round(activeBundle.prix / activeBundle.qty) : p.prix
     try {
       await onSubmitOrder({
         ...form,
-        items: [{ ...p, qty: currentQty, prix: prixUnit }],
+        items: [{ ...p, qty: currentQty, prix: prixUnit, color: activeColor?.name || null, couleur: activeColor?.name || null }],
         mode_livraison: modeLiv,
         mode_paiement:  modePaiement,
         preuve_paiement: preuvePaiement || null,
@@ -293,7 +317,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   }
   const lbl = { fontSize:11, fontWeight:800, color:'var(--g3)', letterSpacing:'.06em', textTransform:'uppercase', display:'block', marginBottom:6 }
 
-  const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null)
+  const canOrder = form.nom && form.tel && form.wilaya && form.commune && !outOfStock && (!hasBundles || selectedBundle !== null) && (!hasColors || selectedColor !== null)
 
   return (
     <div className={`pp-root ${checkoutOnly ? 'checkout-only' : ''}`} data-product-id={p.id} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:checkoutOnly ? 420 : 300, background:'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
@@ -448,6 +472,82 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           )}
         </div>
 
+        {/* 🎨 Couleurs du produit — optionnelles et configurables depuis l'admin */}
+        {hasColors && (
+          <div style={{ marginBottom:14, padding:'12px 14px', background:'rgba(255,255,255,.025)', border:'1px solid rgba(201,168,76,.18)', borderRadius:14 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:15 }}>🎨</span>
+                <div>
+                  <div style={{ color:'var(--g3)', fontSize:12, fontWeight:900 }}>
+                    {lang==='ar' ? 'اللون' : 'Couleur'} <span style={{ color:'#fca5a5' }}>*</span>
+                  </div>
+                  <div style={{ color:'var(--g4)', fontSize:10, marginTop:2 }}>
+                    {selectedColor ? `${activeColor?.name || selectedColor}` : (lang==='ar' ? 'اختر اللون' : 'Choisissez une couleur')}
+                  </div>
+                </div>
+              </div>
+              {selectedColor && activeColor && (
+                <div style={{ fontSize:10, fontWeight:800, color:selectedColorOutOfStock ? '#fca5a5' : '#86efac' }}>
+                  {selectedColorOutOfStock
+                    ? (lang==='ar' ? 'نفذ المخزون' : 'Rupture de stock')
+                    : colorStock !== null && Number.isFinite(colorStock)
+                      ? `${colorStock} ${colorStock > 1 ? 'disponibles' : 'disponible'}`
+                      : (lang==='ar' ? 'متوفر' : 'Disponible')}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display:'flex', gap:9, overflowX:'auto', padding:'2px 1px 5px', scrollbarWidth:'thin', WebkitOverflowScrolling:'touch' }}>
+              {colors.map((color, index) => {
+                const name = String(color.name || '').trim()
+                const stock = color.stock !== '' && color.stock !== null && color.stock !== undefined ? Number(color.stock) : null
+                const hasFiniteStock = stock !== null && Number.isFinite(stock)
+                const soldOut = hasFiniteStock && stock <= 0
+                const isSelected = String(selectedColor) === name
+                const hex = /^#[0-9A-Fa-f]{6}$/.test(String(color.hex || '')) ? color.hex : '#888888'
+                return (
+                  <button
+                    key={`${name}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      if (soldOut) return
+                      setSelectedColor(name)
+                      if (hasFiniteStock) setQty(q => Math.max(1, Math.min(q, stock)))
+                    }}
+                    aria-label={`${name}${soldOut ? ' — Rupture de stock' : ''}`}
+                    disabled={soldOut}
+                    style={{
+                      minWidth:74, padding:'8px 9px 9px', borderRadius:12,
+                      border:`1px solid ${isSelected ? '#C9A84C' : soldOut ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.11)'}`,
+                      background:isSelected ? 'rgba(201,168,76,.10)' : 'rgba(255,255,255,.025)',
+                      color:soldOut ? 'rgba(255,255,255,.3)' : 'var(--g3)',
+                      opacity:soldOut ? .72 : 1,
+                      cursor:soldOut ? 'not-allowed' : 'pointer',
+                      flexShrink:0,
+                      boxShadow:isSelected ? '0 0 0 2px rgba(201,168,76,.12)' : 'none',
+                    }}
+                  >
+                    <span style={{ position:'relative', display:'block', width:34, height:34, margin:'0 auto 6px', borderRadius:'50%', background:hex, border:'2px solid rgba(255,255,255,.5)', boxShadow:'0 2px 7px rgba(0,0,0,.28)', overflow:'hidden' }}>
+                      {soldOut && <span style={{ position:'absolute', left:2, right:2, top:'50%', height:2, background:'#ef4444', transform:'rotate(-45deg)', borderRadius:2 }} />}
+                    </span>
+                    <span style={{ display:'block', fontSize:10, fontWeight:900, lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{name}</span>
+                    <span style={{ display:'block', marginTop:3, fontSize:8.5, fontWeight:800, color:soldOut ? '#fca5a5' : 'var(--g4)' }}>
+                      {soldOut ? 'Rupture' : hasFiniteStock ? `${stock} en stock` : 'Disponible'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {!selectedColor && (
+              <div style={{ marginTop:8, fontSize:10, fontWeight:800, color:'#fca5a5' }}>
+                {lang==='ar' ? 'اختر لونًا قبل الطلب.' : 'Veuillez choisir une couleur avant de commander.'}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="pp-trust-grid">
           <div className="pp-trust-item"><span>🚚</span><div><strong>69 wilayas</strong><small>Livraison nationale</small></div></div>
           <div className="pp-trust-item"><span>💳</span><div><strong>Paiement à la livraison</strong><small>Simple et pratique</small></div></div>
@@ -576,8 +676,8 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 <span className="pp-qty-stock" style={{ fontSize:10, color: outOfStock ? '#fca5a5' : 'var(--g4)', fontWeight:800 }}>
                   {outOfStock
                     ? (lang==='ar' ? 'غير متوفر' : 'Indisponible')
-                    : p.stock !== null && p.stock !== undefined
-                      ? `${p.stock} ${lang==='ar' ? 'en stock' : 'en stock'}`
+                    : effectiveStock !== null && Number.isFinite(effectiveStock)
+                      ? `${effectiveStock} ${lang==='ar' ? 'en stock' : 'en stock'}`
                       : (lang==='ar' ? 'Stock disponible' : 'Stock disponible')}
                 </span>
               </div>
@@ -604,13 +704,13 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 <button
                   type="button"
                   aria-label={lang==='ar' ? 'زيادة الكمية' : 'Augmenter la quantité'}
-                  disabled={outOfStock || (p.stock !== null && p.stock !== undefined && qty >= Number(p.stock))}
-                  onClick={() => setQty(q => (p.stock !== null && p.stock !== undefined ? Math.min(Number(p.stock), q+1) : q+1))}
-                  style={{ background:(outOfStock || (p.stock !== null && p.stock !== undefined && qty >= Number(p.stock)))?'rgba(255,255,255,.04)':'rgba(201,168,76,.10)', border:'1px solid rgba(201,168,76,.18)', borderRadius:10, width:42, height:42, color:(outOfStock || (p.stock !== null && p.stock !== undefined && qty >= Number(p.stock)))?'#555':'var(--br)', fontSize:20, cursor:(outOfStock || (p.stock !== null && p.stock !== undefined && qty >= Number(p.stock)))?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s', flexShrink:0 }}
+                  disabled={outOfStock || (effectiveStock !== null && qty >= effectiveStock)}
+                  onClick={() => setQty(q => (effectiveStock !== null ? Math.min(effectiveStock, q+1) : q+1))}
+                  style={{ background:(outOfStock || (effectiveStock !== null && qty >= effectiveStock))?'rgba(255,255,255,.04)':'rgba(201,168,76,.10)', border:'1px solid rgba(201,168,76,.18)', borderRadius:10, width:42, height:42, color:(outOfStock || (effectiveStock !== null && qty >= effectiveStock))?'#555':'var(--br)', fontSize:20, cursor:(outOfStock || (effectiveStock !== null && qty >= effectiveStock))?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s', flexShrink:0 }}
                 >+</button>
               </div>
 
-              {p.stock !== null && p.stock !== undefined && Number(p.stock) > 0 && qty >= Number(p.stock) && (
+              {effectiveStock !== null && Number.isFinite(effectiveStock) && effectiveStock > 0 && qty >= effectiveStock && (
                 <div style={{ marginTop:6, fontSize:10, color:'#fbbf24', fontWeight:700, textAlign:'center' }}>
                   {lang==='ar' ? 'الكمية maximale disponible' : 'Quantité maximale disponible'}
                 </div>
