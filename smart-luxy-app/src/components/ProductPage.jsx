@@ -488,76 +488,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
         )}
       </div>
 
-      {/* ── Description ── */}
-      {p.description && (
-        <div className="pp-section pp-description" style={{ padding:'0 16px 16px' }}>
-          <h2 className="pp-section-title">À propos du produit</h2>
-          <div style={{ fontSize:14, color:'var(--g3)', lineHeight:1.8 }}
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description || '') }} />
-        </div>
-      )}
-
-      {/* ── Caractéristiques ── */}
-      {specs.length > 0 && (
-        <div className="pp-section pp-specs" style={{ padding:'0 16px 16px' }}>
-          <h2 className="pp-section-title">Caractéristiques</h2>
-          {specs.map((s,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
-              <span style={{ color:'var(--br)', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
-              <span style={{ color:'var(--g3)', fontSize:14, lineHeight:1.5 }}>{s}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── GALERIE VERTICALE — photos séparées du carrousel ── */}
-      {imgsGallery.length > 0 && (
-        <div className="pp-gallery" style={{ lineHeight:0, margin:0, padding:0 }}>
-          {imgsGallery.map((img, i) => (
-            <img
-              key={i}
-              src={img.url}
-              alt=""
-              loading="lazy"
-              style={{
-                width:'100%',
-                display:'block',
-                objectFit: img.type === 'gif' ? 'contain' : 'cover',
-                margin:0, padding:0, lineHeight:0,
-                background: img.type === 'gif' ? '#000' : 'transparent',
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* ── FAQ ── */}
-      {faq.length > 0 && (
-        <div className="pp-section pp-faq" style={{ padding:'0 16px 16px' }}>
-          <h3 style={{ fontSize:16, fontWeight:900, color:'var(--g3)', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
-          {faq.map((item,i) => {
-            const isOpen = openFaq === i
-            return (
-              <div key={i} className={`pp-faq-item${isOpen ? ' is-open' : ''}`}>
-                <button
-                  className="pp-faq-q"
-                  onClick={() => setOpenFaq(isOpen ? null : i)}
-                  aria-expanded={isOpen}
-                >
-                  <span>{item.q}</span>
-                  <span className="pp-faq-chevron" aria-hidden="true">⌄</span>
-                </button>
-                {isOpen && (
-                  <div className="pp-faq-a">
-                    {item.r}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
       {/* ══════════════════════════════════════════
           FORMULAIRE DE COMMANDE — style MarketDZ
       ══════════════════════════════════════════ */}
@@ -1119,6 +1049,77 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
         </div>
       </div>
+
+
+      {/* ── Description ── */}
+      {p.description && (
+        <div className="pp-section pp-description" style={{ padding:'0 16px 16px' }}>
+          <h2 className="pp-section-title">À propos du produit</h2>
+          <div style={{ fontSize:14, color:'var(--g3)', lineHeight:1.8 }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(p.description || '') }} />
+        </div>
+      )}
+
+      {/* ── Caractéristiques ── */}
+      {specs.length > 0 && (
+        <div className="pp-section pp-specs" style={{ padding:'0 16px 16px' }}>
+          <h2 className="pp-section-title">Caractéristiques</h2>
+          {specs.map((s,i) => (
+            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
+              <span style={{ color:'var(--br)', fontWeight:900, fontSize:14, flexShrink:0, marginTop:1 }}>✓</span>
+              <span style={{ color:'var(--g3)', fontSize:14, lineHeight:1.5 }}>{s}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── GALERIE VERTICALE — photos séparées du carrousel ── */}
+      {imgsGallery.length > 0 && (
+        <div className="pp-gallery" style={{ lineHeight:0, margin:0, padding:0 }}>
+          {imgsGallery.map((img, i) => (
+            <img
+              key={i}
+              src={img.url}
+              alt=""
+              loading="lazy"
+              style={{
+                width:'100%',
+                display:'block',
+                objectFit: img.type === 'gif' ? 'contain' : 'cover',
+                margin:0, padding:0, lineHeight:0,
+                background: img.type === 'gif' ? '#000' : 'transparent',
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── FAQ ── */}
+      {faq.length > 0 && (
+        <div className="pp-section pp-faq" style={{ padding:'0 16px 16px' }}>
+          <h3 style={{ fontSize:16, fontWeight:900, color:'var(--g3)', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
+          {faq.map((item,i) => {
+            const isOpen = openFaq === i
+            return (
+              <div key={i} className={`pp-faq-item${isOpen ? ' is-open' : ''}`}>
+                <button
+                  className="pp-faq-q"
+                  onClick={() => setOpenFaq(isOpen ? null : i)}
+                  aria-expanded={isOpen}
+                >
+                  <span>{item.q}</span>
+                  <span className="pp-faq-chevron" aria-hidden="true">⌄</span>
+                </button>
+                {isOpen && (
+                  <div className="pp-faq-a">
+                    {item.r}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* ── Partager le produit ── */}
       <div className="pp-share-label" style={{ padding:'0 16px 16px', display:'flex', gap:8, alignItems:'center' }}>
