@@ -226,7 +226,8 @@ export default function App() {
     const fbp = getCookie('_fbp')
 
     try {
-      const { data: order, error } = await supabase.rpc('create_order', {
+      const rpcName = (form.items || []).some(i => i?.color || i?.couleur) ? 'create_order_with_colors' : 'create_order'
+      const { data: order, error } = await supabase.rpc(rpcName, {
         p_nom_client: form.nom,
         p_telephone: form.tel,
         p_wilaya: form.wilaya,
