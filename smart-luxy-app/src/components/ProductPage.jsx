@@ -707,6 +707,42 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                 {lang==='ar' ? 'اختر لونًا قبل الطلب.' : 'Veuillez choisir une couleur avant de commander.'}
               </div>
             )}
+
+            {/* Bouton d'ajout placé juste sous les couleurs pour être visible immédiatement. */}
+            {!checkoutOnly && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleAddCurrentSelectionToCart}
+                  disabled={ordering || selectedColor === null || selectedColorOutOfStock}
+                  style={{
+                    width:'100%', marginTop:10, padding:'14px 14px',
+                    background:(selectedColor !== null && !selectedColorOutOfStock)
+                      ? 'linear-gradient(135deg,#C9A84C,#E9C46A)'
+                      : 'rgba(255,255,255,.05)',
+                    border:(selectedColor !== null && !selectedColorOutOfStock)
+                      ? 'none'
+                      : '1px solid rgba(255,255,255,.10)',
+                    borderRadius:14,
+                    color:(selectedColor !== null && !selectedColorOutOfStock) ? '#000' : '#555',
+                    fontSize:14, fontWeight:900,
+                    cursor:(selectedColor === null || selectedColorOutOfStock) ? 'not-allowed' : 'pointer',
+                    display:'flex', alignItems:'center', justifyContent:'center', gap:7,
+                    boxShadow:(selectedColor !== null && !selectedColorOutOfStock) ? '0 6px 18px rgba(201,168,76,.18)' : 'none',
+                  }}
+                >
+                  🛒 {selectedColor ? `Ajouter ${activeColor?.name || selectedColor} ×${currentQty} à la commande` : 'Choisis une couleur puis ajoute-la'}
+                </button>
+
+                {selectedColor && !selectedColorOutOfStock && (
+              <div style={{ marginTop:6, fontSize:10, color:'var(--g4)', textAlign:'center', lineHeight:1.4 }}>
+                {colorOrderItems.length > 0
+                  ? 'Tu peux ensuite choisir une autre couleur.'
+                  : 'Après l’ajout, tu peux choisir une autre couleur avec une quantité différente.'}
+              </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -1314,25 +1350,6 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     Toutes ces couleurs seront envoyées ensemble dans une seule commande.
                   </div>
                 </div>
-              )}
-
-              {!checkoutOnly && (
-                <button
-                  type="button"
-                  onClick={handleAddCurrentSelectionToCart}
-                  disabled={ordering || selectedColor === null || selectedColorOutOfStock}
-                  style={{
-                    width:'100%', padding:'13px 14px',
-                    background:'rgba(201,168,76,.10)',
-                    border:'1px solid rgba(201,168,76,.38)',
-                    borderRadius:14,
-                    color:selectedColor === null || selectedColorOutOfStock ? '#555' : '#E9C46A',
-                    fontSize:14, fontWeight:900,
-                    cursor:selectedColor === null || selectedColorOutOfStock ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  🛒 Ajouter cette couleur ×{currentQty} à la commande
-                </button>
               )}
 
               {colorOrderItems.length === 0 && (
