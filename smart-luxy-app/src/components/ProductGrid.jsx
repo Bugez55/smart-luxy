@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
 function fmt(n) {
@@ -415,6 +415,10 @@ export default function ProductGrid({
 
 function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) {
   const [selectedImg, setSelectedImg] = useState('')
+  const touchStartX = useRef(null)
+  const touchStartY = useRef(null)
+  const touchMoved = useRef(false)
+  const suppressNextClick = useRef(false)
   const imgs = (() => {
     try {
       return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || [])
@@ -423,6 +427,8 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
     }
   })()
 
+  const selectedIndex = Math.max(0, imgs.findIndex(img => img?.url === selectedImg))
+  const currentIndex = imgs.length ? (selectedImg ? selectedIndex : 0) : 0
   const mainImg = selectedImg || imgs[0]?.url || p.img
   const hasDiscount = Number(p.prix_old) > Number(p.prix)
   const discount = hasDiscount
@@ -433,13 +439,72 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   const lowStock = p.stock !== null && p.stock !== undefined && p.stock > 0 && p.stock <= 5
   const cardBg = p.card_color || 'var(--card)'
 
+  function goToImage(nextIndex) {
+    if (!imgs.length) return
+    const normalized = ((nextIndex % imgs.length) + imgs.length) % imgs.length
+    setSelectedImg(imgs[normalized]?.url || '')
+  }
+
+  function handleTouchStart(e) {
+    if (imgs.length < 2) return
+    const touch = e.touches?.[0]
+    if (!touch) return
+    touchStartX.current = touch.clientX
+    touchStartY.current = touch.clientY
+    touchMoved.current = false
+    suppressNextClick.current = false
+  }
+
+  function handleTouchMove(e) {
+    if (touchStartX.current == null || touchStartY.current == null) return
+    const touch = e.touches?.[0]
+    if (!touch) return
+    const dx = touch.clientX - touchStartX.current
+    const dy = touch.clientY - touchStartY.current
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+      touchMoved.current = true
+      suppressNextClick.current = true
+    }
+  }
+
+  function handleTouchEnd(e) {
+    if (touchStartX.current == null || touchStartY.current == null) return
+    const touch = e.changedTouches?.[0]
+    const dx = touch ? touch.clientX - touchStartX.current : 0
+    const dy = touch ? touch.clientY - touchStartY.current : 0
+    const horizontalSwipe = Math.abs(dx) >= 42 && Math.abs(dx) > Math.abs(dy) * 1.15
+
+    if (horizontalSwipe && imgs.length > 1) {
+      if (dx < 0) goToImage(currentIndex + 1)
+      else goToImage(currentIndex - 1)
+    }
+
+    touchStartX.current = null
+    touchStartY.current = null
+  }
+
+  function handleImageClick() {
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false
+      return
+    }
+    onOpen(p)
+  }
+
   return (
     <article
       className="pcard"
       style={{ opacity: outOfStock ? 0.68 : 1, background: cardBg }}
     >
       {/* Image */}
-      <div className="pcard-img" onClick={() => onOpen(p)}>
+      <div
+        className="pcard-img"
+        onClick={handleImageClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: imgs.length > 1 ? 'pan-y' : 'auto' }}
+      >
         {mainImg ? (
           <img src={mainImg} alt={p.nom} loading="lazy" />
         ) : (
@@ -524,20 +589,44 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
         )}
 
         {imgs.length > 1 && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: outOfStock ? 32 : lowStock ? 40 : 8,
-              right: 8,
-              display: 'flex',
-              gap: 4,
-              zIndex: 4,
-              padding: 3,
-              borderRadius: 7,
-              background: 'rgba(0,0,0,.35)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
+          <>
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                bottom: outOfStock ? 34 : lowStock ? 42 : 10,
+                transform: 'translateX(-50%)',
+                zIndex: 4,
+                padding: '4px 8px',
+                borderRadius: 999,
+                background: 'rgba(0,0,0,.42)',
+                color: 'rgba(255,255,255,.9)',
+                fontSize: 8,
+                fontWeight: 900,
+                letterSpacing: '.06em',
+                textTransform: 'uppercase',
+                pointerEvents: 'none',
+                backdropFilter: 'blur(8px)',
+              }}
+              aria-hidden="true"
+            >
+              Glissez pour voir les photos
+            </div>
+
+            <div
+              style={{
+                position: 'absolute',
+                bottom: outOfStock ? 62 : lowStock ? 70 : 38,
+                right: 8,
+                display: 'flex',
+                gap: 4,
+                zIndex: 4,
+                padding: 3,
+                borderRadius: 7,
+                background: 'rgba(0,0,0,.35)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
             {imgs.slice(0, 4).map((img, i) => {
               const active = (selectedImg || imgs[0]?.url) === img.url
               return (
@@ -573,11 +662,12 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
                 +{imgs.length - 4}
               </div>
             )}
-          </div>
+            </div>
+          </>
         )}
 
         <div className="pcard-quickview">Voir le produit</div>
-        <div className="pcard-image-hint">Touchez les miniatures pour voir les autres vues</div>
+        <div className="pcard-image-hint">Glissez sur la photo pour voir les autres vues</div>
       </div>
 
       {/* Body */}
