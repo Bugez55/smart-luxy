@@ -160,44 +160,6 @@ export default function ProductGrid({
 
       <style>{`
         /* Wazyo premium product-card micro-interactions */
-        .pcard-thumb{
-          appearance:none;
-          border:1px solid rgba(255,255,255,.32);
-          padding:0;
-          margin:0;
-          width:19px;
-          height:19px;
-          border-radius:4px;
-          overflow:hidden;
-          background:transparent;
-          opacity:.72;
-          cursor:pointer;
-          transition:transform .2s ease, opacity .2s ease, border-color .2s ease;
-        }
-        .pcard-thumb img{
-          display:block;
-          width:100%;
-          height:100%;
-          object-fit:cover;
-        }
-        .pcard-thumb.active{
-          opacity:1;
-          border-color:white;
-          transform:scale(1.06);
-        }
-        .pcard-thumb:focus-visible{
-          outline:2px solid white;
-          outline-offset:2px;
-        }
-        @media(max-width:640px){
-          .pcard-image-hint{
-            display:none;
-          }
-          .pcard-thumb{
-            width:22px;
-            height:22px;
-          }
-        }
 
         .pcard{
           position:relative;
@@ -216,12 +178,26 @@ export default function ProductGrid({
           opacity:.45;
           transition:opacity .28s ease;
         }
-        .pcard-img{
+.pcard-img{
+          position:relative;
           overflow:hidden;
+          background:#111;
         }
         .pcard-img img{
-          transition:transform .5s cubic-bezier(.2,.7,.2,1), filter .35s ease;
+          transition:transform .42s cubic-bezier(.2,.7,.2,1), filter .28s ease;
           transform-origin:center;
+          -webkit-user-drag:none;
+        }
+        .pcard .pcard-badge{
+          font-size:11px !important;
+          line-height:1 !important;
+          padding:9px 13px !important;
+          border-radius:14px !important;
+          letter-spacing:.01em;
+          backdrop-filter:blur(8px);
+        }
+        .pcard .pcard-badge[style*="right: 10px"]{
+          padding:9px 11px !important;
         }
         @media (hover:hover) and (pointer:fine){
           .pcard:hover{
@@ -377,56 +353,6 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
     setSelectedImg(imgs[normalized]?.url || '')
   }
 
-  function handleTouchStart(e) {
-    if (imgs.length < 2) return
-    const touch = e.touches?.[0]
-    if (!touch) return
-    touchStartX.current = touch.clientX
-    touchStartY.current = touch.clientY
-    suppressNextClick.current = false
-  }
-
-  function handleTouchMove(e) {
-    if (touchStartX.current == null || touchStartY.current == null) return
-    const touch = e.touches?.[0]
-    if (!touch) return
-    const dx = touch.clientX - touchStartX.current
-    const dy = touch.clientY - touchStartY.current
-
-    // Bloque uniquement le scroll horizontal lorsque le geste est
-    // clairement destiné à changer de photo. Le scroll vertical reste libre.
-    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.08) {
-      suppressNextClick.current = true
-      e.preventDefault()
-    }
-  }
-
-  function handleTouchEnd(e) {
-    if (touchStartX.current == null || touchStartY.current == null) return
-
-    const touch = e.changedTouches?.[0]
-    if (!touch) return
-
-    const dx = touch.clientX - touchStartX.current
-    const dy = touch.clientY - touchStartY.current
-    const horizontalSwipe = Math.abs(dx) >= 32 && Math.abs(dx) > Math.abs(dy) * 1.08
-
-    if (horizontalSwipe && imgs.length > 1) {
-      e.preventDefault()
-      if (dx < 0) goToImage(currentIndex + 1)
-      else goToImage(currentIndex - 1)
-      suppressNextClick.current = true
-    }
-
-    touchStartX.current = null
-    touchStartY.current = null
-  }
-
-  function handleTouchCancel() {
-    touchStartX.current = null
-    touchStartY.current = null
-  }
-
   function handlePointerDown(e) {
     if (imgs.length < 2 || e.pointerType === 'mouse') return
     pointerStartX.current = e.clientX
@@ -502,20 +428,34 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchCancel}
         style={{
-          touchAction: imgs.length > 1 ? 'pan-y pinch-zoom' : 'auto',
+          touchAction: imgs.length > 1 ? 'pan-y' : 'auto',
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
         }}
       >
         {mainImg ? (
           <img src={mainImg} alt={p.nom} loading="lazy" draggable={false} onDragStart={e => e.preventDefault()} />
         ) : (
           <span className="pcard-emoji">{p.emoji || '📦'}</span>
+        )}
+        {imgs.length > 1 && (
+          <span
+            style={{
+              position: 'absolute',
+              width: 1,
+              height: 1,
+              padding: 0,
+              margin: -1,
+              overflow: 'hidden',
+              clip: 'rect(0,0,0,0)',
+              whiteSpace: 'nowrap',
+              border: 0,
+            }}
+          >
+            Faites glisser horizontalement pour voir les autres photos.
+          </span>
         )}
 
         {p.badge && <div className="pcard-badge">{p.badge}</div>}
@@ -595,61 +535,6 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
           </div>
         )}
 
-        {imgs.length > 1 && (
-          <>
-            <div
-              style={{
-                position: 'absolute',
-                bottom: outOfStock ? 62 : lowStock ? 70 : 38,
-                right: 8,
-                display: 'flex',
-                gap: 4,
-                zIndex: 4,
-                padding: 3,
-                borderRadius: 7,
-                background: 'rgba(0,0,0,.35)',
-                backdropFilter: 'blur(8px)',
-              }}
-            >
-            {imgs.slice(0, 4).map((img, i) => {
-              const active = (selectedImg || imgs[0]?.url) === img.url
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  className={`pcard-thumb ${active ? 'active' : ''}`}
-                  aria-label={`Voir l’image ${i + 1} de ${imgs.length}`}
-                  onClick={e => {
-                    e.stopPropagation()
-                    setSelectedImg(img.url)
-                  }}
-                >
-                  <img src={img.url} alt="" />
-                </button>
-              )
-            })}
-            {imgs.length > 4 && (
-              <div
-                style={{
-                  width: 19,
-                  height: 19,
-                  borderRadius: 4,
-                  background: 'rgba(0,0,0,.72)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 8,
-                  color: 'white',
-                  fontWeight: 900,
-                }}
-              >
-                +{imgs.length - 4}
-              </div>
-            )}
-            </div>
-          </>
-        )}
-
       </div>
 
       {/* Body */}
@@ -708,14 +593,14 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
               alignItems: 'center',
               alignSelf: 'flex-start',
               gap: 5,
-              padding: '4px 8px',
-              borderRadius: 999,
-              background: 'rgba(34,197,94,.09)',
-              border: '1px solid rgba(34,197,94,.18)',
+              padding: '2px 0',
+              borderRadius: 0,
+              background: 'transparent',
+              border: '0',
               color: '#86efac',
               fontSize: 10,
               fontWeight: 800,
-              marginTop: -2,
+              marginTop: -1,
             }}
           >
             Économisez {fmt(saving)}
