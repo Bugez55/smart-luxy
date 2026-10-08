@@ -177,7 +177,6 @@ function printInvoice(order) {
         <td>
           <div class="article-name">${escapeHtml(item.nom)}</div>
           ${item.categorie ? `<div class="article-prix">${escapeHtml(item.categorie)}</div>` : ''}
-          ${item.color || item.couleur ? `<div class="article-prix" style="color:#C9A84C;font-weight:700">🎨 Couleur : ${escapeHtml(item.color || item.couleur)}</div>` : ''}
         </td>
         <td style="text-align:center;font-weight:700">${escapeHtml(String(item.qty))}</td>
         <td style="text-align:right;color:#666">${fmtDA(item.prix)}</td>
@@ -1481,6 +1480,7 @@ export default function AdminPanel({ onLogout, onToast }) {
   // données existaient dans Supabase.
   useEffect(() => {
     if (tab === 'promos') loadPromos()
+    if (tab === 'affiliate') loadProducts()
     if (tab === 'banner') loadBanner()
   }, [tab])
 
@@ -1872,7 +1872,7 @@ export default function AdminPanel({ onLogout, onToast }) {
         'Commune':          o.commune,
         'Adresse':          o.adresse || '',
         'Mode livraison':   o.mode_livraison === 'bureau' ? 'Bureau' : 'Domicile',
-        'Articles':         items.map(i => `${i.nom}${(i.color || i.couleur) ? ` — Couleur: ${i.color || i.couleur}` : ''} x${i.qty}`).join(' | '),
+        'Articles':         items.map(i => `${i.nom} x${i.qty}`).join(' | '),
         'Sous-total (DA)':  items.reduce((s,i) => s + Number(i.prix)*i.qty, 0),
         'Frais liv. (DA)':  o.frais_livraison || 0,
         'Total (DA)':       o.total,
@@ -1947,7 +1947,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Wazyo — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['affiliate','🤝 Influenceurs'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -2160,14 +2160,7 @@ export default function AdminPanel({ onLogout, onToast }) {
                         <strong style={{color:'white', fontSize:12, textTransform:'uppercase', letterSpacing:'.05em'}}>Articles</strong>
                         {items.map((item, i) => (
                           <div key={i} style={{display:'flex', justifyContent:'space-between', marginTop:6}}>
-                            <span>
-                              {item.nom} <span style={{color:'#555'}}>×{item.qty}</span>
-                              {(item.color || item.couleur) && (
-                                <span style={{ display:'block', marginTop:2, color:'#C9A84C', fontSize:11, fontWeight:700 }}>
-                                  🎨 {item.color || item.couleur}
-                                </span>
-                              )}
-                            </span>
+                            <span>{item.nom} <span style={{color:'#555'}}>×{item.qty}</span></span>
                             <span style={{color:'var(--br)'}}>{fmt(Number(item.prix)*item.qty)}</span>
                           </div>
                         ))}
@@ -2388,6 +2381,11 @@ export default function AdminPanel({ onLogout, onToast }) {
           </div>
         )}
 
+        {/* ── INFLUENCEURS TAB ── */}
+        {tab === 'affiliate' && (
+          <AffiliateManager products={products} onToast={onToast} />
+        )}
+
         {/* ── BANNIÈRE TAB ── */}
         {tab === 'banner' && (
           <div>
@@ -2511,6 +2509,334 @@ export default function AdminPanel({ onLogout, onToast }) {
           onSave={saveProd}
         />
       )}
+    </div>
+  )
+}
+
+
+function AffiliateManager({ products, onToast }) {
+  const [influencers, setInfluencers] = useState([])
+  const [stats, setStats] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [newInfluencer, setNewInfluencer] = useState({ name:'', active:true })
+  const [newLink, setNewLink] = useState({ influencer_id:'', product_id:'', code:'', discount_percent:10, commission_percent:10, starts_at:'', ends_at:'' })
+  const [savingInfluencer, setSavingInfluencer] = useState(false)
+  const [savingLink, setSavingLink] = useState(false)
+
+  const productById = (id) => products.find(p => String(p.id) === String(id))
+
+  async function load() {
+    setLoading(true)
+    const [{ data: infs, error: infErr }, { data: dashboard, error: dashErr }] = await Promise.all([
+      supabase.from('influencers').select('*').order('created_at', { ascending:false }),
+      supabase.rpc('get_affiliate_dashboard'),
+    ])
+    if (infErr) {
+      onToast && onToast('❌ Impossible de charger les influenceurs : ' + infErr.message, 'error')
+    }
+    if (dashErr) {
+      onToast && onToast('❌ Impossible de charger les statistiques affiliation : ' + dashErr.message, 'error')
+    }
+    setInfluencers(infs || [])
+    setStats(dashboard || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  function slug(value) {
+    return String(value || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toUpperCase().replace(/[^A-Z0-9]+/g,'')
+  }
+
+  function generateCode() {
+    const inf = influencers.find(i => String(i.id) === String(newLink.influencer_id))
+    const base = slug(inf?.name || 'INFLU').slice(0, 12) || 'INFLU'
+    const product = productById(newLink.product_id)
+    const suffix = Math.floor(1000 + Math.random() * 9000)
+    const code = `${base}${product ? String(product.id) : ''}-${suffix}`
+    setNewLink(v => ({ ...v, code }))
+  }
+
+  async function addInfluencer() {
+    const name = newInfluencer.name.trim()
+    if (name.length < 2) {
+      onToast && onToast('❌ Nom d’influenceur invalide', 'error')
+      return
+    }
+    setSavingInfluencer(true)
+    const { data, error } = await supabase
+      .from('influencers')
+      .insert({ name, active:true })
+      .select('*')
+      .single()
+    setSavingInfluencer(false)
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
+      return
+    }
+    setNewInfluencer({ name:'', active:true })
+    setInfluencers(prev => [data, ...prev])
+    setNewLink(prev => ({ ...prev, influencer_id:String(data.id) }))
+    onToast && onToast('✅ Influenceur ajouté', 'default')
+  }
+
+  async function addLink() {
+    const influencerId = Number(newLink.influencer_id)
+    const productId = Number(newLink.product_id)
+    const discount = Number(newLink.discount_percent)
+    const commission = Number(newLink.commission_percent)
+    const code = newLink.code.trim().toUpperCase()
+    if (!influencerId || !productId || !code) {
+      onToast && onToast('❌ Influenceur, produit et code sont obligatoires', 'error')
+      return
+    }
+    if (!Number.isFinite(discount) || discount <= 0 || discount > 100) {
+      onToast && onToast('❌ Réduction invalide (1 à 100 %)', 'error')
+      return
+    }
+    if (!Number.isFinite(commission) || commission < 0 || commission > 100) {
+      onToast && onToast('❌ Commission invalide (0 à 100 %)', 'error')
+      return
+    }
+    if (newLink.starts_at && newLink.ends_at && new Date(newLink.ends_at) < new Date(newLink.starts_at)) {
+      onToast && onToast('❌ La date de fin doit être après la date de début', 'error')
+      return
+    }
+
+    setSavingLink(true)
+    const { error } = await supabase.rpc('create_affiliate_link_admin', {
+      p_influencer_id: influencerId,
+      p_product_id: productId,
+      p_code: code,
+      p_discount_percent: discount,
+      p_commission_percent: commission,
+      p_starts_at: newLink.starts_at ? new Date(newLink.starts_at).toISOString() : null,
+      p_ends_at: newLink.ends_at ? new Date(newLink.ends_at).toISOString() : null,
+    })
+    setSavingLink(false)
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
+      return
+    }
+    setNewLink(v => ({ ...v, code:'', product_id:'', starts_at:'', ends_at:'' }))
+    await load()
+    onToast && onToast('✅ Lien influenceur créé', 'default')
+  }
+
+  async function toggleLink(linkId, active) {
+    const { error } = await supabase.from('affiliate_links').update({ active }).eq('id', linkId)
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
+      return
+    }
+    await load()
+  }
+
+  async function toggleInfluencer(id, active) {
+    const { error } = await supabase.from('influencers').update({ active }).eq('id', id)
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
+      return
+    }
+    await load()
+  }
+
+  async function markPaid(linkId) {
+    if (!window.confirm('Marquer comme payées toutes les commissions livrées non encore payées pour ce lien ?')) return
+
+    const { data: pending, error: pendingError } = await supabase
+      .from('affiliate_order_attributions')
+      .select('order_id')
+      .eq('link_id', linkId)
+      .eq('paid', false)
+
+    if (pendingError) {
+      onToast && onToast('❌ ' + pendingError.message, 'error')
+      return
+    }
+
+    const orderIds = (pending || []).map(r => r.order_id).filter(Boolean)
+    if (!orderIds.length) {
+      onToast && onToast('ℹ️ Aucune commission en attente pour ce lien', 'default')
+      return
+    }
+
+    const { data: deliveredOrders, error: ordersError } = await supabase
+      .from('orders')
+      .select('id')
+      .in('id', orderIds)
+      .eq('statut', 'delivered')
+
+    if (ordersError) {
+      onToast && onToast('❌ ' + ordersError.message, 'error')
+      return
+    }
+
+    const deliveredIds = (deliveredOrders || []).map(r => r.id).filter(Boolean)
+    if (!deliveredIds.length) {
+      onToast && onToast('ℹ️ Aucune commande livrée à payer pour ce lien', 'default')
+      return
+    }
+
+    const now = new Date().toISOString()
+    const { data: paidRows, error } = await supabase
+      .from('affiliate_order_attributions')
+      .update({ paid:true, paid_at:now })
+      .in('order_id', deliveredIds)
+      .eq('link_id', linkId)
+      .eq('paid', false)
+      .select('order_id')
+
+    if (error) {
+      onToast && onToast('❌ ' + error.message, 'error')
+      return
+    }
+
+    await load()
+    onToast && onToast(`✅ ${(paidRows || []).length} commission(s) marquée(s) comme payée(s)`, 'default')
+  }
+
+
+  async function copyLink(row) {
+    const url = `${window.location.origin}/?ref=${encodeURIComponent(row.code)}#produit-${encodeURIComponent(row.product_id)}`
+    try {
+      await navigator.clipboard.writeText(url)
+      onToast && onToast('✅ Lien copié', 'default')
+    } catch {
+      window.prompt('Copie ce lien :', url)
+    }
+  }
+
+  const totals = stats.reduce((acc, r) => ({
+    clicks: acc.clicks + Number(r.clicks_total || 0),
+    orders: acc.orders + Number(r.orders_count || 0),
+    delivered: acc.delivered + Number(r.delivered_count || 0),
+    sales: acc.sales + Number(r.delivered_sales || 0),
+    commission: acc.commission + Number(r.delivered_commission || 0),
+    unpaid: acc.unpaid + Number(r.unpaid_commission || 0),
+  }), { clicks:0, orders:0, delivered:0, sales:0, commission:0, unpaid:0 })
+
+  const money = n => Number(n || 0).toLocaleString('fr-DZ') + ' DA'
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start', marginBottom:18, flexWrap:'wrap' }}>
+        <div>
+          <h3 style={{ color:'white', fontSize:16, fontWeight:900, marginBottom:6 }}>🤝 Influenceurs & affiliation</h3>
+          <p style={{ color:'rgba(255,255,255,.42)', fontSize:12, margin:0, maxWidth:760 }}>
+            Crée un lien par influenceur et par produit. Chaque clic unique quotidien est compté, puis les commandes livrées servent de base à la commission.
+          </p>
+        </div>
+        <button onClick={load} className="act-btn">↻ Actualiser</button>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:8, marginBottom:18 }}>
+        {[
+          ['👆','Clics uniques',totals.clicks],
+          ['🛒','Commandes',totals.orders],
+          ['📦','Livrées',totals.delivered],
+          ['💰','Ventes livrées',money(totals.sales)],
+          ['🎁','Commission livrée',money(totals.commission)],
+          ['💳','Commission à payer',money(totals.unpaid)],
+        ].map(([icon,label,value]) => (
+          <div key={label} style={{ background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'12px 14px' }}>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,.38)', marginBottom:5 }}>{icon} {label}</div>
+            <div style={{ fontSize:17, color:'white', fontWeight:900 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,2fr)', gap:12, alignItems:'start', marginBottom:22 }}>
+        <div style={{ background:'#141414', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:14 }}>
+          <div style={{ color:'white', fontWeight:900, fontSize:13, marginBottom:10 }}>1. Ajouter un influenceur</div>
+          <div style={{ display:'flex', gap:7 }}>
+            <input
+              value={newInfluencer.name}
+              onChange={e => setNewInfluencer(v => ({...v,name:e.target.value}))}
+              onKeyDown={e => e.key==='Enter' && addInfluencer()}
+              placeholder="Nom / pseudo"
+              style={{ flex:1, minWidth:0, background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:16, outline:'none' }}
+            />
+            <button onClick={addInfluencer} disabled={savingInfluencer} className="act-btn" style={{ background:'var(--br)', color:'#000', border:'none', fontWeight:900 }}>{savingInfluencer?'…':'+ Ajouter'}</button>
+          </div>
+        </div>
+
+        <div style={{ background:'#141414', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:14 }}>
+          <div style={{ color:'white', fontWeight:900, fontSize:13, marginBottom:10 }}>2. Créer le lien pour un produit</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7 }}>
+            <select value={newLink.influencer_id} onChange={e => setNewLink(v=>({...v,influencer_id:e.target.value}))} style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:newLink.influencer_id?'white':'#666', fontSize:14, outline:'none' }}>
+              <option value="">Influenceur</option>
+              {influencers.map(i => <option key={i.id} value={i.id}>{i.name}{i.active?'':' — inactif'}</option>)}
+            </select>
+            <select value={newLink.product_id} onChange={e => setNewLink(v=>({...v,product_id:e.target.value}))} style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:newLink.product_id?'white':'#666', fontSize:14, outline:'none' }}>
+              <option value="">Produit</option>
+              {products.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+            </select>
+            <div style={{ display:'flex', gap:6 }}>
+              <input value={newLink.code} onChange={e=>setNewLink(v=>({...v,code:e.target.value.toUpperCase()}))} placeholder="Code" style={{ flex:1, background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:16, outline:'none', fontFamily:'monospace' }} />
+              <button type="button" onClick={generateCode} className="act-btn" style={{ whiteSpace:'nowrap' }}>Générer</button>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+              <input type="number" min="1" max="100" value={newLink.discount_percent} onChange={e=>setNewLink(v=>({...v,discount_percent:e.target.value}))} placeholder="Remise %" style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:16, outline:'none' }} />
+              <input type="number" min="0" max="100" value={newLink.commission_percent} onChange={e=>setNewLink(v=>({...v,commission_percent:e.target.value}))} placeholder="Commission %" style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:16, outline:'none' }} />
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+              <input type="datetime-local" value={newLink.starts_at} onChange={e=>setNewLink(v=>({...v,starts_at:e.target.value}))} style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:newLink.starts_at?'white':'#666', fontSize:13, outline:'none' }} />
+              <input type="datetime-local" value={newLink.ends_at} onChange={e=>setNewLink(v=>({...v,ends_at:e.target.value}))} style={{ background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:newLink.ends_at?'white':'#666', fontSize:13, outline:'none' }} />
+            </div>
+            <button onClick={addLink} disabled={savingLink || !influencers.length || !products.length} className="act-btn" style={{ gridColumn:'1 / -1', background:'var(--br)', color:'#000', border:'none', fontWeight:900, padding:'11px 14px' }}>{savingLink?'Création…':'🔗 Créer le lien influenceur'}</button>
+          </div>
+          <div style={{ color:'rgba(255,255,255,.3)', fontSize:10, marginTop:8 }}>
+            Le lien généré ouvre directement le produit : <code>/?ref=CODE#produit-ID</code>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ color:'white', fontWeight:900, fontSize:13, marginBottom:10 }}>Liens actifs et résultats</div>
+      {loading ? (
+        <div className="empty"><p>Chargement…</p></div>
+      ) : stats.length === 0 ? (
+        <div className="empty"><div style={{fontSize:36}}>🤝</div><p>Aucun lien d’influenceur.</p></div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {stats.map(r => {
+            const product = productById(r.product_id)
+            const url = `${window.location.origin}/?ref=${encodeURIComponent(r.code)}#produit-${encodeURIComponent(r.product_id)}`
+            return (
+              <div key={r.link_id} style={{ background:'#1a1a1a', border:`1px solid ${r.active?'rgba(201,168,76,.16)':'rgba(255,255,255,.06)'}`, borderRadius:12, padding:12, opacity:r.active?1:.62 }}>
+                <div style={{ display:'flex', gap:10, alignItems:'flex-start', flexWrap:'wrap' }}>
+                  <div style={{ minWidth:220, flex:1 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:7, flexWrap:'wrap' }}>
+                      <span style={{ color:'white', fontWeight:900, fontSize:13 }}>{r.influencer_name}</span>
+                      <span style={{ color:'var(--br)', fontFamily:'monospace', fontSize:11, fontWeight:900 }}>{r.code}</span>
+                    </div>
+                    <div style={{ color:'rgba(255,255,255,.45)', fontSize:11, marginTop:4 }}>📦 {product?.nom || r.product_name} · 🎁 -{r.discount_percent}% · 💵 commission {r.commission_percent}%</div>
+                    <div style={{ color:'rgba(255,255,255,.3)', fontSize:9, marginTop:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{url}</div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(5,auto)', gap:12, alignItems:'center' }}>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Clics</div><strong style={{color:'white'}}>{r.clicks_total}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Cmd</div><strong style={{color:'white'}}>{r.orders_count}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Livrées</div><strong style={{color:'var(--br)'}}>{r.delivered_count}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>CA</div><strong style={{color:'white'}}>{money(r.delivered_sales)}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>À payer</div><strong style={{color:'#86efac'}}>{money(r.unpaid_commission)}</strong></div>
+                  </div>
+                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', width:'100%', paddingTop:9, borderTop:'1px solid rgba(255,255,255,.05)' }}>
+                    <button onClick={()=>copyLink(r)} className="act-btn">🔗 Copier le lien</button>
+                    <button onClick={()=>toggleLink(r.link_id, !r.active)} className="act-btn" style={{ color:r.active?'#86efac':'#aaa' }}>{r.active?'✅ Actif':'⏸ Inactif'}</button>
+                    {Number(r.unpaid_commission || 0) > 0 && <button onClick={()=>markPaid(r.link_id)} className="act-btn" style={{ color:'#C9A84C' }}>💳 Marquer payé</button>}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div style={{ marginTop:14, fontSize:10, color:'rgba(255,255,255,.28)', lineHeight:1.5 }}>
+        La commission est comptabilisée uniquement sur les commandes livrées et reste indépendante des frais de livraison. Une commande annulée ne génère pas de commission à payer.
+      </div>
     </div>
   )
 }
