@@ -108,9 +108,6 @@ export default function ProductGrid({
             </button>
           ))}
         </div>
-        {categories.length > 4 && (
-          <div className="wz-categories-swipe" aria-hidden="true">Faites glisser <span>→</span></div>
-        )}
       </div>
 
       <style>{`
@@ -127,9 +124,6 @@ export default function ProductGrid({
           font-weight:900;
           letter-spacing:.16em;
           text-transform:uppercase;
-        }
-        .wz-categories-swipe{
-          display:none;
         }
         .wz-categories-scroll{
           max-width:1180px;
@@ -160,30 +154,6 @@ export default function ProductGrid({
             padding-left:13px!important;
             padding-right:13px!important;
             font-size:11px!important;
-          }
-          .wz-categories-swipe{
-            display:flex;
-            justify-content:flex-end;
-            align-items:center;
-            gap:4px;
-            margin:4px 2px 0;
-            color:var(--g4);
-            font-size:8px;
-            font-weight:800;
-            letter-spacing:.08em;
-            text-transform:uppercase;
-            opacity:.78;
-            animation:wzSwipeHint 2.8s ease-in-out infinite;
-          }
-          .wz-categories-swipe span{
-            color:var(--br);
-            font-size:12px;
-            line-height:1;
-          }
-          @keyframes wzSwipeHint{
-            0%,100%{opacity:.42;transform:translateX(0)}
-            35%{opacity:.9;transform:translateX(3px)}
-            65%{opacity:.9;transform:translateX(0)}
           }
         }
       `}</style>
@@ -219,32 +189,6 @@ export default function ProductGrid({
           outline:2px solid white;
           outline-offset:2px;
         }
-        .pcard-image-hint{
-          position:absolute;
-          left:10px;
-          right:10px;
-          bottom:8px;
-          padding:4px 7px;
-          border-radius:999px;
-          background:rgba(0,0,0,.48);
-          color:rgba(255,255,255,.9);
-          font-size:9px;
-          font-weight:800;
-          text-align:center;
-          letter-spacing:.02em;
-          opacity:0;
-          transform:translateY(5px);
-          pointer-events:none;
-          transition:opacity .22s ease, transform .22s ease;
-          backdrop-filter:blur(8px);
-          z-index:3;
-        }
-        @media (hover:hover) and (pointer:fine){
-          .pcard:hover .pcard-image-hint{
-            opacity:1;
-            transform:translateY(0);
-          }
-        }
         @media(max-width:640px){
           .pcard-image-hint{
             display:none;
@@ -279,11 +223,6 @@ export default function ProductGrid({
           transition:transform .5s cubic-bezier(.2,.7,.2,1), filter .35s ease;
           transform-origin:center;
         }
-        .pcard-quickview{
-          transform:translateY(8px);
-          opacity:0;
-          transition:opacity .25s ease, transform .25s ease, background .25s ease;
-        }
         @media (hover:hover) and (pointer:fine){
           .pcard:hover{
             transform:translateY(-4px);
@@ -295,10 +234,6 @@ export default function ProductGrid({
             transform:scale(1.045);
             filter:saturate(1.03);
           }
-          .pcard:hover .pcard-quickview{
-            opacity:1;
-            transform:translateY(0);
-          }
         }
         @media (hover:none){
           .pcard:active{transform:scale(.992);}
@@ -306,11 +241,6 @@ export default function ProductGrid({
         }
         @media(max-width:640px){
           .pcard{border-color:rgba(255,255,255,.06);}
-          .pcard-quickview{
-            opacity:1;
-            transform:none;
-            background:rgba(0,0,0,.48)!important;
-          }
         }
       `}</style>
 
@@ -415,9 +345,11 @@ export default function ProductGrid({
 
 function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) {
   const [selectedImg, setSelectedImg] = useState('')
+  const pointerStartX = useRef(null)
+  const pointerStartY = useRef(null)
+  const pointerId = useRef(null)
   const touchStartX = useRef(null)
   const touchStartY = useRef(null)
-  const touchMoved = useRef(false)
   const suppressNextClick = useRef(false)
   const imgs = (() => {
     try {
@@ -451,7 +383,6 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
     if (!touch) return
     touchStartX.current = touch.clientX
     touchStartY.current = touch.clientY
-    touchMoved.current = false
     suppressNextClick.current = false
   }
 
@@ -461,26 +392,93 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
     if (!touch) return
     const dx = touch.clientX - touchStartX.current
     const dy = touch.clientY - touchStartY.current
-    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.15) {
-      touchMoved.current = true
+
+    // Bloque uniquement le scroll horizontal lorsque le geste est
+    // clairement destiné à changer de photo. Le scroll vertical reste libre.
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.08) {
       suppressNextClick.current = true
+      e.preventDefault()
     }
   }
 
   function handleTouchEnd(e) {
     if (touchStartX.current == null || touchStartY.current == null) return
+
     const touch = e.changedTouches?.[0]
-    const dx = touch ? touch.clientX - touchStartX.current : 0
-    const dy = touch ? touch.clientY - touchStartY.current : 0
-    const horizontalSwipe = Math.abs(dx) >= 42 && Math.abs(dx) > Math.abs(dy) * 1.15
+    if (!touch) return
+
+    const dx = touch.clientX - touchStartX.current
+    const dy = touch.clientY - touchStartY.current
+    const horizontalSwipe = Math.abs(dx) >= 32 && Math.abs(dx) > Math.abs(dy) * 1.08
 
     if (horizontalSwipe && imgs.length > 1) {
+      e.preventDefault()
       if (dx < 0) goToImage(currentIndex + 1)
       else goToImage(currentIndex - 1)
+      suppressNextClick.current = true
     }
 
     touchStartX.current = null
     touchStartY.current = null
+  }
+
+  function handleTouchCancel() {
+    touchStartX.current = null
+    touchStartY.current = null
+  }
+
+  function handlePointerDown(e) {
+    if (imgs.length < 2 || e.pointerType === 'mouse') return
+    pointerStartX.current = e.clientX
+    pointerStartY.current = e.clientY
+    pointerId.current = e.pointerId
+    suppressNextClick.current = false
+  }
+
+  function handlePointerMove(e) {
+    if (pointerId.current == null || pointerStartX.current == null || pointerStartY.current == null) return
+
+    const dx = e.clientX - pointerStartX.current
+    const dy = e.clientY - pointerStartY.current
+
+    // Dès qu'on détecte une vraie intention horizontale, on capture
+    // le pointeur pour ne pas perdre le geste sur mobile.
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.08) {
+      suppressNextClick.current = true
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId)
+      } catch {}
+    }
+  }
+
+  function handlePointerUp(e) {
+    if (pointerId.current == null || pointerStartX.current == null || pointerStartY.current == null) return
+
+    const dx = e.clientX - pointerStartX.current
+    const dy = e.clientY - pointerStartY.current
+    const horizontalSwipe = Math.abs(dx) >= 38 && Math.abs(dx) > Math.abs(dy) * 1.08
+
+    if (horizontalSwipe && imgs.length > 1) {
+      if (dx < 0) goToImage(currentIndex + 1)
+      else goToImage(currentIndex - 1)
+      suppressNextClick.current = true
+    }
+
+    try {
+      if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      }
+    } catch {}
+
+    pointerStartX.current = null
+    pointerStartY.current = null
+    pointerId.current = null
+  }
+
+  function handlePointerCancel() {
+    pointerStartX.current = null
+    pointerStartY.current = null
+    pointerId.current = null
   }
 
   function handleImageClick() {
@@ -500,13 +498,22 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
       <div
         className="pcard-img"
         onClick={handleImageClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ touchAction: imgs.length > 1 ? 'pan-y' : 'auto' }}
+        onTouchCancel={handleTouchCancel}
+        style={{
+          touchAction: imgs.length > 1 ? 'pan-y pinch-zoom' : 'auto',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+        }}
       >
         {mainImg ? (
-          <img src={mainImg} alt={p.nom} loading="lazy" />
+          <img src={mainImg} alt={p.nom} loading="lazy" draggable={false} onDragStart={e => e.preventDefault()} />
         ) : (
           <span className="pcard-emoji">{p.emoji || '📦'}</span>
         )}
@@ -593,29 +600,6 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
             <div
               style={{
                 position: 'absolute',
-                left: '50%',
-                bottom: outOfStock ? 34 : lowStock ? 42 : 10,
-                transform: 'translateX(-50%)',
-                zIndex: 4,
-                padding: '4px 8px',
-                borderRadius: 999,
-                background: 'rgba(0,0,0,.42)',
-                color: 'rgba(255,255,255,.9)',
-                fontSize: 8,
-                fontWeight: 900,
-                letterSpacing: '.06em',
-                textTransform: 'uppercase',
-                pointerEvents: 'none',
-                backdropFilter: 'blur(8px)',
-              }}
-              aria-hidden="true"
-            >
-              Glissez pour voir les photos
-            </div>
-
-            <div
-              style={{
-                position: 'absolute',
                 bottom: outOfStock ? 62 : lowStock ? 70 : 38,
                 right: 8,
                 display: 'flex',
@@ -666,8 +650,6 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
           </>
         )}
 
-        <div className="pcard-quickview">Voir le produit</div>
-        <div className="pcard-image-hint">Glissez sur la photo pour voir les autres vues</div>
       </div>
 
       {/* Body */}
