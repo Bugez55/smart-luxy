@@ -4,7 +4,7 @@
 // ══════════════════════════════════════════════
 import { useState, useEffect } from 'react'
 
-export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImage }) {
+export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImage, heroMediaType = 'image', heroFallbackImage }) {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -16,11 +16,27 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
     <section className="wz-hero">
       <div className="wz-hero-media" aria-hidden="true">
         {heroImage ? (
-          <img
-            src={heroImage}
-            alt=""
-            className={`wz-hero-image ${loaded ? 'is-loaded' : ''}`}
-          />
+          heroMediaType === 'video' ? (
+            <video
+              src={heroImage}
+              poster={heroFallbackImage || undefined}
+              className={`wz-hero-video ${loaded ? 'is-loaded' : ''}`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-hidden="true"
+              onLoadedData={() => setLoaded(true)}
+            />
+          ) : (
+            <img
+              src={heroImage}
+              alt=""
+              className={`wz-hero-image ${loaded ? 'is-loaded' : ''}`}
+              onLoad={() => setLoaded(true)}
+            />
+          )
         ) : (
           <div className="wz-hero-fallback" />
         )}
@@ -121,7 +137,9 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
             linear-gradient(135deg, #11110f 0%, #090909 56%, #060606 100%);
         }
 
-        .wz-hero-image {
+        .wz-hero-image,
+        .wz-hero-video {
+          display: block;
           width: 100%;
           height: 100%;
           object-fit: cover;
@@ -132,7 +150,8 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
           filter: saturate(.78) contrast(1.06) brightness(.92);
         }
 
-        .wz-hero-image.is-loaded {
+        .wz-hero-image.is-loaded,
+        .wz-hero-video.is-loaded {
           opacity: .76;
           transform: scale(1);
         }
@@ -453,6 +472,7 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
 
         @media (prefers-reduced-motion: reduce) {
           .wz-hero-image,
+          .wz-hero-video,
           .wz-hero-content,
           .wz-hero-primary,
           .wz-hero-secondary {
