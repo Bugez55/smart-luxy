@@ -1432,6 +1432,191 @@ function ImageOptimizer({ products, supabase }) {
   )
 }
 
+
+function HomeHeroManager({ onToast }) {
+  const [currentUrl, setCurrentUrl] = useState('')
+  const [currentType, setCurrentType] = useState('')
+  const [file, setFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const maxBytes = 30 * 1024 * 1024
+
+  useEffect(() => {
+    let mounted = true
+    getSettings().then(s => {
+      if (!mounted) return
+      setCurrentUrl(String(s?.hero_media_url || '').trim())
+      setCurrentType(String(s?.hero_media_type || '').trim().toLowerCase())
+      setLoading(false)
+    }).catch(error => {
+      console.error('Chargement média Hero:', error)
+      if (mounted) setLoading(false)
+    })
+    return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl('')
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  function detectMediaType(selected) {
+    const mime = String(selected?.type || '').toLowerCase()
+    const ext = String(selected?.name || '').split('.').pop().toLowerCase()
+    const videoOk = ['mp4', 'webm'].includes(ext) && (!mime || ['video/mp4', 'video/webm'].includes(mime))
+    const imageExtOk = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'].includes(ext)
+    const imageMimeOk = !mime || ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'].includes(mime)
+    if (videoOk) return 'video'
+    if (imageExtOk && imageMimeOk) return 'image'
+    return ''
+  }
+
+  function handleFileChange(e) {
+    const selected = e.target.files?.[0] || null
+    if (!selected) return
+    if (selected.size > maxBytes) {
+      onToast && onToast('❌ Fichier trop lourd : maximum 30 Mo', 'error')
+      e.target.value = ''
+      return
+    }
+    const mediaType = detectMediaType(selected)
+    if (!mediaType) {
+      onToast && onToast('❌ Format non pris en charge. Choisis JPG, PNG, WebP, GIF, MP4 ou WebM.', 'error')
+      e.target.value = ''
+      return
+    }
+    setFile(selected)
+  }
+
+  async function saveHeroMedia() {
+    if (!file) {
+      onToast && onToast('Choisis d’abord une image, un GIF ou une vidéo.', 'error')
+      return
+    }
+    setSaving(true)
+    try {
+      const ext = String(file.name || '').split('.').pop().toLowerCase()
+      const safeExt = /^[a-z0-9]{2,5}$/.test(ext) ? ext : (file.type === 'video/webm' ? 'webm' : file.type === 'video/mp4' ? 'mp4' : 'jpg')
+      const path = `site-hero/hero-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${safeExt}`
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(path, file, {
+          contentType: file.type || (safeExt === 'gif' ? 'image/gif' : safeExt === 'mp4' ? 'video/mp4' : undefined),
+          cacheControl: '3600',
+          upsert: false,
+        })
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+      const publicUrl = data?.publicUrl
+      if (!publicUrl) throw new Error('URL publique introuvable après le transfert')
+      const mediaType = detectMediaType(file)
+      await saveSettings({ hero_media_url: publicUrl, hero_media_type: mediaType })
+      setCurrentUrl(publicUrl)
+      setCurrentType(mediaType)
+      setFile(null)
+      const input = document.getElementById('wazyo-home-hero-file')
+      if (input) input.value = ''
+      onToast && onToast('✅ Média de la page d’accueil enregistré', 'default')
+    } catch (error) {
+      console.error('Enregistrement média Hero:', error)
+      onToast && onToast('❌ Impossible d’enregistrer le média : ' + (error?.message || 'erreur inconnue'), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function clearHeroMedia() {
+    if (!window.confirm('Désactiver le média personnalisé ? La boutique réutilisera automatiquement la photo du premier produit.')) return
+    setSaving(true)
+    try {
+      await saveSettings({ hero_media_url: '', hero_media_type: '' })
+      setCurrentUrl('')
+      setCurrentType('')
+      setFile(null)
+      const input = document.getElementById('wazyo-home-hero-file')
+      if (input) input.value = ''
+      onToast && onToast('✅ Retour à la photo du premier produit', 'default')
+    } catch (error) {
+      console.error('Désactivation média Hero:', error)
+      onToast && onToast('❌ Impossible de modifier le média : ' + (error?.message || 'erreur inconnue'), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const shownUrl = previewUrl || currentUrl
+  const shownType = file ? detectMediaType(file) : currentType
+  const box = { background:'#151515', border:'1px solid rgba(255,255,255,.1)', borderRadius:14, padding:16, marginBottom:16 }
+  const button = { border:0, borderRadius:9, padding:'11px 16px', fontWeight:800, cursor:'pointer', fontSize:12 }
+
+  return (
+    <div style={{ maxWidth:850 }}>
+      <h3 style={{ color:'white', fontSize:16, fontWeight:900, margin:'0 0 8px' }}>🎬 Média principal de la page d’accueil</h3>
+      <p style={{ color:'rgba(255,255,255,.55)', fontSize:12, lineHeight:1.7, margin:'0 0 18px' }}>
+        Choisis une image, un GIF animé ou une vidéo indépendante des produits. Elle remplacera la photo du premier produit dans le grand visuel en haut du site. Sans média personnalisé, Wazyo garde son comportement actuel.
+      </p>
+
+      <div style={box}>
+        <div style={{ color:'#C9A84C', fontSize:11, fontWeight:900, marginBottom:10 }}>APERÇU</div>
+        {loading ? <div style={{ color:'#999', padding:22 }}>Chargement du média actuel…</div> : shownUrl ? (
+          <div style={{ width:'100%', aspectRatio:'16 / 7', maxHeight:360, background:'#080808', borderRadius:10, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            {shownType === 'video' ? (
+              <video src={shownUrl} controls muted loop playsInline style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            ) : (
+              <img src={shownUrl} alt="Aperçu du média d’accueil" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            )}
+          </div>
+        ) : (
+          <div style={{ color:'#999', padding:'22px 16px', border:'1px dashed #444', borderRadius:10, textAlign:'center' }}>
+            Aucun média personnalisé. La page d’accueil utilisera la photo du premier produit actif.
+          </div>
+        )}
+        <div style={{ color:'#777', fontSize:10, marginTop:10, lineHeight:1.6 }}>
+          Le média est affiché en plein cadre, en recadrage automatique. Pour le meilleur résultat, utilise une image paysage. Une vidéo se lance sans son, en boucle, sur les appareils compatibles.
+        </div>
+      </div>
+
+      <div style={box}>
+        <label htmlFor="wazyo-home-hero-file" style={{ display:'block', color:'white', fontWeight:800, fontSize:13, marginBottom:9 }}>
+          {currentUrl ? 'Remplacer le média actuel' : 'Choisir le média à afficher'}
+        </label>
+        <input
+          id="wazyo-home-hero-file"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,.jpg,.jpeg,.png,.webp,.gif,.avif,.mp4,.webm"
+          onChange={handleFileChange}
+          style={{ display:'block', width:'100%', boxSizing:'border-box', color:'#ddd', fontSize:12, padding:'10px 0' }}
+        />
+        <div style={{ color:'#888', fontSize:11, lineHeight:1.7, marginTop:5 }}>
+          Formats : JPG, PNG, WebP, GIF, MP4 et WebM. Taille maximale : 30 Mo. Le GIF conserve son animation.
+        </div>
+        {file && (
+          <div style={{ display:'flex', alignItems:'center', gap:10, justifyContent:'space-between', flexWrap:'wrap', marginTop:14, padding:'10px 12px', background:'#101010', borderRadius:8 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ color:'white', fontSize:12, fontWeight:800, overflowWrap:'anywhere' }}>{file.name}</div>
+              <div style={{ color:'#888', fontSize:10, marginTop:3 }}>{(file.size / (1024 * 1024)).toFixed(2)} Mo · {shownType === 'video' ? 'Vidéo' : 'Image / GIF'}</div>
+            </div>
+            <button type="button" onClick={() => setFile(null)} style={{ ...button, background:'#252525', color:'#ddd' }}>Retirer</button>
+          </div>
+        )}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:16 }}>
+          <button type="button" onClick={saveHeroMedia} disabled={!file || saving} style={{ ...button, background:(!file || saving) ? '#555' : '#C9A84C', color:'#080808', opacity:(!file || saving) ? .65 : 1 }}>
+            {saving ? '⏳ Enregistrement…' : '💾 Publier sur la page d’accueil'}
+          </button>
+          {currentUrl && <button type="button" onClick={clearHeroMedia} disabled={saving} style={{ ...button, background:'rgba(239,68,68,.12)', color:'#fca5a5', border:'1px solid rgba(239,68,68,.28)' }}>↩️ Revenir à la photo du produit</button>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPanel({ onLogout, onToast }) {
   const [tab, setTab] = useState('dashboard')
   const [promos, setPromos] = useState([])
@@ -1947,7 +2132,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Wazyo — Admin
         </div>
         <div className="adm-tabs">
-          {[['dashboard','🏠 Dashboard'],['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['affiliate','🤝 Influenceurs'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['dashboard','🏠 Dashboard'],['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['affiliate','🤝 Influenceurs'],['hero','🎬 Hero accueil'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -2500,6 +2685,9 @@ export default function AdminPanel({ onLogout, onToast }) {
         {tab === 'affiliate' && (
           <AffiliateManager products={products} onToast={onToast} />
         )}
+
+        {/* ── HERO MEDIA TAB ── */}
+        {tab === 'hero' && <HomeHeroManager onToast={onToast} />}
 
         {/* ── BANNIÈRE TAB ── */}
         {tab === 'banner' && (
