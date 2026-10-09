@@ -49,6 +49,7 @@ export default function App() {
   const [cartOpen, setCartOpen] = useState(false)
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [promoInfo, setPromoInfo] = useState(null)
+  const [affiliateOffer, setAffiliateOffer] = useState(null)
   const [orderItems, setOrderItems] = useState(null)
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
@@ -86,12 +87,79 @@ export default function App() {
     setLoading(false)
   }, [])
 
-  // ── Chargement produits + ouverture directe via URL hash ──
+  // ── Chargement produits + ouverture directe + affiliation ──
   useEffect(() => {
+    let cancelled = false
+
     async function init() {
       await loadProducts()
-      // Lire le hash APRÈS que les produits soient chargés
-      const hash = window.location.hash // ex: #produit-abc123
+
+      try {
+        const searchParams = new URLSearchParams(window.location.search)
+        const refCode = String(searchParams.get('ref') || '').trim().toUpperCase()
+        let offerData = null
+
+        if (refCode) {
+          // Même visiteur = même clé persistante. Le RPC compte au maximum
+          // un clic unique par lien et par jour.
+          let visitorKey = localStorage.getItem('wazyo_affiliate_visitor_key')
+          if (!visitorKey) {
+            visitorKey = window.crypto?.randomUUID
+              ? window.crypto.randomUUID()
+              : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`
+            localStorage.setItem('wazyo_affiliate_visitor_key', visitorKey)
+          }
+
+          const { data, error } = await supabase.rpc('track_affiliate_click', {
+            p_code: refCode,
+            p_visitor_key: visitorKey,
+          })
+
+          if (error) {
+            console.error('Suivi du clic influenceur :', error)
+            // Si le suivi du clic échoue, on vérifie tout de même si le lien
+            // est valide afin de ne pas bloquer la remise pour le client.
+            const fallback = await supabase.rpc('get_affiliate_link', { p_code: refCode })
+            if (!fallback.error) offerData = fallback.data
+          } else {
+            offerData = data
+          }
+
+          if (offerData?.code) {
+            localStorage.setItem('wazyo_affiliate_offer', JSON.stringify(offerData))
+          } else {
+            localStorage.removeItem('wazyo_affiliate_offer')
+          }
+        } else {
+          // Conserver l'offre après navigation/rechargement, mais revalider
+          // son statut et ses dates côté serveur à chaque démarrage.
+          let savedOffer = null
+          try {
+            savedOffer = JSON.parse(localStorage.getItem('wazyo_affiliate_offer') || 'null')
+          } catch {
+            savedOffer = null
+          }
+
+          if (savedOffer?.code) {
+            const { data, error } = await supabase.rpc('get_affiliate_link', {
+              p_code: savedOffer.code,
+            })
+            if (!error && data?.code) {
+              offerData = data
+              localStorage.setItem('wazyo_affiliate_offer', JSON.stringify(data))
+            } else {
+              localStorage.removeItem('wazyo_affiliate_offer')
+            }
+          }
+        }
+
+        if (!cancelled) setAffiliateOffer(offerData?.code ? offerData : null)
+      } catch (e) {
+        console.error('Initialisation affiliation :', e)
+      }
+
+      // Lire le hash APRÈS le chargement des produits et du lien.
+      const hash = window.location.hash
       if (hash.startsWith('#produit-')) {
         const productId = hash.replace('#produit-', '')
         const { data } = await supabase
@@ -99,10 +167,12 @@ export default function App() {
           .select('*')
           .eq('id', productId)
           .single()
-        if (data) setOpenProduct(data)
+        if (!cancelled && data) setOpenProduct(data)
       }
     }
-    init()
+
+    init().catch(e => console.error('Initialisation boutique :', e))
+    return () => { cancelled = true }
   }, [loadProducts])
 
   // ── Bouton retour physique du téléphone/navigateur — ferme la page produit ──
@@ -226,28 +296,56 @@ export default function App() {
     const fbp = getCookie('_fbp')
 
     try {
-      const rpcName = (form.items || []).some(i => i?.color || i?.couleur) ? 'create_order_with_colors' : 'create_order'
-      const { data: order, error } = await supabase.rpc(rpcName, {
+      const items = Array.isArray(form.items) ? form.items : []
+      const hasColors = items.some(i => i?.color || i?.couleur)
+      const offerCode = String(affiliateOffer?.code || '').trim()
+      const targetProductId = affiliateOffer?.product_id
+      const includesTarget = !!offerCode && items.some(i => String(i?.id) === String(targetProductId))
+      const allItemsAreTarget = !!offerCode && items.length > 0 &&
+        items.every(i => String(i?.id) === String(targetProductId))
+
+      // Le SQL actuel applique une seule réduction influenceur à un seul
+      // produit. Refuser les paniers mélangés évite de créer une commande
+      // sans la remise promise ou d'appliquer la remise à d'autres articles.
+      if (includesTarget && !allItemsAreTarget) {
+        toast('La remise influenceur s’applique uniquement à ce produit. Passe cette commande séparément depuis sa fiche.', 'error')
+        return false
+      }
+
+      const useAffiliate = allItemsAreTarget
+      const rpcName = useAffiliate
+        ? (hasColors ? 'create_order_with_colors_affiliate' : 'create_order_with_affiliate')
+        : (hasColors ? 'create_order_with_colors' : 'create_order')
+
+      const rpcArgs = {
         p_nom_client: form.nom,
         p_telephone: form.tel,
         p_wilaya: form.wilaya,
         p_commune: form.commune,
         p_adresse: form.adresse || '',
         p_note: form.note || '',
-        p_items: form.items,
+        p_items: items,
         p_mode_livraison: form.mode_livraison || 'domicile',
-        // Kept for backward compatibility; the SQL RPC ignores this
-        // client-controlled amount and calculates the real tariff itself.
+        // Conserver strictement le calcul de livraison côté SQL existant.
         p_frais_livraison: form.frais_livraison || 0,
         p_mode_paiement: form.mode_paiement || 'livraison',
-        p_promo_code: form.promo_code || null,
+        p_promo_code: useAffiliate ? null : (form.promo_code || null),
         p_fbc: fbc,
         p_fbp: fbp,
-      })
+      }
+      if (useAffiliate) rpcArgs.p_affiliate_code = offerCode
+
+      const { data: order, error } = await supabase.rpc(rpcName, rpcArgs)
 
       if (error || !order) {
-        console.error('create_order:', error)
-        toast('❌ Erreur. Vérifie tes informations et réessaie.', 'error')
+        console.error('Erreur RPC commande Wazyo:', {
+          rpcName,
+          message: error?.message,
+          details: error?.details,
+          hint: error?.hint,
+          code: error?.code,
+        })
+        toast('❌ Commande non enregistrée. Vérifie les informations et réessaie.', 'error')
         return false
       }
 
@@ -521,6 +619,7 @@ export default function App() {
         <ProductPage
           checkoutOnly
           product={checkoutProduct}
+          affiliateOffer={affiliateOffer}
           allProducts={products}
           onClose={() => setCheckoutProduct(null)}
           onSubmitOrder={async (form) => {
@@ -540,6 +639,7 @@ export default function App() {
       {openProduct && (
         <ProductPage
           product={openProduct}
+          affiliateOffer={affiliateOffer}
           onClose={() => {
             setOpenProduct(null)
             window.history.pushState({}, '', window.location.pathname)
