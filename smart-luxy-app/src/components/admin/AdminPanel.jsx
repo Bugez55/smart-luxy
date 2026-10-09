@@ -1433,7 +1433,7 @@ function ImageOptimizer({ products, supabase }) {
 }
 
 export default function AdminPanel({ onLogout, onToast }) {
-  const [tab, setTab] = useState('orders')
+  const [tab, setTab] = useState('dashboard')
   const [promos, setPromos] = useState([])
   const [bannerMsgs, setBannerMsgs] = useState([])
   const [newMsg, setNewMsg] = useState('')
@@ -1947,7 +1947,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Wazyo — Admin
         </div>
         <div className="adm-tabs">
-          {[['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['affiliate','🤝 Influenceurs'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['dashboard','🏠 Dashboard'],['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['affiliate','🤝 Influenceurs'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -1997,6 +1997,121 @@ export default function AdminPanel({ onLogout, onToast }) {
           <div className="stat-card"><div className="label">✅ Confirmées</div><div className="value" style={{color:'#86efac'}}>{stats.confirmed}</div></div>
           <div className="stat-card"><div className="label">💰 Chiffre d'affaires</div><div className="value gold">{fmt(stats.ca)}</div></div>
         </div>
+
+        {/* ── DASHBOARD TAB ── */}
+        {tab === 'dashboard' && (() => {
+          const algeriaTodayKey = localDateKey(new Date())
+          const todayOrders = orders.filter(o => o.created_at && localDateKey(o.created_at) === algeriaTodayKey)
+          const todayValid = todayOrders.filter(o => o.statut !== 'cancelled')
+          const todayCA = todayValid.reduce((s, o) => s + Number(o.total || 0), 0)
+
+          const monthPrefix = algeriaTodayKey.slice(0, 7)
+          const monthOrders = orders.filter(o => o.created_at && localDateKey(o.created_at).startsWith(monthPrefix))
+          const monthValid = monthOrders.filter(o => o.statut !== 'cancelled')
+          const monthCA = monthValid.reduce((s, o) => s + Number(o.total || 0), 0)
+
+          const pendingCount = orders.filter(o => o.statut === 'new' || o.statut === 'confirmed').length
+          const lowStockProducts = products.filter(p => {
+            if (p.stock === null || p.stock === undefined) return false
+            const n = Number(p.stock)
+            return Number.isFinite(n) && n <= 5
+          }).sort((a,b) => Number(a.stock) - Number(b.stock)).slice(0, 6)
+
+          const dashboardTopProducts = {}
+          orders.forEach(o => {
+            if (o.statut === 'cancelled') return
+            const items = (() => { try { return typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []) } catch { return [] } })()
+            items.forEach(i => {
+              const name = String(i.nom || 'Produit').trim() || 'Produit'
+              dashboardTopProducts[name] = (dashboardTopProducts[name] || 0) + (Number(i.qty) || 0)
+            })
+          })
+          const dashboardTop = Object.entries(dashboardTopProducts).sort((a,b) => b[1] - a[1]).slice(0, 5)
+
+          const statusCards = [
+            { label: 'À traiter', value: pendingCount, icon: '🟠', color: '#fbbf24', bg: 'rgba(251,191,36,.10)' },
+            { label: 'Livrées', value: orders.filter(o => o.statut === 'delivered').length, icon: '📦', color: '#C9A84C', bg: 'rgba(201,168,76,.10)' },
+            { label: 'Annulées', value: orders.filter(o => o.statut === 'cancelled').length, icon: '❌', color: '#fca5a5', bg: 'rgba(239,68,68,.08)' },
+          ]
+
+          return (
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap',marginBottom:16}}>
+                <div>
+                  <h2 style={{color:'white',fontSize:20,fontWeight:900,margin:'0 0 5px'}}>🏠 Dashboard</h2>
+                  <p style={{color:'rgba(255,255,255,.42)',fontSize:12,margin:0}}>La vue rapide de ton activité Wazyo.</p>
+                </div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,.38)'}}>
+                  Mis à jour à partir des données déjà chargées
+                </div>
+              </div>
+
+              <div className="adm-stats">
+                <div className="stat-card"><div className="label">💰 CA aujourd'hui</div><div className="value gold">{fmt(todayCA)}</div><div style={{fontSize:10,color:'rgba(255,255,255,.34)',marginTop:5}}>{todayValid.length} commande{todayValid.length>1?'s':''} non annulée{todayValid.length>1?'s':''}</div></div>
+                <div className="stat-card"><div className="label">🗓️ CA ce mois</div><div className="value gold">{fmt(monthCA)}</div><div style={{fontSize:10,color:'rgba(255,255,255,.34)',marginTop:5}}>{monthValid.length} commande{monthValid.length>1?'s':''} non annulée{monthValid.length>1?'s':''}</div></div>
+                <div className="stat-card"><div className="label">🛒 Commandes aujourd'hui</div><div className="value">{todayOrders.length}</div><div style={{fontSize:10,color:'rgba(255,255,255,.34)',marginTop:5}}>Toutes étapes confondues</div></div>
+                <div className="stat-card"><div className="label">⏳ À traiter</div><div className="value" style={{color:'#fbbf24'}}>{pendingCount}</div><div style={{fontSize:10,color:'rgba(255,255,255,.34)',marginTop:5}}>Nouvelles + confirmées</div></div>
+              </div>
+
+              <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.45fr) minmax(280px,1fr)',gap:14}}>
+                <div style={{background:'#1a1a1a',border:'1px solid rgba(255,255,255,.07)',borderRadius:14,padding:18}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,gap:10}}>
+                    <div style={{color:'white',fontWeight:800}}>📈 CA des 7 derniers jours</div>
+                    <button className="act-btn" onClick={() => setTab('stats')} style={{fontSize:10}}>Voir les stats</button>
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(7,minmax(0,1fr))',gap:8,alignItems:'end',height:185}}>
+                    {last7.map(d => (
+                      <div key={d.key} style={{height:'100%',display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',gap:7}}>
+                        <div style={{fontSize:9,color:'rgba(255,255,255,.55)',minHeight:14,textAlign:'center'}}>{fmt(d.ca)}</div>
+                        <div title={`${d.label} · ${fmt(d.ca)}`} style={{width:'70%',maxWidth:42,height:`${Math.max(6,Math.round((d.ca/maxCA)*120))}px`,background:'var(--br)',borderRadius:'6px 6px 2px 2px'}} />
+                        <div style={{fontSize:10,color:'rgba(255,255,255,.45)',textTransform:'capitalize'}}>{d.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{background:'#1a1a1a',border:'1px solid rgba(255,255,255,.07)',borderRadius:14,padding:18}}>
+                  <div style={{color:'white',fontWeight:800,marginBottom:12}}>📌 État des commandes</div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8,marginBottom:12}}>
+                    {statusCards.map(s => (
+                      <div key={s.label} style={{background:s.bg,border:'1px solid rgba(255,255,255,.06)',borderRadius:10,padding:'12px 8px',textAlign:'center'}}>
+                        <div style={{fontSize:17}}>{s.icon}</div>
+                        <div style={{fontSize:18,fontWeight:900,color:s.color,marginTop:3}}>{s.value}</div>
+                        <div style={{fontSize:9,color:'rgba(255,255,255,.4)',marginTop:3}}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,.38)',paddingTop:8,borderTop:'1px solid rgba(255,255,255,.06)'}}>Total commandes : <strong style={{color:'white'}}>{orders.length}</strong></div>
+                </div>
+              </div>
+
+              <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)',gap:14,marginTop:14}}>
+                <div style={{background:'#1a1a1a',border:'1px solid rgba(255,255,255,.07)',borderRadius:14,padding:18}}>
+                  <div style={{color:'white',fontWeight:800,marginBottom:12}}>🏆 Produits les plus vendus</div>
+                  {dashboardTop.length ? dashboardTop.map(([name,count],i) => (
+                    <div key={name} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'10px 0',borderBottom:'1px solid rgba(255,255,255,.05)',fontSize:12}}>
+                      <span style={{color:'rgba(255,255,255,.72)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{i+1}. {name}</span>
+                      <strong style={{color:'var(--br)',whiteSpace:'nowrap'}}>{count} unité{count>1?'s':''}</strong>
+                    </div>
+                  )) : <div style={{color:'rgba(255,255,255,.35)',fontSize:12}}>Aucune vente non annulée.</div>}
+                </div>
+
+                <div style={{background:'#1a1a1a',border:'1px solid rgba(255,255,255,.07)',borderRadius:14,padding:18}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                    <div style={{color:'white',fontWeight:800}}>⚠️ Stocks faibles</div>
+                    <button className="act-btn" onClick={() => setTab('products')} style={{fontSize:10}}>Produits</button>
+                  </div>
+                  {lowStockProducts.length ? lowStockProducts.map(p => (
+                    <div key={p.id} style={{display:'flex',justifyContent:'space-between',gap:10,padding:'9px 0',borderBottom:'1px solid rgba(255,255,255,.05)',fontSize:12}}>
+                      <span style={{color:'rgba(255,255,255,.72)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.nom}</span>
+                      <strong style={{color:Number(p.stock)<=0?'#fca5a5':Number(p.stock)<=2?'#fbbf24':'#fcd34d',whiteSpace:'nowrap'}}>{Number(p.stock).toLocaleString('fr-DZ')}</strong>
+                    </div>
+                  )) : <div style={{color:'#86efac',fontSize:12}}>✅ Aucun stock général faible.</div>}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* ── ORDERS TAB ── */}
         {tab === 'orders' && (
