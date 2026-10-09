@@ -4,21 +4,27 @@
 // ══════════════════════════════════════════════
 import { useState, useEffect } from 'react'
 
-export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImage, heroMediaType = 'image', heroFallbackImage }) {
+export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImage, heroMediaType = 'image', heroFallbackImage, heroCustomMedia = false }) {
   const [loaded, setLoaded] = useState(false)
+  const [mediaFailed, setMediaFailed] = useState(false)
 
   useEffect(() => {
+    setLoaded(false)
+    setMediaFailed(false)
     const id = requestAnimationFrame(() => setLoaded(true))
     return () => cancelAnimationFrame(id)
-  }, [])
+  }, [heroImage, heroMediaType])
+
+  const effectiveImage = mediaFailed ? (heroFallbackImage || '') : (heroImage || '')
+  const effectiveType = mediaFailed ? 'image' : heroMediaType
 
   return (
-    <section className="wz-hero">
+    <section className={`wz-hero ${heroCustomMedia && !mediaFailed ? "has-custom-media" : ""}`}>
       <div className="wz-hero-media" aria-hidden="true">
-        {heroImage ? (
-          heroMediaType === 'video' ? (
+        {effectiveImage ? (
+          effectiveType === 'video' ? (
             <video
-              src={heroImage}
+              src={effectiveImage}
               poster={heroFallbackImage || undefined}
               className={`wz-hero-video ${loaded ? 'is-loaded' : ''}`}
               autoPlay
@@ -28,13 +34,15 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
               preload="metadata"
               aria-hidden="true"
               onLoadedData={() => setLoaded(true)}
+              onError={() => setMediaFailed(true)}
             />
           ) : (
             <img
-              src={heroImage}
+              src={effectiveImage}
               alt=""
               className={`wz-hero-image ${loaded ? 'is-loaded' : ''}`}
               onLoad={() => setLoaded(true)}
+              onError={() => setMediaFailed(true)}
             />
           )
         ) : (
@@ -154,6 +162,25 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
         .wz-hero-video.is-loaded {
           opacity: .76;
           transform: scale(1);
+        }
+
+        /* Le média choisi dans l’admin doit rester clairement visible.
+           On conserve un contraste suffisant derrière le texte. */
+        .wz-hero.has-custom-media .wz-hero-image,
+        .wz-hero.has-custom-media .wz-hero-video {
+          opacity: .94;
+          filter: saturate(.92) contrast(1.03) brightness(.98);
+        }
+
+        .wz-hero.has-custom-media .wz-hero-image.is-loaded,
+        .wz-hero.has-custom-media .wz-hero-video.is-loaded {
+          opacity: .96;
+        }
+
+        .wz-hero.has-custom-media .wz-hero-overlay {
+          background:
+            linear-gradient(90deg, rgba(5,5,5,.78) 0%, rgba(5,5,5,.60) 28%, rgba(5,5,5,.22) 61%, rgba(5,5,5,.06) 100%),
+            linear-gradient(0deg, rgba(5,5,5,.54) 0%, rgba(5,5,5,.04) 48%, rgba(5,5,5,.12) 100%);
         }
 
         .wz-hero-overlay {
