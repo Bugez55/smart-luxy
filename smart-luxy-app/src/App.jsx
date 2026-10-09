@@ -148,6 +148,10 @@ export default function App() {
     async function init() {
       await loadProducts()
 
+      // Les anciennes versions conservaient la remise dans localStorage,
+      // ce qui la faisait réapparaître lors de visites ultérieures sans lien.
+      try { localStorage.removeItem('wazyo_affiliate_offer') } catch {}
+
       try {
         const searchParams = new URLSearchParams(window.location.search)
         const refCode = String(searchParams.get('ref') || '').trim().toUpperCase()
@@ -180,30 +184,36 @@ export default function App() {
           }
 
           if (offerData?.code) {
-            localStorage.setItem('wazyo_affiliate_offer', JSON.stringify(offerData))
+            sessionStorage.setItem('wazyo_affiliate_offer', JSON.stringify({ ...offerData, _saved_at: Date.now() }))
           } else {
-            localStorage.removeItem('wazyo_affiliate_offer')
+            sessionStorage.removeItem('wazyo_affiliate_offer')
           }
         } else {
           // Conserver l'offre après navigation/rechargement, mais revalider
           // son statut et ses dates côté serveur à chaque démarrage.
           let savedOffer = null
           try {
-            savedOffer = JSON.parse(localStorage.getItem('wazyo_affiliate_offer') || 'null')
+            savedOffer = JSON.parse(sessionStorage.getItem('wazyo_affiliate_offer') || 'null')
           } catch {
             savedOffer = null
           }
 
-          if (savedOffer?.code) {
+          const savedAt = Number(savedOffer?._saved_at || 0)
+          const offerExpired = !savedAt || (Date.now() - savedAt > 24 * 60 * 60 * 1000)
+
+          if (savedOffer?.code && !offerExpired) {
             const { data, error } = await supabase.rpc('get_affiliate_link', {
               p_code: savedOffer.code,
             })
             if (!error && data?.code) {
               offerData = data
-              localStorage.setItem('wazyo_affiliate_offer', JSON.stringify(data))
+              sessionStorage.setItem('wazyo_affiliate_offer', JSON.stringify({ ...data, _saved_at: savedAt }))
             } else {
-              localStorage.removeItem('wazyo_affiliate_offer')
+              sessionStorage.removeItem('wazyo_affiliate_offer')
             }
+          } else {
+            // Ne jamais réutiliser éternellement une ancienne offre.
+            sessionStorage.removeItem('wazyo_affiliate_offer')
           }
         }
 
