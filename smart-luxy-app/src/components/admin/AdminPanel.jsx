@@ -1507,7 +1507,16 @@ function HomeHeroManager({ onToast }) {
       const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(path, file, {
-          contentType: file.type || (safeExt === 'gif' ? 'image/gif' : safeExt === 'mp4' ? 'video/mp4' : undefined),
+          contentType: file.type || ({
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            png: 'image/png',
+            webp: 'image/webp',
+            gif: 'image/gif',
+            avif: 'image/avif',
+            mp4: 'video/mp4',
+            webm: 'video/webm',
+          }[safeExt] || 'application/octet-stream'),
           cacheControl: '3600',
           upsert: false,
         })
@@ -1517,13 +1526,41 @@ function HomeHeroManager({ onToast }) {
       const publicUrl = data?.publicUrl
       if (!publicUrl) throw new Error('URL publique introuvable après le transfert')
       const mediaType = detectMediaType(file)
+      // Enregistrer les deux paramètres avec le helper partagé, puis vérifier
+      // directement dans Supabase qu'ils ont réellement été persistés.
       await saveSettings({ hero_media_url: publicUrl, hero_media_type: mediaType })
+
+      const { data: savedRows, error: verifyError } = await supabase
+        .from('settings')
+        .select('key, value')
+        .in('key', ['hero_media_url', 'hero_media_type'])
+
+      if (verifyError) throw verifyError
+
+      const savedSettings = Object.fromEntries(
+        (savedRows || []).map(row => [row.key, row.value])
+      )
+
+      if (
+        String(savedSettings.hero_media_url || '').trim() !== publicUrl ||
+        String(savedSettings.hero_media_type || '').trim().toLowerCase() !== mediaType
+      ) {
+        throw new Error('Supabase n’a pas confirmé la sauvegarde. Vérifie les droits administrateur sur settings.')
+      }
+
       setCurrentUrl(publicUrl)
       setCurrentType(mediaType)
       setFile(null)
       const input = document.getElementById('wazyo-home-hero-file')
       if (input) input.value = ''
-      onToast && onToast('✅ Média de la page d’accueil enregistré', 'default')
+      try {
+        localStorage.setItem('wazyo_hero_media_updated', JSON.stringify({
+          url: publicUrl,
+          type: mediaType,
+          updatedAt: Date.now(),
+        }))
+      } catch {}
+      onToast && onToast('✅ Média enregistré et vérifié. La page d’accueil ouverte dans un autre onglet sera actualisée.', 'default')
     } catch (error) {
       console.error('Enregistrement média Hero:', error)
       onToast && onToast('❌ Impossible d’enregistrer le média : ' + (error?.message || 'erreur inconnue'), 'error')
@@ -1542,6 +1579,13 @@ function HomeHeroManager({ onToast }) {
       setFile(null)
       const input = document.getElementById('wazyo-home-hero-file')
       if (input) input.value = ''
+      try {
+        localStorage.setItem('wazyo_hero_media_updated', JSON.stringify({
+          url: '',
+          type: '',
+          updatedAt: Date.now(),
+        }))
+      } catch {}
       onToast && onToast('✅ Retour à la photo du premier produit', 'default')
     } catch (error) {
       console.error('Désactivation média Hero:', error)
@@ -1595,7 +1639,7 @@ function HomeHeroManager({ onToast }) {
           style={{ display:'block', width:'100%', boxSizing:'border-box', color:'#ddd', fontSize:12, padding:'10px 0' }}
         />
         <div style={{ color:'#888', fontSize:11, lineHeight:1.7, marginTop:5 }}>
-          Formats : JPG, PNG, WebP, GIF, MP4 et WebM. Taille maximale : 30 Mo. Le GIF conserve son animation.
+          Formats : JPG, PNG, WebP, GIF, MP4 et WebM. Taille maximale : 30 Mo après mise à jour du stockage Supabase. Le GIF conserve son animation.
         </div>
         {file && (
           <div style={{ display:'flex', alignItems:'center', gap:10, justifyContent:'space-between', flexWrap:'wrap', marginTop:14, padding:'10px 12px', background:'#101010', borderRadius:8 }}>
