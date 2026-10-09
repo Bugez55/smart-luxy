@@ -2635,6 +2635,8 @@ function AffiliateManager({ products, onToast }) {
   const [loading, setLoading] = useState(true)
   const [newInfluencer, setNewInfluencer] = useState({ name:'', active:true })
   const [newLink, setNewLink] = useState({ influencer_id:'', product_id:'', code:'', discount_percent:10, commission_percent:10, starts_at:'', ends_at:'' })
+  const [adSpendDrafts, setAdSpendDrafts] = useState({})
+  const [savingAdSpend, setSavingAdSpend] = useState({})
   const [savingInfluencer, setSavingInfluencer] = useState(false)
   const [savingLink, setSavingLink] = useState(false)
 
@@ -2644,7 +2646,7 @@ function AffiliateManager({ products, onToast }) {
     setLoading(true)
     const [{ data: infs, error: infErr }, { data: dashboard, error: dashErr }] = await Promise.all([
       supabase.from('influencers').select('*').order('created_at', { ascending:false }),
-      supabase.rpc('get_affiliate_dashboard'),
+      supabase.rpc('get_affiliate_financial_dashboard'),
     ])
     if (infErr) {
       onToast && onToast('❌ Impossible de charger les influenceurs : ' + infErr.message, 'error')
@@ -2758,6 +2760,31 @@ function AffiliateManager({ products, onToast }) {
     await load()
   }
 
+  async function saveAdSpend(linkId, fallbackValue) {
+    const raw = adSpendDrafts[linkId] !== undefined ? adSpendDrafts[linkId] : fallbackValue
+    const value = Number(raw)
+    if (!Number.isFinite(value) || value < 0) {
+      onToast && onToast('❌ La dépense publicitaire doit être un montant positif ou nul', 'error')
+      return
+    }
+
+    setSavingAdSpend(prev => ({ ...prev, [linkId]: true }))
+    const { error } = await supabase
+      .from('affiliate_links')
+      .update({ ad_spend_da: value })
+      .eq('id', linkId)
+    setSavingAdSpend(prev => ({ ...prev, [linkId]: false }))
+
+    if (error) {
+      onToast && onToast('❌ Impossible d’enregistrer la publicité : ' + error.message, 'error')
+      return
+    }
+
+    await load()
+    setAdSpendDrafts(prev => ({ ...prev, [linkId]: String(value) }))
+    onToast && onToast('✅ Dépense publicitaire enregistrée', 'default')
+  }
+
   async function markPaid(linkId) {
     if (!window.confirm('Marquer comme payées toutes les commissions livrées non encore payées pour ce lien ?')) return
 
@@ -2828,10 +2855,16 @@ function AffiliateManager({ products, onToast }) {
     clicks: acc.clicks + Number(r.clicks_total || 0),
     orders: acc.orders + Number(r.orders_count || 0),
     delivered: acc.delivered + Number(r.delivered_count || 0),
-    sales: acc.sales + Number(r.delivered_sales || 0),
-    commission: acc.commission + Number(r.delivered_commission || 0),
-    unpaid: acc.unpaid + Number(r.unpaid_commission || 0),
-  }), { clicks:0, orders:0, delivered:0, sales:0, commission:0, unpaid:0 })
+    sales: acc.sales + Number(r.delivered_product_sales_da || 0),
+    commission: acc.commission + Number(r.delivered_commission_da || 0),
+    unpaid: acc.unpaid + Number(r.unpaid_commission_da || 0),
+    adSpend: acc.adSpend + Number(r.ad_spend_da || 0),
+    productCost: acc.productCost + Number(r.delivered_purchase_cost_da || 0),
+    otherCosts: acc.otherCosts + Number(r.delivered_other_costs_da || 0),
+    shippingCost: acc.shippingCost + Number(r.delivered_shipping_cost_estimate_da || 0),
+    returnCost: acc.returnCost + Number(r.delivered_return_cost_estimate_da || 0),
+    profit: acc.profit + Number(r.estimated_profit_da || 0),
+  }), { clicks:0, orders:0, delivered:0, sales:0, commission:0, unpaid:0, adSpend:0, productCost:0, otherCosts:0, shippingCost:0, returnCost:0, profit:0 })
 
   const money = n => Number(n || 0).toLocaleString('fr-DZ') + ' DA'
 
@@ -2841,7 +2874,7 @@ function AffiliateManager({ products, onToast }) {
         <div>
           <h3 style={{ color:'white', fontSize:16, fontWeight:900, marginBottom:6 }}>🤝 Influenceurs & affiliation</h3>
           <p style={{ color:'rgba(255,255,255,.42)', fontSize:12, margin:0, maxWidth:760 }}>
-            Crée un lien par influenceur et par produit. Chaque clic unique quotidien est compté, puis les commandes livrées servent de base à la commission.
+            Suis les clics, les ventes réellement attribuées, le coût fournisseur, les frais estimés, la publicité dépensée et la commission due. Le bénéfice est calculé sur les commandes livrées avec les coûts renseignés dans les fiches produits.
           </p>
         </div>
         <button onClick={load} className="act-btn">↻ Actualiser</button>
@@ -2852,9 +2885,12 @@ function AffiliateManager({ products, onToast }) {
           ['👆','Clics uniques',totals.clicks],
           ['🛒','Commandes',totals.orders],
           ['📦','Livrées',totals.delivered],
-          ['💰','Ventes livrées',money(totals.sales)],
-          ['🎁','Commission livrée',money(totals.commission)],
+          ['💰','Ventes produits nettes',money(totals.sales)],
+          ['📦','Coût achat livré',money(totals.productCost)],
+          ['📣','Publicité saisie',money(totals.adSpend)],
+          ['🎁','Commissions livrées',money(totals.commission)],
           ['💳','Commission à payer',money(totals.unpaid)],
+          ['📈','Bénéfice net estimé',money(totals.profit)],
         ].map(([icon,label,value]) => (
           <div key={label} style={{ background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'12px 14px' }}>
             <div style={{ fontSize:10, color:'rgba(255,255,255,.38)', marginBottom:5 }}>{icon} {label}</div>
@@ -2930,17 +2966,43 @@ function AffiliateManager({ products, onToast }) {
                     <div style={{ color:'rgba(255,255,255,.45)', fontSize:11, marginTop:4 }}>📦 {product?.nom || r.product_name} · 🎁 -{r.discount_percent}% · 💵 commission {r.commission_percent}%</div>
                     <div style={{ color:'rgba(255,255,255,.3)', fontSize:9, marginTop:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{url}</div>
                   </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(5,auto)', gap:12, alignItems:'center' }}>
-                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Clics</div><strong style={{color:'white'}}>{r.clicks_total}</strong></div>
-                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Cmd</div><strong style={{color:'white'}}>{r.orders_count}</strong></div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(88px,1fr))', gap:10, alignItems:'center', width:'100%', marginTop:8 }}>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Clics uniques/jour</div><strong style={{color:'white'}}>{r.clicks_total}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Commandes</div><strong style={{color:'white'}}>{r.orders_count}</strong></div>
                     <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Livrées</div><strong style={{color:'var(--br)'}}>{r.delivered_count}</strong></div>
-                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>CA</div><strong style={{color:'white'}}>{money(r.delivered_sales)}</strong></div>
-                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>À payer</div><strong style={{color:'#86efac'}}>{money(r.unpaid_commission)}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Ventes produit nettes</div><strong style={{color:'white'}}>{money(r.delivered_product_sales_da)}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Achat marchandises</div><strong style={{color:'#fbbf24'}}>{money(r.delivered_purchase_cost_da)}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Commissions livrées</div><strong style={{color:'white'}}>{money(r.delivered_commission_da)}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Commission à payer</div><strong style={{color:'#86efac'}}>{money(r.unpaid_commission_da)}</strong></div>
+                    <div><div style={{fontSize:9,color:'rgba(255,255,255,.3)'}}>Bénéfice net estimé</div><strong style={{color:Number(r.estimated_profit_da)>=0?'#86efac':'#fca5a5'}}>{money(r.estimated_profit_da)}</strong></div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(105px,1fr))', gap:8, width:'100%', marginTop:10, padding:10, background:'rgba(255,255,255,.018)', borderRadius:9 }}>
+                    {[
+                      ['🚚 Livraison reçue', r.delivered_shipping_collected_da],
+                      ['🧾 Autres frais', r.delivered_other_costs_da],
+                      ['📦 Transport estimé', r.delivered_shipping_cost_estimate_da],
+                      ['↩️ Retours estimés', r.delivered_return_cost_estimate_da],
+                      ['➖ Total dépenses', r.total_expenses_da],
+                      ['📊 Marge nette', `${Number(r.estimated_margin_percent || 0).toLocaleString('fr-DZ')} %`],
+                    ].map(([label,value]) => (
+                      <div key={label}>
+                        <div style={{fontSize:9,color:'rgba(255,255,255,.32)',marginBottom:4}}>{label}</div>
+                        <strong style={{fontSize:11,color:'rgba(255,255,255,.76)'}}>{typeof value === 'string' && value.endsWith(' %') ? value : money(value)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'minmax(160px,1fr) auto', gap:8, alignItems:'end', width:'100%', marginTop:12, padding:10, background:'rgba(255,255,255,.025)', border:'1px solid rgba(255,255,255,.06)', borderRadius:9 }}>
+                    <div>
+                      <label style={{ display:'block', color:'rgba(255,255,255,.55)', fontSize:10, marginBottom:5 }}>📣 Dépenses publicitaires réelles pour ce lien (DA)</label>
+                      <input type="number" min="0" step="1" value={adSpendDrafts[r.link_id] !== undefined ? adSpendDrafts[r.link_id] : String(r.ad_spend_da || 0)} onChange={e=>setAdSpendDrafts(prev=>({...prev,[r.link_id]:e.target.value}))} placeholder="0" style={{ width:'100%', boxSizing:'border-box', background:'#111', border:'1px solid #333', borderRadius:7, padding:'9px 10px', color:'white', fontSize:14, outline:'none' }} />
+                      <div style={{fontSize:9,color:'rgba(255,255,255,.32)',marginTop:4}}>Saisis le budget réellement dépensé pour cette campagne Meta/TikTok. Il est déduit une seule fois du bénéfice du lien.</div>
+                    </div>
+                    <button onClick={()=>saveAdSpend(r.link_id, r.ad_spend_da || 0)} disabled={!!savingAdSpend[r.link_id]} className="act-btn" style={{ color:'#C9A84C', whiteSpace:'nowrap' }}>{savingAdSpend[r.link_id]?'Enregistrement…':'💾 Enregistrer pub'}</button>
                   </div>
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap', width:'100%', paddingTop:9, borderTop:'1px solid rgba(255,255,255,.05)' }}>
                     <button onClick={()=>copyLink(r)} className="act-btn">🔗 Copier le lien</button>
                     <button onClick={()=>toggleLink(r.link_id, !r.active)} className="act-btn" style={{ color:r.active?'#86efac':'#aaa' }}>{r.active?'✅ Actif':'⏸ Inactif'}</button>
-                    {Number(r.unpaid_commission || 0) > 0 && <button onClick={()=>markPaid(r.link_id)} className="act-btn" style={{ color:'#C9A84C' }}>💳 Marquer payé</button>}
+                    {Number(r.unpaid_commission_da || 0) > 0 && <button onClick={()=>markPaid(r.link_id)} className="act-btn" style={{ color:'#C9A84C' }}>💳 Marquer payé</button>}
                   </div>
                 </div>
               </div>
@@ -2949,8 +3011,10 @@ function AffiliateManager({ products, onToast }) {
         </div>
       )}
 
-      <div style={{ marginTop:14, fontSize:10, color:'rgba(255,255,255,.28)', lineHeight:1.5 }}>
-        La commission est comptabilisée uniquement sur les commandes livrées et reste indépendante des frais de livraison. Une commande annulée ne génère pas de commission à payer.
+      <div style={{ marginTop:14, fontSize:10, color:'rgba(255,255,255,.38)', lineHeight:1.7, background:'rgba(255,255,255,.025)', border:'1px solid rgba(255,255,255,.06)', borderRadius:10, padding:12 }}>
+        <strong style={{color:'rgba(255,255,255,.68)'}}>Comment le bénéfice est calculé</strong><br />
+        Ventes produits après remise + frais de livraison reçus − coût fournisseur − autres frais produit − coût de livraison estimé − retours estimés − commission des commandes livrées − dépenses publicitaires saisies.<br />
+        La commission influenceur est calculée sur le prix du produit après remise, hors livraison, et n’est due que pour les commandes livrées. Les coûts proviennent des champs déjà présents dans la fiche produit ; les coûts des nouvelles commandes sont mémorisés au moment de l’attribution. Le coût historique d’une commande ancienne sans instantané utilise le coût actuel du produit, donc reste une estimation.
       </div>
     </div>
   )
