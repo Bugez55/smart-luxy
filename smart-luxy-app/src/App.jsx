@@ -50,6 +50,7 @@ export default function App() {
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [promoInfo, setPromoInfo] = useState(null)
   const [affiliateOffer, setAffiliateOffer] = useState(null)
+  const [heroSettings, setHeroSettings] = useState({ url: '', type: '' })
   const [orderItems, setOrderItems] = useState(null)
   const [lastOrder, setLastOrder] = useState(null)
   const [toasts, setToasts] = useState([])
@@ -64,12 +65,17 @@ export default function App() {
     getSettings().then(s => {
       if (!mounted) return
       setMaintenanceMode(String(s?.maintenance || 'false').toLowerCase() === 'true')
+      setHeroSettings({
+        url: String(s?.hero_media_url || '').trim(),
+        type: String(s?.hero_media_type || '').trim().toLowerCase(),
+      })
       setMaintenanceChecked(true)
     }).catch(err => {
       // En cas d'erreur de lecture des settings, ne jamais bloquer la boutique.
       console.error('maintenance settings:', err)
       if (mounted) {
         setMaintenanceMode(false)
+        setHeroSettings({ url: '', type: '' })
         setMaintenanceChecked(true)
       }
     })
@@ -489,7 +495,9 @@ export default function App() {
       <main>
         {/* ── Hero plein écran ── */}
         <Hero
-          heroImage={products[0]?.img}
+          heroImage={heroSettings.url || products[0]?.img}
+          heroMediaType={heroSettings.url ? heroSettings.type : 'image'}
+          heroFallbackImage={products[0]?.img}
           onScrollToCollection={() => document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' })}
         />
 
