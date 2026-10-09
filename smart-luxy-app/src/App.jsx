@@ -82,6 +82,54 @@ export default function App() {
     return () => { mounted = false }
   }, [])
 
+  // Mise à jour du visuel Hero si l'admin publie depuis un autre onglet.
+  // Le rechargement au focus couvre aussi les cas où les événements storage sont bloqués.
+  useEffect(() => {
+    let mounted = true
+
+    const applyPayload = (raw) => {
+      try {
+        const payload = typeof raw === 'string' ? JSON.parse(raw) : raw
+        if (!payload || typeof payload !== 'object') return
+        setHeroSettings({
+          url: String(payload.url || '').trim(),
+          type: String(payload.type || '').trim().toLowerCase(),
+        })
+      } catch (error) {
+        console.warn('Mise à jour Hero ignorée :', error)
+      }
+    }
+
+    const onStorage = (event) => {
+      if (event.key === 'wazyo_hero_media_updated' && event.newValue) {
+        applyPayload(event.newValue)
+      }
+    }
+
+    const refreshHeroFromSupabase = async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('key, value')
+        .in('key', ['hero_media_url', 'hero_media_type'])
+      if (!mounted || error || !data) return
+      const rows = Object.fromEntries(data.map(row => [row.key, row.value]))
+      setHeroSettings({
+        url: String(rows.hero_media_url || '').trim(),
+        type: String(rows.hero_media_type || '').trim().toLowerCase(),
+      })
+    }
+
+    const onFocus = () => { refreshHeroFromSupabase() }
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('focus', onFocus)
+
+    return () => {
+      mounted = false
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [])
+
   const loadProducts = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
@@ -498,6 +546,7 @@ export default function App() {
           heroImage={heroSettings.url || products[0]?.img}
           heroMediaType={heroSettings.url ? heroSettings.type : 'image'}
           heroFallbackImage={products[0]?.img}
+          heroCustomMedia={Boolean(heroSettings.url)}
           onScrollToCollection={() => document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' })}
         />
 
