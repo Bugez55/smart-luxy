@@ -29,7 +29,7 @@ const LIVRAISON = {
   'Bordj Badji Mokhtar':{bureau:1500,domicile:1900},'Ouled Djellal':{bureau:600,domicile:1100},
 }
 
-export default function ProductPage({ product: p, allProducts, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
+export default function ProductPage({ product: p, allProducts, affiliateOffer = null, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
   const [openFaq, setOpenFaq] = useState(null)
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('ar')
@@ -120,6 +120,19 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const currentPrix = activeBundle ? activeBundle.prix : p.prix
   const currentQty = activeBundle ? activeBundle.qty : qty
 
+  // La remise est active uniquement sur le produit visé par le lien.
+  const activeAffiliateOffer = affiliateOffer &&
+    String(affiliateOffer.product_id) === String(p.id)
+      ? affiliateOffer
+      : null
+  const affiliateDiscountPercent = Math.max(
+    0,
+    Math.min(100, Number(activeAffiliateOffer?.discount_percent) || 0)
+  )
+  const displayCurrentPrix = affiliateDiscountPercent > 0
+    ? Math.max(0, Math.round(Number(currentPrix || 0) * (100 - affiliateDiscountPercent) / 100))
+    : currentPrix
+
   const outOfStock = hasColors && selectedColor !== null
     ? selectedColorOutOfStock
     : p.stock !== null && p.stock !== undefined && p.stock <= 0
@@ -134,7 +147,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
   const prixLiv = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][modeLiv] : null
   const fraisLivBase = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
   const fraisLiv = freeShip !== null && currentPrix >= freeShip ? 0 : fraisLivBase
-  const totalFinal = currentPrix + (fraisLiv || 0)
+  const totalFinal = displayCurrentPrix + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
   const filteredWilayas = wilayasOptions.filter(opt => {
@@ -617,11 +630,43 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
         )}
 
+        {activeAffiliateOffer && affiliateDiscountPercent > 0 && (
+          <div style={{
+            display:'flex', alignItems:'center', gap:10, marginBottom:12,
+            padding:'11px 13px', borderRadius:13,
+            background:'linear-gradient(135deg, rgba(34,197,94,.12), rgba(201,168,76,.08))',
+            border:'1px solid rgba(34,197,94,.28)',
+            direction:rtl ? 'rtl' : 'ltr',
+            textAlign:rtl ? 'right' : 'left',
+          }}>
+            <span style={{ fontSize:21, flexShrink:0 }}>🎁</span>
+            <div style={{ minWidth:0 }}>
+              <div style={{ color:'#86efac', fontSize:12, fontWeight:900 }}>
+                {lang==='ar'
+                  ? `تم تفعيل تخفيض المؤثر: -${affiliateDiscountPercent}%`
+                  : `Réduction influenceur activée : -${affiliateDiscountPercent}%`}
+              </div>
+              <div style={{ color:'var(--g4)', fontSize:10, marginTop:3 }}>
+                {lang==='ar'
+                  ? `عرض خاص من ${activeAffiliateOffer.influencer_name || 'المؤثر'} · سيتم تأكيد التخفيض عند إتمام الطلب.`
+                  : `Offre de ${activeAffiliateOffer.influencer_name || 'votre influenceur'} · La remise sera confirmée lors de la commande.`}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Prix + bouton Commander immédiat */}
         <div className="pp-price-row" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:14, flexWrap:'wrap' }}>
           <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
-            <span className="pp-price" style={{ fontSize:32, fontWeight:900, color:'var(--br)' }}>{fmt(p.prix)}</span>
-            {p.prix_old && p.prix_old > p.prix && <>
+            <span className="pp-price" style={{ fontSize:32, fontWeight:900, color:'var(--br)' }}>
+              {fmt(affiliateDiscountPercent > 0
+                ? Math.max(0, Math.round(Number(p.prix || 0) * (100 - affiliateDiscountPercent) / 100))
+                : p.prix)}
+            </span>
+            {affiliateDiscountPercent > 0 ? <>
+              <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix)}</span>
+              <span className="pp-discount" style={{ background:'rgba(34,197,94,.15)', color:'#86efac', fontSize:11, fontWeight:900, padding:'4px 9px', borderRadius:999 }}>-{affiliateDiscountPercent}%</span>
+            </> : p.prix_old && p.prix_old > p.prix && <>
               <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
               <span className="pp-discount" style={{ background:'#ef4444', color:'var(--g3)', fontSize:11, fontWeight:900, padding:'4px 9px', borderRadius:999 }}>-{disc}%</span>
               <span className="pp-save" style={{ background:'rgba(34,197,94,.10)', border:'1px solid rgba(34,197,94,.22)', color:'#86efac', fontSize:10, fontWeight:900, padding:'4px 8px', borderRadius:999, whiteSpace:'nowrap' }}>Économisez {fmt(p.prix_old - p.prix)}</span>
@@ -744,7 +789,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                       <span style={{ color:'var(--g4)', fontSize:9, fontWeight:800 }}>{qty > 1 ? 'unités' : 'unité'}</span>
                     </div>
                     <div style={{ marginTop:4, fontSize:9, color:'var(--br)', fontWeight:800 }}>
-                      {fmt(currentPrix * qty)}
+                      {fmt(displayCurrentPrix * qty)}
                     </div>
                   </div>
 
@@ -953,7 +998,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
                     <span style={{ color:'var(--g4)', fontSize:10, fontWeight:800 }}>{qty > 1 ? (lang==='ar' ? 'unités' : 'unités') : (lang==='ar' ? 'unité' : 'unité')}</span>
                   </div>
                   <div style={{ marginTop:4, fontSize:10, color:'var(--br)', fontWeight:800 }}>
-                    {fmt(currentPrix * qty)}
+                    {fmt(displayCurrentPrix * qty)}
                   </div>
                 </div>
 
@@ -1346,7 +1391,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           {form.wilaya && (
             <div style={{ background:'rgba(201,168,76,.08)', borderRadius:12, padding:'12px 14px', marginBottom:16, border:'1px solid rgba(201,168,76,.25)' }}>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:6 }}>
-                <span>🛍️ Prix produit</span><span>{fmt(currentPrix)}</span>
+                <span>🛍️ Prix produit</span><span>{fmt(displayCurrentPrix)}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:8 }}>
                 <span>🚚 Frais livraison</span>
@@ -1617,7 +1662,7 @@ export default function ProductPage({ product: p, allProducts, onClose, onAddToC
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:1 }}>
             <span style={{ fontSize:14, color:'var(--br)', fontWeight:900 }}>
-              {form.wilaya && fraisLiv !== null ? fmt(totalFinal) : fmt(activeBundle ? activeBundle.prix : p.prix)}
+              {form.wilaya && fraisLiv !== null ? fmt(totalFinal) : fmt(displayCurrentPrix)}
             </span>
             <span style={{ fontSize:9, color:'var(--g4)', fontWeight:700 }}>
               {form.wilaya && fraisLiv !== null ? 'total' : 'hors livraison'}
