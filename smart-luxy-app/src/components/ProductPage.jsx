@@ -130,6 +130,12 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     ? Math.min(...models.map(getModelPrice))
     : Number(p.prix || 0)
   const activeModelPrice = activeModel ? getModelPrice(activeModel) : startingModelPrice
+  // Couleur sélectionnée pour la logique de stock couleur existante.
+  // Cette déclaration manquait dans la version modèles et faisait planter
+  // le rendu de toutes les fiches produit (ReferenceError: activeColor).
+  const activeColor = hasColors
+    ? colors.find(c => String(c.name) === String(selectedColor)) || null
+    : null
   const colorStock = activeColor && activeColor.stock !== '' && activeColor.stock !== null && activeColor.stock !== undefined
     ? Number(activeColor.stock)
     : null
