@@ -338,7 +338,20 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   const selectedIndex = Math.max(0, imgs.findIndex(img => img?.url === selectedImg))
   const currentIndex = imgs.length ? (selectedImg ? selectedIndex : 0) : 0
   const mainImg = selectedImg || imgs[0]?.url || p.img
-  const hasDiscount = Number(p.prix_old) > Number(p.prix)
+  const productModels = (() => {
+    try {
+      const raw = typeof p.models === 'string' ? JSON.parse(p.models) : (p.models || [])
+      return Array.isArray(raw) ? raw.filter(m => m && String(m.name || '').trim()) : []
+    } catch { return [] }
+  })()
+  const isModelProduct = p.show_models === true && productModels.length > 0
+  const modelPrices = isModelProduct ? productModels.map(m =>
+    m.price !== '' && m.price !== null && m.price !== undefined && Number.isFinite(Number(m.price))
+      ? Math.max(0, Number(m.price))
+      : Number(p.prix || 0)
+  ) : []
+  const cardPrice = isModelProduct ? Math.min(...modelPrices) : Number(p.prix || 0)
+  const hasDiscount = !isModelProduct && Number(p.prix_old) > Number(p.prix)
   const discount = hasDiscount
     ? Math.round(100 - (Number(p.prix) / Number(p.prix_old)) * 100)
     : 0
@@ -582,7 +595,8 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
 
         {/* Prix */}
         <div className="pcard-prices" style={{ gap: 9, flexWrap: 'wrap' }}>
-          <span className="pcard-prix">{fmt(p.prix)}</span>
+          {isModelProduct && <span style={{ fontSize:9, color:'var(--g4)', fontWeight:800, alignSelf:'center' }}>À partir de</span>}
+          <span className="pcard-prix">{fmt(cardPrice)}</span>
           {hasDiscount && <span className="pcard-old">{fmt(p.prix_old)}</span>}
         </div>
 
