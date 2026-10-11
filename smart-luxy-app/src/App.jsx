@@ -362,6 +362,11 @@ export default function App() {
     try {
       const items = Array.isArray(form.items) ? form.items : []
       const hasColors = items.some(i => i?.color || i?.couleur)
+      const hasModels = items.some(i => i?.model || i?.modele)
+      if (hasColors && hasModels) {
+        toast('Une commande ne peut pas mélanger couleurs et modèles. Réessaie depuis la fiche produit.', 'error')
+        return false
+      }
       const offerCode = String(affiliateOffer?.code || '').trim()
       const targetProductId = affiliateOffer?.product_id
       const includesTarget = !!offerCode && items.some(i => String(i?.id) === String(targetProductId))
@@ -377,9 +382,11 @@ export default function App() {
       }
 
       const useAffiliate = allItemsAreTarget
-      const rpcName = useAffiliate
-        ? (hasColors ? 'create_order_with_colors_affiliate' : 'create_order_with_affiliate')
-        : (hasColors ? 'create_order_with_colors' : 'create_order')
+      const rpcName = hasModels
+        ? 'create_order_with_models'
+        : useAffiliate
+          ? (hasColors ? 'create_order_with_colors_affiliate' : 'create_order_with_affiliate')
+          : (hasColors ? 'create_order_with_colors' : 'create_order')
 
       const rpcArgs = {
         p_nom_client: form.nom,
