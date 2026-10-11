@@ -44,6 +44,9 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
   // Mini-panier local pour une même référence avec plusieurs couleurs.
   // Exemple : Rouge ×2 + Noir ×5 dans une seule commande.
   const [colorOrderItems, setColorOrderItems] = useState([])
+  // Mini-panier local des modèles : HTND-500VA ×1 + HTND-2000VA ×2.
+  const [selectedModel, setSelectedModel] = useState(null)
+  const [modelOrderItems, setModelOrderItems] = useState([])
   const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'', website:'' })
   const [modeLiv, setModeLiv] = useState('domicile')
   const [modePaiement, setModePaiement] = useState('livraison')
@@ -103,7 +106,30 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     } catch { return [] }
   })()
   const hasColors = p.show_colors === true && colors.length > 0
-  const activeColor = hasColors ? colors.find(c => String(c.name) === String(selectedColor)) || null : null
+  const models = (() => {
+    try {
+      const raw = typeof p.models === 'string' ? JSON.parse(p.models) : (p.models || [])
+      return Array.isArray(raw) ? raw.filter(m => m && String(m.name || '').trim()) : []
+    } catch { return [] }
+  })()
+  const hasModels = p.show_models === true && models.length > 0
+  const activeModel = hasModels ? models.find(m => String(m.name) === String(selectedModel)) || null : null
+  const modelStock = activeModel && activeModel.stock !== '' && activeModel.stock !== null && activeModel.stock !== undefined
+    ? Number(activeModel.stock)
+    : null
+  const selectedModelOutOfStock = modelStock !== null && Number.isFinite(modelStock) && modelStock <= 0
+  const selectedModelAlreadyQty = hasModels && selectedModel !== null ? currentModelAlreadyQty() : 0
+  const remainingModelStock = modelStock !== null && Number.isFinite(modelStock)
+    ? Math.max(0, modelStock - selectedModelAlreadyQty)
+    : null
+  const selectedModelMaxReached = hasModels && selectedModel !== null && remainingModelStock !== null && remainingModelStock <= 0
+  const getModelPrice = model => model && model.price !== '' && model.price !== null && model.price !== undefined && Number.isFinite(Number(model.price))
+    ? Math.max(0, Number(model.price))
+    : Number(p.prix || 0)
+  const startingModelPrice = hasModels
+    ? Math.min(...models.map(getModelPrice))
+    : Number(p.prix || 0)
+  const activeModelPrice = activeModel ? getModelPrice(activeModel) : startingModelPrice
   const colorStock = activeColor && activeColor.stock !== '' && activeColor.stock !== null && activeColor.stock !== undefined
     ? Number(activeColor.stock)
     : null
@@ -115,9 +141,11 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
   const selectedColorMaxReached = hasColors && selectedColor !== null && remainingColorStock !== null && remainingColorStock <= 0
 
   const mainImg = imgs[0]?.url || p.img
-  const hasBundles = bundles.length > 0
+  const hasBundles = bundles.length > 0 && !hasModels
   const activeBundle = selectedBundle !== null ? bundles[selectedBundle] : null
-  const currentPrix = activeBundle ? activeBundle.prix : p.prix
+  const currentPrix = hasModels
+    ? activeModelPrice
+    : activeBundle ? activeBundle.prix : p.prix
   const currentQty = activeBundle ? activeBundle.qty : qty
 
   // La remise est active uniquement sur le produit visé par le lien.
@@ -133,12 +161,16 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     ? Math.max(0, Math.round(Number(currentPrix || 0) * (100 - affiliateDiscountPercent) / 100))
     : currentPrix
 
-  const outOfStock = hasColors && selectedColor !== null
-    ? selectedColorOutOfStock
-    : p.stock !== null && p.stock !== undefined && p.stock <= 0
-  const effectiveStock = hasColors && selectedColor !== null && colorStock !== null && Number.isFinite(colorStock)
-    ? colorStock
-    : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : null)
+  const outOfStock = hasModels && selectedModel !== null
+    ? selectedModelOutOfStock
+    : hasColors && selectedColor !== null
+      ? selectedColorOutOfStock
+      : p.stock !== null && p.stock !== undefined && Number(p.stock) <= 0
+  const effectiveStock = hasModels && selectedModel !== null && modelStock !== null && Number.isFinite(modelStock)
+    ? modelStock
+    : hasColors && selectedColor !== null && colorStock !== null && Number.isFinite(colorStock)
+      ? colorStock
+      : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : null)
   const lowStock = effectiveStock !== null && Number.isFinite(effectiveStock) && effectiveStock > 0 && effectiveStock <= 5
   const isPromo = p.badge?.includes('Promo') || p.prix_old
   const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100-(p.prix/p.prix_old)*100) : 0
@@ -146,8 +178,18 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
   const prixLiv = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][modeLiv] : null
   const fraisLivBase = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
-  const fraisLiv = freeShip !== null && currentPrix >= freeShip ? 0 : fraisLivBase
-  const totalFinal = displayCurrentPrix + (fraisLiv || 0)
+  const modelLinesGrossSubtotal = modelOrderItems.reduce((sum, item) => sum + (Number(item.prix) || 0) * (Number(item.qty) || 0), 0)
+  const modelLinesSubtotal = affiliateDiscountPercent > 0
+    ? Math.max(0, Math.round(modelLinesGrossSubtotal * (100 - affiliateDiscountPercent) / 100))
+    : modelLinesGrossSubtotal
+  const displayItemsSubtotal = hasModels && modelOrderItems.length > 0
+    ? modelLinesSubtotal
+    : displayCurrentPrix * (Number(currentQty) || 1)
+  const shippingThresholdSubtotal = hasModels && modelOrderItems.length > 0
+    ? modelLinesGrossSubtotal
+    : Number(currentPrix || 0) * (Number(currentQty) || 1)
+  const fraisLiv = freeShip !== null && shippingThresholdSubtotal >= freeShip ? 0 : fraisLivBase
+  const totalFinal = displayItemsSubtotal + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
   const filteredWilayas = wilayasOptions.filter(opt => {
@@ -301,6 +343,62 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     }
   }
 
+  function normalizeModelName(value) {
+    return String(value || '').trim().toLowerCase()
+  }
+
+  function currentModelAlreadyQty() {
+    if (!hasModels || !selectedModel) return 0
+    const key = normalizeModelName(selectedModel)
+    return modelOrderItems.reduce((sum, item) =>
+      sum + (normalizeModelName(item.model || item.modele) === key ? Number(item.qty) || 0 : 0), 0
+    )
+  }
+
+  function handleAddCurrentModelToOrder() {
+    if (!hasModels || !selectedModel || !activeModel || selectedModelOutOfStock) return
+    const wantedQty = Number(currentQty) || 0
+    if (wantedQty < 1) return
+
+    const alreadyQty = currentModelAlreadyQty()
+    const remaining = modelStock !== null && Number.isFinite(modelStock)
+      ? Math.max(0, modelStock - alreadyQty)
+      : null
+    if (remaining !== null && wantedQty > remaining) {
+      if (remaining > 0) setQty(remaining)
+      return
+    }
+
+    const modelName = String(activeModel.name || selectedModel).trim()
+    const unitPrice = activeModel.price !== '' && activeModel.price !== null && activeModel.price !== undefined && Number.isFinite(Number(activeModel.price))
+      ? Math.max(0, Number(activeModel.price))
+      : Number(p.prix || 0)
+    const variantItem = {
+      ...p,
+      qty: wantedQty,
+      prix: unitPrice,
+      model: modelName,
+      modele: modelName,
+      model_description: String(activeModel.description || ''),
+      model_image: String(activeModel.image || ''),
+    }
+
+    setModelOrderItems(prev => {
+      const index = prev.findIndex(item => normalizeModelName(item.model || item.modele) === normalizeModelName(modelName))
+      if (index >= 0) {
+        return prev.map((item, i) => i === index ? { ...item, qty: Number(item.qty || 0) + wantedQty } : item)
+      }
+      return [...prev, variantItem]
+    })
+    setSelectedModel(null)
+    setQty(1)
+  }
+
+  function removeModelOrderItem(modelName) {
+    const key = normalizeModelName(modelName)
+    setModelOrderItems(prev => prev.filter(item => normalizeModelName(item.model || item.modele) !== key))
+  }
+
   function normalizeColorName(value) {
     return String(value || '').trim().toLowerCase()
   }
@@ -378,6 +476,19 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
   }
 
   function buildOrderItems() {
+    if (hasModels) {
+      return modelOrderItems.map(item => ({
+        ...item,
+        qty: Number(item.qty) || 1,
+        model: String(item.model || item.modele || '').trim(),
+        modele: String(item.model || item.modele || '').trim(),
+        model_description: String(item.model_description || ''),
+        model_image: String(item.model_image || ''),
+        color: null,
+        couleur: null,
+      }))
+    }
+
     // Avec couleurs : le client doit ajouter chaque couleur souhaitée.
     if (hasColors) {
       return colorOrderItems.map(item => ({
@@ -409,6 +520,48 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     // Anti-bot honeypot — si ce champ caché est rempli, c'est un robot
     if (form.website) { console.warn('Bot détecté'); return }
     if (hasBundles && selectedBundle === null) return
+
+    // Pour les produits à modèles, envoyer les lignes modèle/quantité exactes.
+    if (hasModels) {
+      let orderItems = buildOrderItems()
+      if (orderItems.length === 0) {
+        if (selectedModel === null || selectedModelOutOfStock || selectedModelMaxReached) return
+        if (effectiveStock !== null && currentQty > effectiveStock) {
+          setQty(Math.max(1, effectiveStock))
+          return
+        }
+        const modelName = String(activeModel?.name || selectedModel).trim()
+        const unitPrice = activeModel?.price !== '' && activeModel?.price !== null && activeModel?.price !== undefined && Number.isFinite(Number(activeModel?.price))
+          ? Math.max(0, Number(activeModel.price))
+          : Number(p.prix || 0)
+        orderItems = [{
+          ...p,
+          qty: currentQty,
+          prix: unitPrice,
+          model: modelName,
+          modele: modelName,
+          model_description: String(activeModel?.description || ''),
+          model_image: String(activeModel?.image || ''),
+          color: null,
+          couleur: null,
+        }]
+      }
+      setOrdering(true)
+      try {
+        await onSubmitOrder({
+          ...form,
+          items: orderItems,
+          mode_livraison: modeLiv,
+          mode_paiement: modePaiement,
+          preuve_paiement: preuvePaiement || null,
+          frais_livraison: fraisLiv || 0,
+          total: totalFinal,
+        })
+      } finally {
+        setOrdering(false)
+      }
+      return
+    }
 
     // Pour un produit avec couleurs, au moins une couleur doit avoir été ajoutée.
     if (hasColors) {
@@ -484,20 +637,26 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
 
   const hasPendingColorSelections = hasColors && colorOrderItems.length > 0
   const selectedColorUnavailable = hasColors && selectedColor !== null && selectedColorOutOfStock
-  const productOutOfStock = !hasColors && p.stock !== null && p.stock !== undefined && Number(p.stock) <= 0
+  const hasPendingModelSelections = hasModels && modelOrderItems.length > 0
+  const selectedModelUnavailable = hasModels && selectedModel !== null && (selectedModelOutOfStock || selectedModelMaxReached)
+  const productOutOfStock = !hasColors && !hasModels && p.stock !== null && p.stock !== undefined && Number(p.stock) <= 0
   const canOrder = Boolean(
     form.nom &&
     form.tel &&
     form.wilaya &&
     form.commune &&
     (!hasBundles || selectedBundle !== null) &&
-    (hasColors
-      ? (hasPendingColorSelections || (selectedColor !== null && !selectedColorUnavailable))
-      : !productOutOfStock)
+    (hasModels
+      ? (hasPendingModelSelections || (selectedModel !== null && !selectedModelUnavailable))
+      : hasColors
+        ? (hasPendingColorSelections || (selectedColor !== null && !selectedColorUnavailable))
+        : !productOutOfStock)
   )
-  const displayOutOfStock = hasColors
-    ? selectedColorUnavailable && !hasPendingColorSelections
-    : productOutOfStock
+  const displayOutOfStock = hasModels
+    ? selectedModelUnavailable && !hasPendingModelSelections
+    : hasColors
+      ? selectedColorUnavailable && !hasPendingColorSelections
+      : productOutOfStock
 
   return (
     <div className={`pp-root ${checkoutOnly ? 'checkout-only' : ''}`} data-product-id={p.id} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:checkoutOnly ? 420 : 300, background:'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
@@ -659,12 +818,10 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
         <div className="pp-price-row" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:14, flexWrap:'wrap' }}>
           <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
             <span className="pp-price" style={{ fontSize:32, fontWeight:900, color:'var(--br)' }}>
-              {fmt(affiliateDiscountPercent > 0
-                ? Math.max(0, Math.round(Number(p.prix || 0) * (100 - affiliateDiscountPercent) / 100))
-                : p.prix)}
+              {fmt(displayCurrentPrix)}
             </span>
             {affiliateDiscountPercent > 0 ? <>
-              <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix)}</span>
+              <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(currentPrix)}</span>
               <span className="pp-discount" style={{ background:'rgba(34,197,94,.15)', color:'#86efac', fontSize:11, fontWeight:900, padding:'4px 9px', borderRadius:999 }}>-{affiliateDiscountPercent}%</span>
             </> : p.prix_old && p.prix_old > p.prix && <>
               <span style={{ fontSize:15, color:'var(--g4)', textDecoration:'line-through' }}>{fmt(p.prix_old)}</span>
@@ -683,6 +840,70 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
             >{lang==='ar' ? '🛒 اطلب الآن' : '🛒 Commander'}</button>
           )}
         </div>
+
+        {/* ⚙️ Modèles du produit — stock/prix indépendants par modèle */}
+        {hasModels && (
+          <div style={{ marginBottom:14, padding:'12px 14px', background:'rgba(255,255,255,.025)', border:'1px solid rgba(96,165,250,.22)', borderRadius:14 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:17 }}>⚙️</span>
+                <div>
+                  <div style={{ color:'var(--g3)', fontSize:12, fontWeight:900 }}>{lang==='ar' ? 'اختر الموديل' : 'Choisir un modèle'} <span style={{ color:'#fca5a5' }}>*</span></div>
+                  <div style={{ color:'var(--g4)', fontSize:10, marginTop:2 }}>{activeModel ? activeModel.name : (lang==='ar' ? 'حدد الموديل المناسب' : 'Choisissez la référence qui vous convient')}</div>
+                </div>
+              </div>
+              {activeModel && <div style={{ fontSize:10, fontWeight:800, color:selectedModelOutOfStock ? '#fca5a5' : '#86efac' }}>{selectedModelOutOfStock ? 'Rupture de stock' : modelStock !== null && Number.isFinite(modelStock) ? `${modelStock} en stock` : 'Disponible'}</div>}
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(135px,1fr))', gap:8 }}>
+              {models.map((model, index) => {
+                const name = String(model.name || '').trim()
+                const stock = model.stock !== '' && model.stock !== null && model.stock !== undefined ? Number(model.stock) : null
+                const finite = stock !== null && Number.isFinite(stock)
+                const soldOut = finite && stock <= 0
+                const isSelected = String(selectedModel) === name
+                const modelPrice = model.price !== '' && model.price !== null && model.price !== undefined && Number.isFinite(Number(model.price)) ? Number(model.price) : Number(p.prix || 0)
+                const img = String(model.image || '').trim()
+                return (
+                  <button key={`${name}-${index}`} type="button" disabled={soldOut} onClick={() => {
+                    if (soldOut) return
+                    setSelectedModel(name)
+                    setQty(q => Math.max(1, finite ? Math.min(q, Math.max(1, stock)) : q))
+                    if (img) {
+                      const ix = imgs.findIndex(x => String(x?.url || x) === img)
+                      if (ix >= 0) setImgIdx(ix)
+                    }
+                  }} style={{ textAlign:'left', padding:9, borderRadius:12, border:`1px solid ${isSelected ? '#60a5fa' : soldOut ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.10)'}`, background:isSelected ? 'rgba(96,165,250,.10)' : 'rgba(255,255,255,.02)', color:soldOut ? '#777' : 'var(--g3)', cursor:soldOut ? 'not-allowed' : 'pointer', opacity:soldOut ? .65 : 1, minWidth:0, boxShadow:isSelected ? '0 0 0 2px rgba(96,165,250,.10)' : 'none' }}>
+                    {img ? <img src={img} alt={name} loading="lazy" style={{ width:'100%', height:82, objectFit:'contain', background:'#101010', borderRadius:8, marginBottom:7 }} /> : <div style={{ width:'100%', height:82, display:'grid', placeItems:'center', background:'rgba(255,255,255,.035)', borderRadius:8, marginBottom:7, fontSize:24 }}>⚙️</div>}
+                    <div style={{ fontSize:11, fontWeight:900, overflowWrap:'anywhere' }}>{name}</div>
+                    {model.description && <div style={{ fontSize:9, color:'var(--g4)', marginTop:3, lineHeight:1.35 }}>{model.description}</div>}
+                    <div style={{ fontSize:11, color:'#93c5fd', fontWeight:900, marginTop:5 }}>{fmt(affiliateDiscountPercent > 0 ? Math.max(0, Math.round(modelPrice * (100 - affiliateDiscountPercent) / 100)) : modelPrice)}</div>
+                    {affiliateDiscountPercent > 0 && <div style={{ fontSize:9, color:'var(--g4)', textDecoration:'line-through', marginTop:2 }}>{fmt(modelPrice)}</div>}
+                    <div style={{ fontSize:9, marginTop:3, color:soldOut ? '#fca5a5' : 'var(--g4)', fontWeight:800 }}>{soldOut ? 'Épuisé' : finite ? `${stock} en stock` : 'Disponible'}</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {!selectedModel && <div style={{ marginTop:8, fontSize:10, fontWeight:800, color:'#fca5a5' }}>{lang==='ar' ? 'يرجى اختيار موديل قبل الطلب.' : 'Veuillez choisir un modèle avant de commander.'}</div>}
+
+            {selectedModel && activeModel && !selectedModelOutOfStock && !selectedModelMaxReached && (
+              <div style={{ marginTop:10, padding:'10px', background:'var(--card2)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:8 }}>
+                  <div style={{ color:'var(--g3)', fontSize:11, fontWeight:900 }}>Quantité — {activeModel.name}</div>
+                  <div style={{ color:'#93c5fd', fontSize:12, fontWeight:900 }}>{fmt(displayCurrentPrix)}{affiliateDiscountPercent > 0 && <span style={{ color:'var(--g4)', fontSize:9, textDecoration:'line-through', marginLeft:5 }}>{fmt(activeModelPrice)}</span>}</div>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+                  <button type="button" disabled={qty<=1} onClick={() => setQty(q => Math.max(1, q-1))} style={{ width:42, height:42, borderRadius:10, border:'1px solid rgba(255,255,255,.10)', background:'rgba(255,255,255,.05)', color:qty<=1?'#555':'var(--g3)', fontSize:22, cursor:qty<=1?'not-allowed':'pointer' }}>−</button>
+                  <div style={{ textAlign:'center' }}><div style={{ fontSize:22, fontWeight:900, color:'var(--g3)' }}>{qty}</div><div style={{ fontSize:9, color:'var(--g4)' }}>{qty>1?'unités':'unité'}</div></div>
+                  <button type="button" disabled={remainingModelStock !== null && qty >= remainingModelStock} onClick={() => setQty(q => remainingModelStock !== null ? Math.min(remainingModelStock, q+1) : q+1)} style={{ width:42, height:42, borderRadius:10, border:'1px solid rgba(96,165,250,.25)', background:'rgba(96,165,250,.10)', color:remainingModelStock !== null && qty>=remainingModelStock?'#555':'#93c5fd', fontSize:22, cursor:remainingModelStock !== null && qty>=remainingModelStock?'not-allowed':'pointer' }}>+</button>
+                </div>
+                {remainingModelStock !== null && <div style={{ textAlign:'center', fontSize:9, color:'var(--g4)', marginTop:5 }}>{remainingModelStock} disponible(s) restant(s) à ajouter</div>}
+                <button type="button" disabled={selectedModelOutOfStock || selectedModelMaxReached || (remainingModelStock !== null && qty>remainingModelStock)} onClick={handleAddCurrentModelToOrder} style={{ width:'100%', marginTop:9, padding:'13px 12px', background:selectedModelOutOfStock || selectedModelMaxReached ? '#222' : 'linear-gradient(135deg,#60a5fa,#93c5fd)', border:'none', borderRadius:12, color:selectedModelOutOfStock || selectedModelMaxReached ? '#666' : '#07101d', fontSize:13, fontWeight:900, cursor:selectedModelOutOfStock || selectedModelMaxReached ? 'not-allowed' : 'pointer' }}>🛒 Ajouter {activeModel.name} ×{qty} à la commande</button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 🎨 Couleurs du produit — optionnelles et configurables depuis l'admin */}
         {hasColors && (
@@ -855,7 +1076,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
         </div>
 
         {/* 🔥 Barre de progression stock — urgence */}
-        {p.stock_initial > 0 && p.stock !== null && p.stock !== undefined && (() => {
+        {!hasModels && p.stock_initial > 0 && p.stock !== null && p.stock !== undefined && (() => {
           const vendus = Math.max(0, p.stock_initial - p.stock)
           const pct = Math.min(100, Math.round((vendus / p.stock_initial) * 100))
           if (vendus <= 0) return null
@@ -1412,6 +1633,30 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
             tabIndex={-1} autoComplete="off"
           />
 
+          {/* ── Mini-panier des modèles ── */}
+          {hasModels && (
+            <div style={{ marginBottom:10 }}>
+              {modelOrderItems.length > 0 ? (
+                <div style={{ background:'rgba(96,165,250,.07)', border:'1px solid rgba(96,165,250,.22)', borderRadius:12, padding:'10px 12px', marginBottom:9 }}>
+                  <div style={{ fontSize:10, fontWeight:900, color:'#93c5fd', marginBottom:7, display:'flex', justifyContent:'space-between', gap:8 }}>
+                    <span>🛒 Modèles sélectionnés</span>
+                    <span style={{ color:'var(--g4)' }}>{modelOrderItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)} article(s)</span>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                    {modelOrderItems.map((item, index) => {
+                      const modelName = item.model || item.modele || 'Modèle'
+                      return <div key={`${normalizeModelName(modelName)}-${index}`} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, fontSize:12 }}>
+                        <span style={{ color:'var(--g3)', minWidth:0, overflow:'hidden', textOverflow:'ellipsis' }}>⚙️ {modelName} <strong style={{ color:'#93c5fd' }}>×{item.qty}</strong> <span style={{ color:'var(--g4)' }}>· {fmt(affiliateDiscountPercent > 0 ? Math.max(0, Math.round(Number(item.prix||0)*Number(item.qty||0)*(100-affiliateDiscountPercent)/100)) : Number(item.prix||0)*Number(item.qty||0))}</span></span>
+                        <button type="button" onClick={() => removeModelOrderItem(modelName)} style={{ border:'none', background:'transparent', color:'#fca5a5', cursor:'pointer', fontWeight:900, padding:'2px 5px' }} aria-label={`Retirer ${modelName}`}>✕</button>
+                      </div>
+                    })}
+                  </div>
+                  <div style={{ marginTop:7, fontSize:10, color:'var(--g4)', lineHeight:1.4 }}>Les modèles seront envoyés ensemble dans une seule commande, avec leurs prix et leurs stocks séparés.</div>
+                </div>
+              ) : <div style={{ marginTop:6, fontSize:10, color:'var(--g4)', textAlign:'center', lineHeight:1.4 }}>Choisis un modèle et sa quantité, puis ajoute-le. Tu peux ajouter plusieurs modèles à la même commande.</div>}
+            </div>
+          )}
+
           {/* ── Mini-panier des couleurs ── */}
           {hasColors && (
             <div style={{ marginBottom:10 }}>
@@ -1484,6 +1729,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
               {ordering ? '⏳ Envoi en cours…'
                 : displayOutOfStock ? '🚫 Épuisé'
                 : hasBundles && selectedBundle===null ? '⬆️ Choisir une offre ci-dessus'
+                : hasModels && modelOrderItems.length > 0 && selectedModel === null ? '✅ Confirmer les modèles sélectionnés'
                 : hasColors && colorOrderItems.length > 0 && selectedColor === null ? '✅ Confirmer les couleurs sélectionnées'
                 : '🛒 Confirmer la commande'}
             </span>
@@ -1691,7 +1937,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
             : ordering
               ? '⏳ Envoi…'
               : canOrder
-                ? (hasColors && colorOrderItems.length > 0 && selectedColor === null ? '✅ Confirmer les couleurs' : '✅ Confirmer la commande')
+                ? (hasModels && modelOrderItems.length > 0 && selectedModel === null ? '✅ Confirmer les modèles' : hasColors && colorOrderItems.length > 0 && selectedColor === null ? '✅ Confirmer les couleurs' : '✅ Confirmer la commande')
                 : '🛒 Commander maintenant'}
         </button>
       </div>
