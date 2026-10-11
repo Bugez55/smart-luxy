@@ -1432,7 +1432,6 @@ function ImageOptimizer({ products, supabase }) {
   )
 }
 
-
 function HomeHeroManager({ onToast }) {
   const [currentUrl, setCurrentUrl] = useState('')
   const [currentType, setCurrentType] = useState('')
@@ -1868,7 +1867,7 @@ export default function AdminPanel({ onLogout, onToast }) {
             </tr>
             ${items.map((it, i) => `
               <tr style="background:${i%2?'#f5f5f5':'white'}">
-                <td style="padding:7px; border-bottom:1px solid #eee;">${escapeHtml(it.nom)}</td>
+                <td style="padding:7px; border-bottom:1px solid #eee;">${escapeHtml(it.nom)}${it.model || it.modele ? `<br><small style="color:#2563eb">Modèle : ${escapeHtml(it.model || it.modele)}</small>` : ''}${it.color || it.couleur ? `<br><small style="color:#805f12">Couleur : ${escapeHtml(it.color || it.couleur)}</small>` : ''}</td>
                 <td style="padding:7px; text-align:center; border-bottom:1px solid #eee;">×${escapeHtml(String(it.qty))}</td>
                 <td style="padding:7px; text-align:right; border-bottom:1px solid #eee; font-weight:700;">${(it.prix * it.qty).toLocaleString()} DA</td>
               </tr>
@@ -2101,7 +2100,7 @@ export default function AdminPanel({ onLogout, onToast }) {
         'Commune':          o.commune,
         'Adresse':          o.adresse || '',
         'Mode livraison':   o.mode_livraison === 'bureau' ? 'Bureau' : 'Domicile',
-        'Articles':         items.map(i => `${i.nom} x${i.qty}`).join(' | '),
+        'Articles':         items.map(i => `${i.nom}${i.model || i.modele ? ` [Modèle: ${i.model || i.modele}]` : ''}${i.color || i.couleur ? ` [Couleur: ${i.color || i.couleur}]` : ''} x${i.qty}`).join(' | '),
         'Sous-total (DA)':  items.reduce((s,i) => s + Number(i.prix)*i.qty, 0),
         'Frais liv. (DA)':  o.frais_livraison || 0,
         'Total (DA)':       o.total,
@@ -2504,7 +2503,12 @@ export default function AdminPanel({ onLogout, onToast }) {
                         <strong style={{color:'white', fontSize:12, textTransform:'uppercase', letterSpacing:'.05em'}}>Articles</strong>
                         {items.map((item, i) => (
                           <div key={i} style={{display:'flex', justifyContent:'space-between', marginTop:6}}>
-                            <span>{item.nom} <span style={{color:'#555'}}>×{item.qty}</span></span>
+                            <span>
+                              {item.nom}{' '}
+                              {(item.model || item.modele) && <span style={{display:'block',fontSize:10,color:'#93c5fd',marginTop:2}}>⚙️ Modèle : {item.model || item.modele}</span>}
+                              {(item.color || item.couleur) && <span style={{display:'block',fontSize:10,color:'#E9C46A',marginTop:2}}>🎨 {item.color || item.couleur}</span>}
+                              <span style={{color:'#555'}}>×{item.qty}</span>
+                            </span>
                             <span style={{color:'var(--br)'}}>{fmt(Number(item.prix)*item.qty)}</span>
                           </div>
                         ))}
@@ -2726,12 +2730,11 @@ export default function AdminPanel({ onLogout, onToast }) {
         )}
 
         {/* ── INFLUENCEURS TAB ── */}
+        {tab === 'hero' && <HomeHeroManager onToast={onToast} />}
+
         {tab === 'affiliate' && (
           <AffiliateManager products={products} onToast={onToast} />
         )}
-
-        {/* ── HERO MEDIA TAB ── */}
-        {tab === 'hero' && <HomeHeroManager onToast={onToast} />}
 
         {/* ── BANNIÈRE TAB ── */}
         {tab === 'banner' && (
