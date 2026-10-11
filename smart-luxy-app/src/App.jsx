@@ -416,7 +416,21 @@ export default function App() {
           hint: error?.hint,
           code: error?.code,
         })
-        toast('❌ Commande non enregistrée. Vérifie les informations et réessaie.', 'error')
+        const diagnosticMessage = [
+          error?.message,
+          error?.details,
+          error?.hint,
+          error?.code ? `Code: ${error.code}` : null,
+        ].filter(Boolean).join(' | ').slice(0, 420)
+
+        // Diagnostic temporaire pour identifier l'erreur SQL réelle.
+        // À retirer après le test, une fois le problème corrigé.
+        toast(
+          diagnosticMessage
+            ? `❌ Erreur commande : ${diagnosticMessage}`
+            : '❌ Commande non enregistrée. Aucun détail Supabase disponible.',
+          'error'
+        )
         return false
       }
 
@@ -460,7 +474,10 @@ export default function App() {
       return true
     } catch (e) {
       console.error('Erreur soumission commande:', e)
-      toast('❌ Une erreur est survenue. Vérifie tes informations et réessaie.', 'error')
+      toast(
+        `❌ Erreur commande : ${String(e?.message || e || 'erreur inconnue').slice(0, 420)}`,
+        'error'
+      )
       return false
     }
   }
