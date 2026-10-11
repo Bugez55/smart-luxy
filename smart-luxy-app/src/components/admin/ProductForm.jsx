@@ -42,6 +42,14 @@ export default function ProductForm({ product, onClose, onSave }) {
       ...c,
       stock: c?.stock !== undefined && c?.stock !== null ? String(c.stock) : '',
     })) : [],
+    show_models:   product?.show_models === true,
+    models:        product?.models ? (typeof product.models === 'string' ? JSON.parse(product.models) : product.models).map(m => ({
+      ...m,
+      price: m?.price !== undefined && m?.price !== null ? String(m.price) : '',
+      stock: m?.stock !== undefined && m?.stock !== null ? String(m.stock) : '',
+      description: m?.description || '',
+      image: m?.image || '',
+    })) : [],
   })
 
   const [newSpec, setNewSpec] = useState('')
@@ -554,6 +562,14 @@ export default function ProductForm({ product, onClose, onSave }) {
         Array.isArray(form.colors) && form.colors.length > 0
           ? form.colors
           : [],
+      show_models: Boolean(form.show_models),
+      models: Array.isArray(form.models) ? form.models.map(model => ({
+        name: String(model.name || '').trim(),
+        description: String(model.description || '').trim(),
+        price: model.price !== '' && model.price !== null && model.price !== undefined ? Number(model.price) : null,
+        stock: model.stock !== '' && model.stock !== null && model.stock !== undefined ? Math.max(0, Math.floor(Number(model.stock))) : '',
+        image: String(model.image || '').trim(),
+      })).filter(model => model.name) : [],
     })
   }
 
@@ -570,6 +586,12 @@ export default function ProductForm({ product, onClose, onSave }) {
         : stockNum <= 5
           ? 'bas'
           : 'ok'
+
+  const modelPhotoOptions = Array.from(new Set([
+    ...(Array.isArray(form.images) ? form.images : []).map(x => typeof x === 'string' ? x : x?.url),
+    ...(Array.isArray(form.images_gallery) ? form.images_gallery : []).map(x => typeof x === 'string' ? x : x?.url),
+    form.img,
+  ].map(x => String(x || '').trim()).filter(Boolean)))
 
   return (
     <div
@@ -1268,6 +1290,134 @@ export default function ProductForm({ product, onClose, onSave }) {
             </div>
           </div>
 
+          {/* ── MODÈLES / VARIANTES DU PRODUIT ── */}
+          <div
+            className="pf-section"
+            style={{ border:'1px solid rgba(96,165,250,.22)', borderRadius:14 }}
+          >
+            <h3>⚙️ Modèles disponibles</h3>
+            <div style={{
+              display:'flex', alignItems:'center', justifyContent:'space-between', gap:12,
+              padding:'10px 12px', marginBottom:14, borderRadius:10,
+              background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)',
+            }}>
+              <div>
+                <div style={{ color:'white', fontSize:13, fontWeight:800 }}>Afficher les modèles sur le site</div>
+                <div style={{ color:'rgba(255,255,255,.38)', fontSize:10, marginTop:3, lineHeight:1.45 }}>
+                  Chaque modèle peut avoir son prix, son stock, sa description et sa photo. Le stock général devient la somme des stocks modèles si tous sont renseignés.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm(f => {
+                  const next = !f.show_models
+                  return { ...f, show_models: next, show_colors: next ? false : f.show_colors }
+                })}
+                aria-pressed={form.show_models}
+                style={{
+                  flexShrink:0, border:`1px solid ${form.show_models ? 'rgba(96,165,250,.5)' : 'rgba(255,255,255,.12)'}`,
+                  background:form.show_models ? 'rgba(96,165,250,.14)' : 'rgba(255,255,255,.05)',
+                  color:form.show_models ? '#93c5fd' : 'rgba(255,255,255,.55)',
+                  borderRadius:999, padding:'7px 12px', fontSize:11, fontWeight:900, cursor:'pointer',
+                }}
+              >{form.show_models ? '✓ Activé' : 'Désactivé'}</button>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(120px,1fr) minmax(120px,1fr)', gap:8, marginBottom:8 }}>
+              <div className="form-field" style={{ margin:0 }}>
+                <label>Nom du modèle</label>
+                <input id="pf-model-name" placeholder="Ex : HTND-500VA" />
+              </div>
+              <div className="form-field" style={{ margin:0 }}>
+                <label>Description / puissance</label>
+                <input id="pf-model-description" placeholder="Ex : 500 VA · environ 400 W" />
+              </div>
+              <div className="form-field" style={{ margin:0 }}>
+                <label>Prix du modèle (DA)</label>
+                <input id="pf-model-price" type="number" min="0" step="1" placeholder={`Vide = ${Number(form.prix || 0).toLocaleString('fr-DZ')} DA`} />
+              </div>
+              <div className="form-field" style={{ margin:0 }}>
+                <label>Stock du modèle</label>
+                <input id="pf-model-stock" type="number" min="0" step="1" placeholder="Ex : 8" />
+              </div>
+              <div className="form-field" style={{ margin:0, gridColumn:'1 / -1' }}>
+                <label>Photo associée (facultatif)</label>
+                <select id="pf-model-image" defaultValue="" style={{ width:'100%', height:42, background:'var(--card)', color:'var(--g3)', border:'1px solid var(--brd)', borderRadius:8, padding:'7px 10px' }}>
+                  <option value="">Utiliser la photo principale du produit</option>
+                  {modelPhotoOptions.map((url, i) => <option key={`${i}-${url}`} value={url}>Photo {i + 1}</option>)}
+                </select>
+                <div style={{ color:'rgba(255,255,255,.28)', fontSize:9, marginTop:4 }}>Les photos proviennent des images déjà ajoutées à la galerie du produit.</div>
+              </div>
+              <button
+                type="button"
+                className="act-btn"
+                style={{ minHeight:40, gridColumn:'1 / -1' }}
+                onClick={() => {
+                  const nameEl = document.getElementById('pf-model-name')
+                  const descEl = document.getElementById('pf-model-description')
+                  const priceEl = document.getElementById('pf-model-price')
+                  const stockEl = document.getElementById('pf-model-stock')
+                  const imageEl = document.getElementById('pf-model-image')
+                  const name = nameEl?.value.trim() || ''
+                  const description = descEl?.value.trim() || ''
+                  const priceRaw = priceEl?.value ?? ''
+                  const stockRaw = stockEl?.value ?? ''
+                  if (!name) { nameEl?.focus(); return }
+                  if (priceRaw !== '' && (!Number.isFinite(Number(priceRaw)) || Number(priceRaw) < 0)) { priceEl?.focus(); return }
+                  if (stockRaw !== '' && (!Number.isFinite(Number(stockRaw)) || Number(stockRaw) < 0)) { stockEl?.focus(); return }
+                  if ((form.models || []).some(m => String(m.name || '').trim().toLowerCase() === name.toLowerCase())) { nameEl?.focus(); return }
+                  set('models', [...(form.models || []), {
+                    name, description,
+                    price: priceRaw === '' ? '' : String(Number(priceRaw)),
+                    stock: stockRaw === '' ? '' : String(Math.floor(Number(stockRaw))),
+                    image: imageEl?.value || '',
+                  }])
+                  if (nameEl) nameEl.value = ''
+                  if (descEl) descEl.value = ''
+                  if (priceEl) priceEl.value = ''
+                  if (stockEl) stockEl.value = ''
+                  if (imageEl) imageEl.value = ''
+                }}
+              >＋ Ajouter ce modèle</button>
+            </div>
+
+            {form.models?.length > 0 ? (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {form.models.map((model, index) => (
+                  <div key={`${model.name}-${index}`} style={{ padding:10, border:'1px solid rgba(255,255,255,.08)', background:'rgba(255,255,255,.025)', borderRadius:11 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+                      {model.image ? <img src={model.image} alt="" style={{ width:52, height:52, borderRadius:8, objectFit:'contain', background:'#111', flexShrink:0 }} /> : <div style={{ width:52, height:52, borderRadius:8, background:'rgba(255,255,255,.05)', display:'grid', placeItems:'center', fontSize:24 }}>⚙️</div>}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ color:'white', fontSize:12, fontWeight:900, overflowWrap:'anywhere' }}>{model.name}</div>
+                        {model.description && <div style={{ color:'rgba(255,255,255,.42)', fontSize:10, marginTop:2 }}>{model.description}</div>}
+                      </div>
+                      <button type="button" aria-label={`Supprimer le modèle ${model.name}`} onClick={() => set('models', form.models.filter((_, i) => i !== index))} style={{ border:'1px solid rgba(239,68,68,.2)', background:'rgba(239,68,68,.08)', color:'#fca5a5', borderRadius:8, padding:'6px 9px', cursor:'pointer', fontSize:12, fontWeight:900 }}>🗑</button>
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                      <div className="form-field" style={{ margin:0 }}>
+                        <label style={{ fontSize:9 }}>Prix (DA) — vide = prix produit</label>
+                        <input type="number" min="0" step="1" value={model.price ?? ''} onChange={e => { const next=[...form.models]; next[index]={...next[index],price:e.target.value}; set('models',next) }} style={{ width:'100%', height:36, boxSizing:'border-box' }} />
+                      </div>
+                      <div className="form-field" style={{ margin:0 }}>
+                        <label style={{ fontSize:9 }}>Stock</label>
+                        <input type="number" min="0" step="1" value={model.stock ?? ''} onChange={e => { const next=[...form.models]; next[index]={...next[index],stock:e.target.value === '' ? '' : String(Math.max(0,Math.floor(Number(e.target.value))))}; set('models',next) }} style={{ width:'100%', height:36, boxSizing:'border-box' }} />
+                      </div>
+                      <div className="form-field" style={{ margin:0, gridColumn:'1 / -1' }}>
+                        <label style={{ fontSize:9 }}>Photo</label>
+                        <select value={model.image || ''} onChange={e => { const next=[...form.models]; next[index]={...next[index],image:e.target.value}; set('models',next) }} style={{ width:'100%', height:36, background:'var(--card)', color:'var(--g3)', border:'1px solid var(--brd)', borderRadius:8, padding:'5px 8px' }}>
+                          <option value="">Photo principale</option>
+                          {modelPhotoOptions.map((url, i) => <option key={`${i}-${url}`} value={url}>Photo {i + 1}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding:'12px 10px', color:'rgba(255,255,255,.3)', fontSize:11, textAlign:'center', border:'1px dashed rgba(255,255,255,.1)', borderRadius:10 }}>Aucun modèle ajouté pour ce produit.</div>
+            )}
+          </div>
+
           {/* ── COULEURS DU PRODUIT ── */}
           <div
             className="pf-section"
@@ -1300,7 +1450,10 @@ export default function ProductForm({ product, onClose, onSave }) {
 
               <button
                 type="button"
-                onClick={() => set('show_colors', !form.show_colors)}
+                onClick={() => setForm(f => {
+                  const next = !f.show_colors
+                  return { ...f, show_colors: next, show_models: next ? false : f.show_models }
+                })}
                 aria-pressed={form.show_colors}
                 style={{
                   flexShrink:0,
