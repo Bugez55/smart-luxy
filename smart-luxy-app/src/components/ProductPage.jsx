@@ -368,7 +368,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     selectionNoticeTimerRef.current = window.setTimeout(() => {
       setSelectionNotice(null)
       selectionNoticeTimerRef.current = null
-    }, 3200)
+    }, 2100)
   }
 
   useEffect(() => () => {
@@ -719,51 +719,49 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
           role="status"
           aria-live="polite"
           style={{
-            position:'fixed',
-            top:'calc(env(safe-area-inset-top, 0px) + 12px)',
-            left:12,
-            right:12,
-            zIndex:10000,
-            display:'flex',
-            alignItems:'center',
-            gap:11,
-            padding:'12px 14px',
-            borderRadius:15,
-            background:'linear-gradient(135deg, rgba(12,32,22,.97), rgba(18,24,24,.97))',
-            border:'1px solid rgba(74,222,128,.42)',
-            boxShadow:'0 12px 32px rgba(0,0,0,.38)',
-            color:'#f3f4f6',
-            direction:rtl ? 'rtl' : 'ltr',
-            textAlign:rtl ? 'right' : 'left',
-            animation:'ppVariantToastIn .22s ease-out',
-            backdropFilter:'blur(12px)',
-            WebkitBackdropFilter:'blur(12px)',
+            position: 'fixed',
+            top: 'calc(env(safe-area-inset-top, 0px) + 8px)',
+            left: 10,
+            right: 10,
+            zIndex: 10000,
+            minHeight: 38,
+            boxSizing: 'border-box',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 9,
+            padding: '7px 11px',
+            borderRadius: 10,
+            background: 'rgba(15, 24, 19, .97)',
+            border: '1px solid rgba(74, 222, 128, .38)',
+            boxShadow: '0 5px 16px rgba(0,0,0,.23)',
+            color: '#f3f4f6',
+            direction: rtl ? 'rtl' : 'ltr',
+            textAlign: rtl ? 'right' : 'left',
+            fontSize: 12,
+            pointerEvents: 'none',
+            animation: 'ppVariantToastIn .16s ease-out',
           }}
         >
-          <span style={{ width:32, height:32, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:11, background:'rgba(74,222,128,.16)', color:'#86efac', fontSize:18, fontWeight:900 }}>✓</span>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ color:'#86efac', fontSize:12, fontWeight:900, marginBottom:3 }}>
-              {lang === 'ar' ? 'تمت الإضافة إلى اختيارك' : 'Ajouté à votre sélection'}
-            </div>
-            <div style={{ fontSize:13, fontWeight:900, overflowWrap:'anywhere' }}>
-              {selectionNotice.name} ×{selectionNotice.addedQty}
-            </div>
-            <div style={{ color:'#d1d5db', fontSize:10, lineHeight:1.45, marginTop:3 }}>
-              {lang === 'ar'
-                ? `الكمية من هذا ${selectionNotice.kind === 'model' ? 'النموذج' : 'اللون'}: ${selectionNotice.variantTotal} · إجمالي القطع المختارة: ${selectionNotice.totalItems}`
-                : `Total pour ce ${selectionNotice.kind === 'model' ? 'modèle' : 'coloris'} : ×${selectionNotice.variantTotal} · Total sélectionné : ${selectionNotice.totalItems} article${selectionNotice.totalItems > 1 ? 's' : ''}`}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (selectionNoticeTimerRef.current) window.clearTimeout(selectionNoticeTimerRef.current)
-              selectionNoticeTimerRef.current = null
-              setSelectionNotice(null)
+          <span
+            style={{
+              flexShrink: 0,
+              borderRadius: 7,
+              padding: '4px 7px',
+              background: 'rgba(74,222,128,.15)',
+              color: '#86efac',
+              fontWeight: 900,
+              fontSize: 12,
+              lineHeight: 1,
             }}
-            aria-label={lang === 'ar' ? 'إغلاق الإشعار' : 'Fermer la notification'}
-            style={{ flexShrink:0, border:0, background:'transparent', color:'#d1d5db', cursor:'pointer', padding:'4px 2px', fontSize:18, lineHeight:1 }}
-          >×</button>
+          >
+            +{selectionNotice.addedQty}
+          </span>
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800 }}>
+            {selectionNotice.name} {lang === 'ar' ? 'تمت إضافته' : 'ajouté'}
+          </span>
+          <span style={{ flexShrink: 0, color: '#86efac', fontSize: 10, fontWeight: 800 }}>
+            ✓
+          </span>
         </div>
       )}
 
