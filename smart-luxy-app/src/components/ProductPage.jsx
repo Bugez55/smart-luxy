@@ -47,6 +47,8 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
   // Mini-panier local des modèles : HTND-500VA ×1 + HTND-2000VA ×2.
   const [selectedModel, setSelectedModel] = useState(null)
   const [modelOrderItems, setModelOrderItems] = useState([])
+  const [selectionNotice, setSelectionNotice] = useState(null)
+  const selectionNoticeTimerRef = useRef(null)
   const [form, setForm] = useState({ nom:'', tel:'', wilaya:'', commune:'', adresse:'', note:'', website:'' })
   const [modeLiv, setModeLiv] = useState('domicile')
   const [modePaiement, setModePaiement] = useState('livraison')
@@ -349,6 +351,32 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     }
   }
 
+  function showVariantAddedNotice({ kind, name, addedQty, variantTotal, totalItems }) {
+    if (selectionNoticeTimerRef.current) {
+      window.clearTimeout(selectionNoticeTimerRef.current)
+    }
+
+    setSelectionNotice({
+      kind,
+      name: String(name || '').trim(),
+      addedQty: Number(addedQty) || 0,
+      variantTotal: Number(variantTotal) || 0,
+      totalItems: Number(totalItems) || 0,
+      id: Date.now(),
+    })
+
+    selectionNoticeTimerRef.current = window.setTimeout(() => {
+      setSelectionNotice(null)
+      selectionNoticeTimerRef.current = null
+    }, 3200)
+  }
+
+  useEffect(() => () => {
+    if (selectionNoticeTimerRef.current) {
+      window.clearTimeout(selectionNoticeTimerRef.current)
+    }
+  }, [])
+
   function normalizeModelName(value) {
     return String(value || '').trim().toLowerCase()
   }
@@ -396,6 +424,15 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
       }
       return [...prev, variantItem]
     })
+    const selectedBefore = modelOrderItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+    showVariantAddedNotice({
+      kind: 'model',
+      name: modelName,
+      addedQty: wantedQty,
+      variantTotal: alreadyQty + wantedQty,
+      totalItems: selectedBefore + wantedQty,
+    })
+
     setSelectedModel(null)
     setQty(1)
   }
@@ -467,6 +504,15 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
           couleur: colorName,
         },
       ]
+    })
+
+    const selectedBefore = colorOrderItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+    showVariantAddedNotice({
+      kind: 'color',
+      name: colorName,
+      addedQty: wantedQty,
+      variantTotal: alreadyQty + wantedQty,
+      totalItems: selectedBefore + wantedQty,
     })
 
     // Prépare immédiatement la prochaine couleur.
@@ -666,6 +712,60 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
 
   return (
     <div className={`pp-root ${checkoutOnly ? 'checkout-only' : ''}`} data-product-id={p.id} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:checkoutOnly ? 420 : 300, background:'var(--bk, #0a0a0a)', overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
+
+      {selectionNotice && (
+        <div
+          key={selectionNotice.id}
+          role="status"
+          aria-live="polite"
+          style={{
+            position:'fixed',
+            top:'calc(env(safe-area-inset-top, 0px) + 12px)',
+            left:12,
+            right:12,
+            zIndex:10000,
+            display:'flex',
+            alignItems:'center',
+            gap:11,
+            padding:'12px 14px',
+            borderRadius:15,
+            background:'linear-gradient(135deg, rgba(12,32,22,.97), rgba(18,24,24,.97))',
+            border:'1px solid rgba(74,222,128,.42)',
+            boxShadow:'0 12px 32px rgba(0,0,0,.38)',
+            color:'#f3f4f6',
+            direction:rtl ? 'rtl' : 'ltr',
+            textAlign:rtl ? 'right' : 'left',
+            animation:'ppVariantToastIn .22s ease-out',
+            backdropFilter:'blur(12px)',
+            WebkitBackdropFilter:'blur(12px)',
+          }}
+        >
+          <span style={{ width:32, height:32, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:11, background:'rgba(74,222,128,.16)', color:'#86efac', fontSize:18, fontWeight:900 }}>✓</span>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ color:'#86efac', fontSize:12, fontWeight:900, marginBottom:3 }}>
+              {lang === 'ar' ? 'تمت الإضافة إلى اختيارك' : 'Ajouté à votre sélection'}
+            </div>
+            <div style={{ fontSize:13, fontWeight:900, overflowWrap:'anywhere' }}>
+              {selectionNotice.name} ×{selectionNotice.addedQty}
+            </div>
+            <div style={{ color:'#d1d5db', fontSize:10, lineHeight:1.45, marginTop:3 }}>
+              {lang === 'ar'
+                ? `الكمية من هذا ${selectionNotice.kind === 'model' ? 'النموذج' : 'اللون'}: ${selectionNotice.variantTotal} · إجمالي القطع المختارة: ${selectionNotice.totalItems}`
+                : `Total pour ce ${selectionNotice.kind === 'model' ? 'modèle' : 'coloris'} : ×${selectionNotice.variantTotal} · Total sélectionné : ${selectionNotice.totalItems} article${selectionNotice.totalItems > 1 ? 's' : ''}`}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (selectionNoticeTimerRef.current) window.clearTimeout(selectionNoticeTimerRef.current)
+              selectionNoticeTimerRef.current = null
+              setSelectionNotice(null)
+            }}
+            aria-label={lang === 'ar' ? 'إغلاق الإشعار' : 'Fermer la notification'}
+            style={{ flexShrink:0, border:0, background:'transparent', color:'#d1d5db', cursor:'pointer', padding:'4px 2px', fontSize:18, lineHeight:1 }}
+          >×</button>
+        </div>
+      )}
 
       {/* ── Header sticky ── */}
       <div style={{ position:'sticky', top:0, zIndex:10, background:'rgba(8,8,8,.90)', backdropFilter:'blur(24px) saturate(150%)', WebkitBackdropFilter:'blur(24px) saturate(150%)', borderBottom:'1px solid rgba(201,168,76,.18)', boxShadow:'0 10px 30px rgba(0,0,0,.18)', display:'flex', alignItems:'center', gap:10, padding:'12px 16px' }}>
@@ -1961,6 +2061,10 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
       )}
 
       <style>{`
+        @keyframes ppVariantToastIn {
+          from { opacity:0; transform:translateY(-10px) scale(.985); }
+          to { opacity:1; transform:translateY(0) scale(1); }
+        }
 
         .pp-page{width:min(1180px,100%);margin:0 auto;background:linear-gradient(180deg,rgba(255,255,255,.018),transparent 24%);border-left:1px solid rgba(255,255,255,.025);border-right:1px solid rgba(255,255,255,.025)}
         .pp-media{overflow:hidden;box-shadow:inset 0 -40px 50px rgba(0,0,0,.2)}
