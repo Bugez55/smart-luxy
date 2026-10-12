@@ -381,6 +381,15 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     return String(value || '').trim().toLowerCase()
   }
 
+  // Quantité déjà ajoutée pour chaque modèle : affichée comme un badge
+  // persistant sur sa carte, même après disparition de la mini-notification.
+  function getModelAddedQty(modelName) {
+    const key = normalizeModelName(modelName)
+    return modelOrderItems.reduce((sum, item) =>
+      sum + (normalizeModelName(item.model || item.modele) === key ? Number(item.qty) || 0 : 0), 0
+    )
+  }
+
   function currentModelAlreadyQty() {
     if (!hasModels || !selectedModel) return 0
     const key = normalizeModelName(selectedModel)
@@ -444,6 +453,14 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
 
   function normalizeColorName(value) {
     return String(value || '').trim().toLowerCase()
+  }
+
+  // Même principe pour les couleurs : le nombre reste visible dans sa pastille.
+  function getColorAddedQty(colorName) {
+    const key = normalizeColorName(colorName)
+    return colorOrderItems.reduce((sum, item) =>
+      sum + (normalizeColorName(item.color || item.couleur) === key ? Number(item.qty) || 0 : 0), 0
+    )
   }
 
   function currentColorAlreadyQty() {
@@ -968,6 +985,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
                 const isSelected = String(selectedModel) === name
                 const modelPrice = model.price !== '' && model.price !== null && model.price !== undefined && Number.isFinite(Number(model.price)) ? Number(model.price) : Number(p.prix || 0)
                 const img = String(model.image || '').trim()
+                const addedQty = getModelAddedQty(name)
                 return (
                   <button key={`${name}-${index}`} type="button" disabled={soldOut} onClick={() => {
                     if (soldOut) return
@@ -978,7 +996,22 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
                       if (ix >= 0) setImgIdx(ix)
                     }
                   }} style={{ textAlign:'left', padding:9, borderRadius:12, border:`1px solid ${isSelected ? '#60a5fa' : soldOut ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.10)'}`, background:isSelected ? 'rgba(96,165,250,.10)' : 'rgba(255,255,255,.02)', color:soldOut ? '#777' : 'var(--g3)', cursor:soldOut ? 'not-allowed' : 'pointer', opacity:soldOut ? .65 : 1, minWidth:0, boxShadow:isSelected ? '0 0 0 2px rgba(96,165,250,.10)' : 'none' }}>
-                    {img ? <img src={img} alt={name} loading="lazy" style={{ width:'100%', height:82, objectFit:'contain', background:'#101010', borderRadius:8, marginBottom:7 }} /> : <div style={{ width:'100%', height:82, display:'grid', placeItems:'center', background:'rgba(255,255,255,.035)', borderRadius:8, marginBottom:7, fontSize:24 }}>⚙️</div>}
+                    <div style={{ position:'relative', width:'100%', height:82, marginBottom:7, borderRadius:8, overflow:'hidden', background:'#101010', display:'grid', placeItems:'center' }}>
+                      {img
+                        ? <img src={img} alt={name} loading="lazy" draggable={false} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }} />
+                        : <span style={{ fontSize:24 }}>⚙️</span>}
+                      {addedQty > 0 && (
+                        <span style={{
+                          position:'absolute', top:5, right:5, zIndex:2,
+                          display:'inline-flex', alignItems:'center', justifyContent:'center',
+                          minWidth:27, height:25, padding:'0 7px', boxSizing:'border-box',
+                          borderRadius:8, background:'rgba(7,16,29,.94)',
+                          border:'1px solid rgba(147,197,253,.72)',
+                          color:'#bfdbfe', fontSize:12, lineHeight:1, fontWeight:1000,
+                          boxShadow:'0 2px 7px rgba(0,0,0,.28)',
+                        }}>+{addedQty}</span>
+                      )}
+                    </div>
                     <div style={{ fontSize:11, fontWeight:900, overflowWrap:'anywhere' }}>{name}</div>
                     {model.description && <div style={{ fontSize:9, color:'var(--g4)', marginTop:3, lineHeight:1.35 }}>{model.description}</div>}
                     <div style={{ fontSize:11, color:'#93c5fd', fontWeight:900, marginTop:5 }}>{fmt(affiliateDiscountPercent > 0 ? Math.max(0, Math.round(modelPrice * (100 - affiliateDiscountPercent) / 100)) : modelPrice)}</div>
@@ -1042,6 +1075,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
                 const hasFiniteStock = stock !== null && Number.isFinite(stock)
                 const soldOut = hasFiniteStock && stock <= 0
                 const isSelected = String(selectedColor) === name
+                const addedQty = getColorAddedQty(name)
                 const hex = /^#[0-9A-Fa-f]{6}$/.test(String(color.hex || '')) ? color.hex : '#888888'
                 return (
                   <button
@@ -1059,7 +1093,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
                     aria-label={`${name}${soldOut ? ' — Rupture de stock' : ''}`}
                     disabled={soldOut}
                     style={{
-                      minWidth:74, padding:'8px 9px 9px', borderRadius:12,
+                      position:'relative', minWidth:74, padding:'8px 9px 9px', borderRadius:12,
                       border:`1px solid ${isSelected ? '#C9A84C' : soldOut ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.11)'}`,
                       background:isSelected ? 'rgba(201,168,76,.10)' : 'rgba(255,255,255,.025)',
                       color:soldOut ? 'rgba(255,255,255,.3)' : 'var(--g3)',
@@ -1069,6 +1103,16 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
                       boxShadow:isSelected ? '0 0 0 2px rgba(201,168,76,.12)' : 'none',
                     }}
                   >
+                    {addedQty > 0 && (
+                      <span style={{
+                        position:'absolute', top:4, right:4, zIndex:2,
+                        display:'inline-flex', alignItems:'center', justifyContent:'center',
+                        minWidth:22, height:19, padding:'0 5px', boxSizing:'border-box',
+                        borderRadius:7, background:'rgba(15,24,19,.97)',
+                        border:'1px solid rgba(74,222,128,.55)', color:'#86efac',
+                        fontSize:10, lineHeight:1, fontWeight:1000,
+                      }}>+{addedQty}</span>
+                    )}
                     <span style={{ position:'relative', display:'block', width:34, height:34, margin:'0 auto 6px', borderRadius:'50%', background:hex, border:'2px solid rgba(255,255,255,.5)', boxShadow:'0 2px 7px rgba(0,0,0,.28)', overflow:'hidden' }}>
                       {soldOut && <span style={{ position:'absolute', left:2, right:2, top:'50%', height:2, background:'#ef4444', transform:'rotate(-45deg)', borderRadius:2 }} />}
                     </span>
