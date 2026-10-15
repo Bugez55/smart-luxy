@@ -184,6 +184,84 @@ const STOREFRONT_THEME_CSS = `
 :root[data-wazyo-preset="midnight"] .pp-root,:root[data-wazyo-preset="midnight"] .pp-page { background:#091321!important; color:#e8f1fb!important; }
 :root[data-wazyo-preset="midnight"] .pp-info,:root[data-wazyo-preset="midnight"] .pp-section,:root[data-wazyo-preset="midnight"] .pp-order-card { background:#122033!important; color:#e8f1fb!important; border-color:#263b54!important; }
 :root[data-wazyo-preset="midnight"] .pp-title,:root[data-wazyo-preset="midnight"] .pp-section-title { color:#e8f1fb!important; }
+
+/* CINEMATIC — layout genuinely different, not just a color palette. */
+:root[data-wazyo-preset="cinematic"] { color-scheme:dark; }
+:root[data-wazyo-preset="cinematic"] body,
+:root[data-wazyo-preset="cinematic"] .app { background:#080a0f!important; color:#f7f4ed!important; font-family:Inter, ui-sans-serif, system-ui, -apple-system, sans-serif!important; }
+:root[data-wazyo-preset="cinematic"] .wz-header,
+:root[data-wazyo-preset="cinematic"] .wz-header--top,
+:root[data-wazyo-preset="cinematic"] .wz-header--scrolled { background:rgba(8,10,15,.86)!important; color:#f7f4ed!important; border-color:rgba(213,183,112,.2)!important; box-shadow:0 10px 35px rgba(0,0,0,.2)!important; backdrop-filter:blur(18px)!important; }
+:root[data-wazyo-preset="cinematic"] .wz-header__hint { color:#c6c2b9!important; }
+:root[data-wazyo-preset="cinematic"] .wz-cart { background:rgba(255,255,255,.07)!important; color:#fff!important; border:1px solid rgba(213,183,112,.35)!important; border-radius:999px!important; box-shadow:none!important; }
+:root[data-wazyo-preset="cinematic"] .wz-cart__count { background:#d5b770!important; color:#111!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero { height:min(900px,94svh)!important; min-height:min(760px,90svh)!important; background:#080a0f!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-media { inset:0!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-image,
+:root[data-wazyo-preset="cinematic"] .wz-hero-video { opacity:.18!important; filter:brightness(.75) saturate(.65)!important; transform:scale(1.07)!important; animation:wzCinemaKenBurns 26s ease-in-out infinite alternate!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-image.is-loaded,
+:root[data-wazyo-preset="cinematic"] .wz-hero-video.is-loaded { opacity:.60!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-overlay { background:linear-gradient(90deg,rgba(5,6,10,.90) 0%,rgba(5,6,10,.56) 40%,rgba(5,6,10,.18) 75%,rgba(5,6,10,.35) 100%),linear-gradient(0deg,#080a0f 0%,rgba(8,10,15,.12) 34%,rgba(8,10,15,.15) 100%)!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-glow { opacity:.18!important; background:radial-gradient(ellipse at 50% 45%,rgba(213,183,112,.28),transparent 58%)!important; animation:wzCinemaGlow 8s ease-in-out infinite alternate!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-inner { justify-content:center!important; width:min(1200px,calc(100% - 36px))!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-content { width:min(920px,100%)!important; margin:0 auto!important; text-align:center!important; padding:64px 0 70px!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-kicker,
+:root[data-wazyo-preset="cinematic"] .wz-hero-actions,
+:root[data-wazyo-preset="cinematic"] .wz-hero-trust,
+:root[data-wazyo-preset="cinematic"] .wz-hero-note { justify-content:center!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-kicker { color:#ded5c1!important; letter-spacing:.24em!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-kicker-line { background:#d5b770!important; box-shadow:0 0 22px rgba(213,183,112,.55)!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-title { max-width:100%!important; font-size:clamp(48px,9.5vw,112px)!important; line-height:.91!important; letter-spacing:-.065em!important; text-shadow:0 14px 48px #0008!important; animation:wzCinemaTitle .9s .08s both!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-title span { color:#e0c783!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-subtitle { margin:28px auto 0!important; max-width:620px!important; color:rgba(248,246,239,.76)!important; font-size:clamp(14px,1.5vw,17px)!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-primary { background:linear-gradient(135deg,#f0d992,#b99146)!important; color:#14120d!important; border:1px solid #efd38c!important; border-radius:999px!important; box-shadow:0 12px 44px rgba(201,168,76,.20)!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-secondary { border:1px solid rgba(255,255,255,.28)!important; background:rgba(255,255,255,.07)!important; color:#fff!important; border-radius:999px!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-trust { color:rgba(255,255,255,.62)!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-trust strong { color:#f0d992!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-note { color:rgba(255,255,255,.42)!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-note-dot { background:#d5b770!important; }
+:root[data-wazyo-preset="cinematic"] .wz-hero-scroll { color:rgba(255,255,255,.56)!important; }
+:root[data-wazyo-preset="cinematic"] .hero:not(.wz-hero) { background:#080a0f!important; color:#f7f4ed!important; }
+:root[data-wazyo-preset="cinematic"] .hero-badge { background:rgba(255,255,255,.045)!important; border:1px solid rgba(213,183,112,.2)!important; color:#f2ede2!important; border-radius:999px!important; }
+:root[data-wazyo-preset="cinematic"] .hero-badge span { color:#bbb2a0!important; }
+:root[data-wazyo-preset="cinematic"] .search-big { background:#11151e!important; border:1px solid rgba(213,183,112,.25)!important; border-radius:16px!important; box-shadow:0 12px 45px #0003!important; color:#f7f4ed!important; }
+:root[data-wazyo-preset="cinematic"] .search-big input { background:transparent!important; color:#fff!important; }
+:root[data-wazyo-preset="cinematic"] .wz-categories-wrap { background:#0b0e14!important; border-block:1px solid rgba(213,183,112,.12)!important; }
+:root[data-wazyo-preset="cinematic"] .wz-categories-label { color:#bcb3a1!important; }
+:root[data-wazyo-preset="cinematic"] .wz-categories-scroll .cat-btn { background:#11151e!important; color:#e9e2d4!important; border:1px solid rgba(255,255,255,.10)!important; border-radius:999px!important; }
+:root[data-wazyo-preset="cinematic"] .wz-categories-scroll .cat-btn.active { background:#d5b770!important; color:#15130e!important; border-color:#d5b770!important; }
+:root[data-wazyo-preset="cinematic"] .wz-products-head { color:#f6f0e4!important; }
+:root[data-wazyo-preset="cinematic"] .wz-products-head h2 { font-size:clamp(26px,4vw,42px)!important; letter-spacing:-.045em!important; }
+:root[data-wazyo-preset="cinematic"] .wz-products-eyebrow { color:#d5b770!important; letter-spacing:.20em!important; }
+:root[data-wazyo-preset="cinematic"] .pgrid { gap:16px!important; }
+:root[data-wazyo-preset="cinematic"] .pcard { background:linear-gradient(160deg,#171a22,#101219)!important; color:#f7f4ed!important; border:1px solid rgba(213,183,112,.18)!important; border-radius:15px!important; box-shadow:0 12px 35px rgba(0,0,0,.18)!important; overflow:hidden!important; animation:wzCinemaCard .65s both!important; }
+:root[data-wazyo-preset="cinematic"] .pcard:nth-child(3n+2) { animation-delay:.08s!important; }
+:root[data-wazyo-preset="cinematic"] .pcard:nth-child(3n) { animation-delay:.16s!important; }
+:root[data-wazyo-preset="cinematic"] .pcard::after { display:none!important; }
+:root[data-wazyo-preset="cinematic"] .pcard-img { background:#0d1017!important; }
+:root[data-wazyo-preset="cinematic"] .pcard-img img { transition:transform .7s cubic-bezier(.2,.7,.3,1),filter .5s ease!important; }
+:root[data-wazyo-preset="cinematic"] .pcard:hover .pcard-img img { transform:scale(1.045)!important; filter:saturate(1.08)!important; }
+:root[data-wazyo-preset="cinematic"] .pcard-body { background:transparent!important; color:#f7f4ed!important; }
+:root[data-wazyo-preset="cinematic"] .pcard-name { color:#f7f4ed!important; }
+:root[data-wazyo-preset="cinematic"] .pcard-prix { color:#e0c783!important; }
+:root[data-wazyo-preset="cinematic"] .pcard-old { color:#a6a29a!important; }
+:root[data-wazyo-preset="cinematic"] .btn-cart { background:rgba(255,255,255,.05)!important; border:1px solid rgba(213,183,112,.28)!important; color:#f7f4ed!important; border-radius:999px!important; }
+:root[data-wazyo-preset="cinematic"] .btn-buy { background:linear-gradient(135deg,#f0d992,#b99146)!important; border:1px solid #d5b770!important; color:#14120d!important; border-radius:999px!important; }
+:root[data-wazyo-preset="cinematic"] .footer { background:#090b10!important; color:#f7f4ed!important; border-color:rgba(213,183,112,.16)!important; }
+:root[data-wazyo-preset="cinematic"] .footer a,:root[data-wazyo-preset="cinematic"] .footer button,:root[data-wazyo-preset="cinematic"] .footer .ftag { color:#e8d7ad!important; }
+:root[data-wazyo-preset="cinematic"] .pp-root,:root[data-wazyo-preset="cinematic"] .pp-page { background:#080a0f!important; color:#f7f4ed!important; }
+:root[data-wazyo-preset="cinematic"] .pp-info,:root[data-wazyo-preset="cinematic"] .pp-section,:root[data-wazyo-preset="cinematic"] .pp-order-card { background:#11151e!important; color:#f7f4ed!important; border:1px solid rgba(213,183,112,.18)!important; border-radius:15px!important; box-shadow:0 14px 42px rgba(0,0,0,.2)!important; }
+:root[data-wazyo-preset="cinematic"] .pp-title,:root[data-wazyo-preset="cinematic"] .pp-form-section-title,:root[data-wazyo-preset="cinematic"] .pp-section-title { color:#f7f4ed!important; }
+:root[data-wazyo-preset="cinematic"] .pp-price,:root[data-wazyo-preset="cinematic"] .pp-discount { color:#e0c783!important; }
+:root[data-wazyo-preset="cinematic"] .pp-root input,:root[data-wazyo-preset="cinematic"] .pp-root select,:root[data-wazyo-preset="cinematic"] .pp-root textarea { background:#090c12!important; color:#f7f4ed!important; border-color:rgba(213,183,112,.22)!important; }
+@keyframes wzCinemaKenBurns { 0% { transform:scale(1.04) translate3d(-.4%,0,0); } 100% { transform:scale(1.15) translate3d(.8%,-.4%,0); } }
+@keyframes wzCinemaGlow { 0% { opacity:.12; transform:scale(.95); } 100% { opacity:.32; transform:scale(1.08); } }
+@keyframes wzCinemaTitle { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+@keyframes wzCinemaCard { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion:reduce) {
+  :root[data-wazyo-preset="cinematic"] .wz-hero-image,:root[data-wazyo-preset="cinematic"] .wz-hero-video,:root[data-wazyo-preset="cinematic"] .wz-hero-glow,:root[data-wazyo-preset="cinematic"] .wz-hero-title,:root[data-wazyo-preset="cinematic"] .pcard { animation:none!important; }
+}
+
 `;
 
 function applyWazyoThemeSettings(s) {
@@ -194,9 +272,10 @@ function applyWazyoThemeSettings(s) {
     minimal: { bg:'#f7f9fa', card:'#ffffff', accent:'#087f8c', text:'#17252a', sub:'#64748b' },
     nature:  { bg:'#edf3ed', card:'#ffffff', accent:'#26734d', text:'#1d3327', sub:'#687b70' },
     midnight:{ bg:'#091321', card:'#122033', accent:'#38bdf8', text:'#e8f1fb', sub:'#9db1c8' },
+    cinematic:{ bg:'#080a0f', card:'#11151e', accent:'#d5b770', text:'#f7f4ed', sub:'#aaa398' },
   }
   const savedPreset = String(s?.theme_preset || 'wazyo').toLowerCase()
-  const presetId = ['wazyo','amazon','minimal','nature','midnight'].includes(savedPreset) ? savedPreset : 'custom'
+  const presetId = ['wazyo','amazon','minimal','nature','midnight','cinematic'].includes(savedPreset) ? savedPreset : 'custom'
   const preset = modes[presetId]
   const bg = preset?.bg || s?.theme_bg || localStorage.getItem('sl_theme_bg') || '#0a0a0a'
   const card = preset?.card || s?.theme_card || localStorage.getItem('sl_theme_card') || '#141414'
@@ -470,8 +549,16 @@ export default function App() {
     let mounted = true
     const refreshTheme = async () => {
       try {
-        const s = await getSettings()
-        if (mounted) applyWazyoThemeSettings(s || {})
+        // Lire directement les paramètres de thème, sans le cache général
+        // de getSettings (TTL 2 minutes), pour appliquer le choix fraîchement publié.
+        const keys = ['theme_preset','theme_bg','theme_card','theme_accent','theme_text','theme_text_sub']
+        const { data, error } = await supabase
+          .from('settings')
+          .select('key,value')
+          .in('key', keys)
+        if (error) throw error
+        const fresh = Object.fromEntries((data || []).map(row => [row.key, row.value]))
+        if (mounted) applyWazyoThemeSettings(fresh)
       } catch (e) {
         console.warn('Chargement du thème ignoré :', e)
       }
