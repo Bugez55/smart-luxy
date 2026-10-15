@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
 import { alertStockBas, resumeQuotidien } from '../../utils/notify'
 import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
@@ -972,6 +972,12 @@ function ThemeEditor({ onToast }) {
   const [customThemes, setCustomThemes] = useState([])
   const [newThemeName, setNewThemeName] = useState('')
   const [savingCustom, setSavingCustom] = useState(false)
+  const themeSaveTimer = useRef(null)
+  const [publishStatus, setPublishStatus] = useState('idle')
+
+  useEffect(() => () => {
+    if (themeSaveTimer.current) clearTimeout(themeSaveTimer.current)
+  }, [])
 
   const DEFAULT_THEME = { theme_bg:'#0a0a0a', theme_card:'#141414', theme_accent:'#C9A84C', theme_text:'#e0e0e0', theme_text_sub:'#888888' }
   const SITE_THEMES = [
@@ -1033,61 +1039,112 @@ function ThemeEditor({ onToast }) {
     document.body.style.background = t.theme_bg
   }
 
-  function selectSiteTheme(p) {
-    const next = { theme_bg:p.bg, theme_card:p.card, theme_accent:p.accent, theme_text:p.text, theme_text_sub:p.sub }
-    setSiteTheme(p.id)
-    setTheme(next)
-    setActivePreset(null)
-    applyToDOM(next, p.id)
-  }
-
-  // Une modification manuelle devient un thème personnalisé.
-  function apply(key, val) {
-    const next = { ...theme, [key]: val }
-    setTheme(next)
-    setSiteTheme('custom')
-    applyToDOM(next, 'custom')
-    setActivePreset(null)
-  }
-
-  // Les anciennes palettes restent utilisables, mais appliquent un style personnalisé.
-  function applyPreset(p, idx) {
-    const next = { theme_bg:p.bg, theme_card:p.card, theme_accent:p.accent, theme_text:p.text, theme_text_sub:p.sub }
-    setTheme(next)
-    setSiteTheme('custom')
-    applyToDOM(next, 'custom')
-    setActivePreset(idx)
-  }
-
-  async function save() {
+  async function publishTheme(nextTheme, presetId, announce = false) {
+    if (themeSaveTimer.current) {
+      clearTimeout(themeSaveTimer.current)
+      themeSaveTimer.current = null
+    }
     setSaving(true)
+    setPublishStatus('saving')
     try {
-      // Persister la palette ET l'identifiant structurel du thème.
-      for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
-      await saveSetting('theme_preset', siteTheme)
+      // Sauvegarde les couleurs et le type de thème avec le mécanisme de paramètres existant.
+      for (const [k, v] of Object.entries(nextTheme)) {
+        await saveSetting(k, v)
+      }
+      await saveSetting('theme_preset', presetId)
 
-      // Vérifier directement auprès de Supabase (sans cache local) avant d'annoncer le succès.
-      const verifyKeys = ['theme_preset','theme_bg','theme_card','theme_accent','theme_text','theme_text_sub']
+      // Relecture directe pour confirmer ce qui a été publié.
+      const verifyKeys = ['theme_preset', ...Object.keys(nextTheme)]
       const { data, error } = await supabase
         .from('settings')
         .select('key,value')
         .in('key', verifyKeys)
       if (error) throw error
       const saved = Object.fromEntries((data || []).map(row => [row.key, row.value]))
-      if (String(saved.theme_preset || '') !== String(siteTheme)) {
-        throw new Error('Le thème sélectionné n’a pas été confirmé par Supabase')
+
+      if (String(saved.theme_preset || '') !== String(presetId)) {
+        throw new Error('Supabase n’a pas confirmé le thème sélectionné')
+      }
+      for (const [key, value] of Object.entries(nextTheme)) {
+        if (String(saved[key] ?? '') !== String(value)) {
+          throw new Error(`La couleur « ${key} » n’a pas été confirmée`)
+        }
       }
 
-      // Appliquer au panneau immédiatement et prévenir les autres onglets.
-      applyToDOM(theme, siteTheme)
-      try { localStorage.setItem('wazyo_theme_updated', JSON.stringify({ preset:siteTheme, updatedAt:Date.now() })) } catch {}
-      onToast && onToast(`✅ Thème « ${SITE_THEMES.find(p => p.id === siteTheme)?.name || 'personnalisé'} » sauvegardé. Recharge la boutique pour le voir partout.`, 'default')
+      setPublishStatus('saved')
+      try {
+        const payload = JSON.stringify({ preset: presetId, updatedAt: Date.now() })
+        localStorage.setItem('wazyo_theme_updated', payload)
+        localStorage.setItem('wazyo_theme_updated_at', String(Date.now()))
+      } catch {}
+      try {
+        window.dispatchEvent(new CustomEvent('wazyo:theme-updated', {
+          detail: { preset: presetId, theme: nextTheme }
+        }))
+      } catch {}
+
+      if (announce) {
+        const themeName = SITE_THEMES.find(p => p.id === presetId)?.name || 'Personnalisé'
+        onToast && onToast(`✅ Thème « ${themeName} » publié et vérifié. Actualise la boutique si elle était déjà ouverte.`, 'default')
+      }
+      return true
     } catch (e) {
-      console.error('ThemeEditor save error:', e)
-      onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de sauvegarder le thème'), 'error')
+      console.error('ThemeEditor publish error:', e)
+      setPublishStatus('error')
+      onToast && onToast('❌ Le thème n’a pas été publié : ' + (e?.message || 'Erreur Supabase'), 'error')
+      return false
     } finally {
       setSaving(false)
     }
+  }
+
+  function schedulePublish(nextTheme, presetId) {
+    if (themeSaveTimer.current) clearTimeout(themeSaveTimer.current)
+    setPublishStatus('pending')
+    themeSaveTimer.current = setTimeout(() => {
+      themeSaveTimer.current = null
+      publishTheme(nextTheme, presetId, false)
+    }, 650)
+  }
+
+  function selectSiteTheme(p) {
+    const next = {
+      theme_bg: p.bg, theme_card: p.card, theme_accent: p.accent,
+      theme_text: p.text, theme_text_sub: p.sub,
+    }
+    setSiteTheme(p.id)
+    setTheme(next)
+    setActivePreset(null)
+    applyToDOM(next, p.id)
+    // Sélection = publication automatique, plus besoin de chercher un bouton séparé.
+    publishTheme(next, p.id, true)
+  }
+
+  // Couleurs personnalisées : aperçu immédiat, publication automatique après une courte pause.
+  function apply(key, val) {
+    const next = { ...theme, [key]: val }
+    setTheme(next)
+    setSiteTheme('custom')
+    applyToDOM(next, 'custom')
+    setActivePreset(null)
+    schedulePublish(next, 'custom')
+  }
+
+  // Les anciennes palettes restent utilisables et sont publiées automatiquement.
+  function applyPreset(p, idx) {
+    const next = {
+      theme_bg: p.bg, theme_card: p.card, theme_accent: p.accent,
+      theme_text: p.text, theme_text_sub: p.sub,
+    }
+    setTheme(next)
+    setSiteTheme('custom')
+    applyToDOM(next, 'custom')
+    setActivePreset(idx)
+    publishTheme(next, 'custom', true)
+  }
+
+  async function save() {
+    return publishTheme(theme, siteTheme, true)
   }
 
   // Sauvegarder la combinaison actuelle comme thème personnalisé réutilisable
@@ -1126,7 +1183,7 @@ function ThemeEditor({ onToast }) {
     setSiteTheme('wazyo')
     applyToDOM(DEFAULT_THEME, 'wazyo')
     setActivePreset(0)
-    onToast && onToast('↺ Thème par défaut restauré (pas encore sauvegardé — clique "Sauvegarder" pour confirmer)', 'default')
+    publishTheme(DEFAULT_THEME, 'wazyo', true)
   }
 
   const PRESETS = [
@@ -1191,7 +1248,15 @@ function ThemeEditor({ onToast }) {
             </button>
           ))}
         </div>
-        <div style={{fontSize:11,color:'#64748b',marginTop:10}}>Sélection actuelle : <strong style={{color:'#232f3e'}}>{SITE_THEMES.find(p=>p.id===siteTheme)?.name || 'Personnalisé'}</strong>. Clique sur « Sauvegarder le thème » pour publier.</div>
+        <div aria-live="polite" style={{fontSize:11,color:publishStatus==='error'?'#b91c1c':publishStatus==='saved'?'#166534':'#64748b',marginTop:10}}>
+          Sélection : <strong style={{color:'#232f3e'}}>{SITE_THEMES.find(p=>p.id===siteTheme)?.name || 'Personnalisé'}</strong>
+          {' · '}
+          {publishStatus==='saving' ? 'Publication en cours…' :
+           publishStatus==='pending' ? 'Enregistrement des couleurs…' :
+           publishStatus==='saved' ? 'Thème publié ✓' :
+           publishStatus==='error' ? 'Publication échouée — vérifie le message d’erreur.' :
+           'Le thème sera publié automatiquement.'}
+        </div>
       </div>
 
       {/* Palettes */}
@@ -1230,7 +1295,7 @@ function ThemeEditor({ onToast }) {
               <div key={ct.id} style={{ position:'relative' }}>
                 <button onClick={() => {
                   const t = { theme_bg:ct.bg, theme_card:ct.card, theme_accent:ct.accent, theme_text:ct.text, theme_text_sub:ct.sub }
-                  setTheme(t); setSiteTheme('custom'); applyToDOM(t, 'custom'); setActivePreset(null)
+                  setTheme(t); setSiteTheme('custom'); applyToDOM(t, 'custom'); setActivePreset(null); publishTheme(t, 'custom', true)
                 }} style={{
                   width:'100%', background: ct.card, border:`2px solid ${ct.accent}80`, borderRadius:12,
                   padding:'12px 10px', cursor:'pointer', textAlign:'left',
@@ -1322,7 +1387,7 @@ function ThemeEditor({ onToast }) {
         </button>
         <button onClick={save} disabled={saving}
           style={{ flex:2, padding:'11px', background:saving?'#222':'linear-gradient(135deg,#C9A84C,#E9C46A)', border:'none', borderRadius:12, color:saving?'#444':'#000', fontSize:13, fontWeight:900, cursor:saving?'default':'pointer' }}>
-          {saving ? '⏳...' : '💾 Sauvegarder le thème'}
+          {saving ? '⏳ Publication…' : '💾 Republier le thème'}
         </button>
       </div>
     </div>
