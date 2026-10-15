@@ -947,6 +947,15 @@ const WAZYO_ADMIN_LIGHT_STYLE = `
 .wazyo-theme-panel>div[id="wz-saved-themes"]>div{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
 .wazyo-theme-panel>div[id="wz-palettes"] button,.wazyo-theme-panel>div[id="wz-saved-themes"] button{border-radius:7px!important;padding:9px!important;min-height:72px!important;box-shadow:none!important}
 .wazyo-theme-panel>div[id="wz-colors"]>div{background:#f8fafc!important;border:1px solid #e5e7eb!important;border-radius:7px!important}
+.wazyo-theme-panel>div[id="wz-colors"]>div>div{color:#232f3e!important}
+.wazyo-theme-panel>div[id="wz-colors"]>span,
+.wazyo-theme-panel>div[id="wz-palettes"]>span,
+.wazyo-theme-panel>div[id="wz-saved-themes"]>span,
+.wazyo-theme-panel>div[id="wz-preview"]>span,
+.wazyo-theme-panel>div>span[style*="text-transform: uppercase"]{color:#565959!important}
+.wazyo-theme-panel>p{color:#565959!important}
+.wazyo-theme-panel input:not([type="color"]){color:#111827!important}
+.wazyo-theme-panel button{color:#232f3e}
 .wazyo-theme-panel>div[id="wz-preview"]{background:#fff!important}
 .wazyo-theme-panel>div[id="wz-preview"] span{color:#565959!important}
 .wazyo-amazon-panel button{transition:background-color .15s,border-color .15s,box-shadow .15s!important}
