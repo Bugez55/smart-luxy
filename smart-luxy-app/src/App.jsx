@@ -262,6 +262,50 @@ const STOREFRONT_THEME_CSS = `
   :root[data-wazyo-preset="cinematic"] .wz-hero-image,:root[data-wazyo-preset="cinematic"] .wz-hero-video,:root[data-wazyo-preset="cinematic"] .wz-hero-glow,:root[data-wazyo-preset="cinematic"] .wz-hero-title,:root[data-wazyo-preset="cinematic"] .pcard { animation:none!important; }
 }
 
+
+/* Robust token-based fallback: works even on components without a theme-specific class. */
+:root[data-wazyo-preset="custom"] body,
+:root[data-wazyo-preset="custom"] .app {
+  background:var(--bk)!important;
+  color:var(--g3)!important;
+}
+:root[data-wazyo-preset="custom"] .pcard,
+:root[data-wazyo-preset="custom"] .pp-info,
+:root[data-wazyo-preset="custom"] .pp-section,
+:root[data-wazyo-preset="custom"] .pp-order-card {
+  background:var(--card)!important;
+  color:var(--wz-card-text,var(--g3))!important;
+  border-color:var(--wz-page-border,rgba(127,127,127,.22))!important;
+}
+:root[data-wazyo-preset="custom"] .pcard-name,
+:root[data-wazyo-preset="custom"] .pp-title,
+:root[data-wazyo-preset="custom"] .pp-section-title {
+  color:var(--wz-card-text,var(--g3))!important;
+}
+:root[data-wazyo-preset="custom"] .pcard-prix,
+:root[data-wazyo-preset="custom"] .pp-price,
+:root[data-wazyo-preset="custom"] .wz-products-eyebrow {
+  color:var(--br)!important;
+}
+:root[data-wazyo-preset="custom"] .pcard-old,
+:root[data-wazyo-preset="custom"] .wz-products-count {
+  color:var(--wz-card-sub,var(--g4))!important;
+}
+:root[data-wazyo-preset="custom"] .pp-root input,
+:root[data-wazyo-preset="custom"] .pp-root select,
+:root[data-wazyo-preset="custom"] .pp-root textarea,
+:root[data-wazyo-preset="custom"] .search-big {
+  background:var(--card)!important;
+  color:var(--wz-card-text,var(--g3))!important;
+  border-color:var(--wz-page-border,rgba(127,127,127,.22))!important;
+}
+:root[data-wazyo-preset="custom"] .btn-buy,
+:root[data-wazyo-preset="custom"] .wz-hero-primary {
+  background:var(--br)!important;
+  color:var(--bk)!important;
+  border-color:var(--br)!important;
+}
+
 `;
 
 function applyWazyoThemeSettings(s) {
@@ -565,15 +609,22 @@ export default function App() {
     }
     refreshTheme()
     const onStorage = (event) => {
-      if (event.key === 'wazyo_theme_updated') refreshTheme()
+      if (event.key === 'wazyo_theme_updated' || event.key === 'wazyo_theme_updated_at') refreshTheme()
     }
+    const onThemeEvent = () => refreshTheme()
     const onFocus = () => refreshTheme()
+    const onPageShow = () => refreshTheme()
+
     window.addEventListener('storage', onStorage)
+    window.addEventListener('wazyo:theme-updated', onThemeEvent)
     window.addEventListener('focus', onFocus)
+    window.addEventListener('pageshow', onPageShow)
     return () => {
       mounted = false
       window.removeEventListener('storage', onStorage)
+      window.removeEventListener('wazyo:theme-updated', onThemeEvent)
       window.removeEventListener('focus', onFocus)
+      window.removeEventListener('pageshow', onPageShow)
     }
   }, [])
 
@@ -808,8 +859,8 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <style>{STOREFRONT_THEME_CSS}</style>
+    <div className="app" data-storefront-theme-root="true">
+      <style id="wazyo-storefront-theme-css">{STOREFRONT_THEME_CSS}</style>
       <AnnouncementBar />
       <Header
         cartCount={cartCount}
