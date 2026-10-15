@@ -27,6 +27,218 @@ function fbq(...args) {
   if (typeof window !== 'undefined' && window.fbq) window.fbq(...args)
 }
 
+const STOREFRONT_THEME_CSS = `
+/* The preset changes presentation only; functional DOM and RPC logic remain untouched. */
+:root[data-wazyo-preset="amazon"] { color-scheme:light; }
+:root[data-wazyo-preset="minimal"] { color-scheme:light; }
+:root[data-wazyo-preset="nature"] { color-scheme:light; }
+:root[data-wazyo-preset="midnight"] { color-scheme:dark; }
+:root[data-wazyo-preset="custom"] { color-scheme:light dark; }
+
+:root[data-wazyo-preset="amazon"] body,
+:root[data-wazyo-preset="amazon"] .app { background:#eaeded!important; color:#111827!important; font-family:Arial,Helvetica,sans-serif!important; }
+:root[data-wazyo-preset="amazon"] .wz-header,
+:root[data-wazyo-preset="amazon"] .wz-header--top,
+:root[data-wazyo-preset="amazon"] .wz-header--scrolled { background:#131921!important; color:#fff!important; border-color:#37475a!important; box-shadow:0 1px 3px #0002!important; backdrop-filter:none!important; }
+:root[data-wazyo-preset="amazon"] .wz-header::after { display:none!important; }
+:root[data-wazyo-preset="amazon"] .wz-header__hint { color:#d5d9d9!important; }
+:root[data-wazyo-preset="amazon"] .wz-cart { background:#232f3e!important; border:1px solid #566579!important; color:#fff!important; border-radius:5px!important; box-shadow:none!important; }
+:root[data-wazyo-preset="amazon"] .wz-cart__count { background:#ff9900!important; color:#111!important; border-color:#131921!important; }
+:root[data-wazyo-preset="amazon"] .wz2-logo .wz-word { color:#fff!important; }
+:root[data-wazyo-preset="amazon"] .wz-hero { color:#fff!important; }
+:root[data-wazyo-preset="amazon"] .wz-hero-primary { background:#ff9900!important; color:#111827!important; border-color:#ff9900!important; border-radius:5px!important; box-shadow:none!important; }
+:root[data-wazyo-preset="amazon"] .wz-hero-secondary { background:#fff!important; color:#232f3e!important; border-color:#d5d9d9!important; border-radius:5px!important; }
+:root[data-wazyo-preset="amazon"] .hero:not(.wz-hero) { background:#eaeded!important; color:#111827!important; }
+:root[data-wazyo-preset="amazon"] .hero-badges { gap:8px!important; }
+:root[data-wazyo-preset="amazon"] .hero-badge { background:#fff!important; color:#232f3e!important; border:1px solid #d5d9d9!important; border-radius:5px!important; box-shadow:none!important; }
+:root[data-wazyo-preset="amazon"] .hero-badge span { color:#565959!important; }
+:root[data-wazyo-preset="amazon"] .search-big { background:#fff!important; border:1px solid #888c8c!important; border-radius:7px!important; color:#232f3e!important; box-shadow:none!important; }
+:root[data-wazyo-preset="amazon"] .search-big input { color:#111827!important; background:transparent!important; }
+:root[data-wazyo-preset="amazon"] .wz-categories-wrap { background:#fff!important; border-block:1px solid #d5d9d9!important; }
+:root[data-wazyo-preset="amazon"] .wz-categories-label { color:#565959!important; }
+:root[data-wazyo-preset="amazon"] .wz-categories-scroll .cat-btn { background:#fff!important; border:1px solid #d5d9d9!important; color:#232f3e!important; border-radius:5px!important; box-shadow:none!important; }
+:root[data-wazyo-preset="amazon"] .wz-categories-scroll .cat-btn.active { background:#fff4e5!important; border-color:#ff9900!important; color:#111827!important; }
+:root[data-wazyo-preset="amazon"] .wz-products-head { color:#111827!important; }
+:root[data-wazyo-preset="amazon"] .wz-products-head h2 { color:#111827!important; font-size:clamp(22px,3vw,30px)!important; letter-spacing:-.02em!important; }
+:root[data-wazyo-preset="amazon"] .wz-products-eyebrow { color:#c45500!important; }
+:root[data-wazyo-preset="amazon"] .wz-products-count { color:#565959!important; }
+:root[data-wazyo-preset="amazon"] .pgrid { gap:14px!important; }
+:root[data-wazyo-preset="amazon"] .pcard { background:#fff!important; color:#111827!important; border:1px solid #d5d9d9!important; border-radius:5px!important; box-shadow:0 1px 2px #0000000d!important; transform:none!important; }
+:root[data-wazyo-preset="amazon"] .pcard::after { display:none!important; }
+:root[data-wazyo-preset="amazon"] .pcard-img { background:#fff!important; border-radius:4px 4px 0 0!important; }
+:root[data-wazyo-preset="amazon"] .pcard-body { background:#fff!important; color:#111827!important; }
+:root[data-wazyo-preset="amazon"] .pcard-name { color:#111827!important; }
+:root[data-wazyo-preset="amazon"] .pcard-prix { color:#b12704!important; }
+:root[data-wazyo-preset="amazon"] .pcard-old { color:#565959!important; }
+:root[data-wazyo-preset="amazon"] .btn-cart { background:#fff!important; border:1px solid #888c8c!important; color:#232f3e!important; border-radius:18px!important; box-shadow:none!important; }
+:root[data-wazyo-preset="amazon"] .btn-buy { background:#ffd814!important; border:1px solid #fcd200!important; color:#111827!important; border-radius:18px!important; box-shadow:none!important; }
+:root[data-wazyo-preset="amazon"] .footer { background:#232f3e!important; color:#fff!important; border-color:#37475a!important; }
+:root[data-wazyo-preset="amazon"] .footer a,
+:root[data-wazyo-preset="amazon"] .footer button,
+:root[data-wazyo-preset="amazon"] .footer .ftag { color:#fff!important; }
+:root[data-wazyo-preset="amazon"] .pp-root { background:#eaeded!important; color:#111827!important; }
+:root[data-wazyo-preset="amazon"] .pp-page { background:#eaeded!important; color:#111827!important; border-color:transparent!important; }
+:root[data-wazyo-preset="amazon"] .pp-info,
+:root[data-wazyo-preset="amazon"] .pp-section,
+:root[data-wazyo-preset="amazon"] .pp-order-card,
+:root[data-wazyo-preset="amazon"] .pp-section.pp-description,
+:root[data-wazyo-preset="amazon"] .pp-section.pp-specs,
+:root[data-wazyo-preset="amazon"] .pp-section.pp-faq { background:#fff!important; color:#111827!important; border:1px solid #d5d9d9!important; border-radius:6px!important; box-shadow:0 1px 2px #0000000d!important; }
+:root[data-wazyo-preset="amazon"] .pp-title,
+:root[data-wazyo-preset="amazon"] .pp-form-section-title,
+:root[data-wazyo-preset="amazon"] .pp-section-title { color:#111827!important; }
+:root[data-wazyo-preset="amazon"] .pp-price,
+:root[data-wazyo-preset="amazon"] .pp-discount { color:#b12704!important; }
+:root[data-wazyo-preset="amazon"] .pp-root input,
+:root[data-wazyo-preset="amazon"] .pp-root select,
+:root[data-wazyo-preset="amazon"] .pp-root textarea { background:#fff!important; color:#111827!important; border-color:#888c8c!important; border-radius:5px!important; }
+:root[data-wazyo-preset="amazon"] .pp-root button { box-shadow:none!important; }
+:root[data-wazyo-preset="amazon"] .pp-root .pp-sticky { background:#fff!important; border-color:#d5d9d9!important; color:#111827!important; }
+
+:root[data-wazyo-preset="minimal"] body,
+:root[data-wazyo-preset="minimal"] .app { background:#f7f9fa!important; color:#17252a!important; font-family:Inter,system-ui,-apple-system,Arial,sans-serif!important; }
+:root[data-wazyo-preset="minimal"] .wz-header,
+:root[data-wazyo-preset="minimal"] .wz-header--top,
+:root[data-wazyo-preset="minimal"] .wz-header--scrolled { background:rgba(255,255,255,.96)!important; color:#17252a!important; border-bottom:1px solid #dfe7e8!important; box-shadow:0 2px 12px #1734380d!important; backdrop-filter:blur(14px)!important; }
+:root[data-wazyo-preset="minimal"] .wz-header__hint { color:#64748b!important; }
+:root[data-wazyo-preset="minimal"] .wz-cart { background:#fff!important; color:#17252a!important; border:1px solid #d1dcde!important; border-radius:12px!important; }
+:root[data-wazyo-preset="minimal"] .wz-cart__count { background:#087f8c!important; color:#fff!important; }
+:root[data-wazyo-preset="minimal"] .wz-hero-primary { background:#087f8c!important; color:#fff!important; border-radius:10px!important; box-shadow:none!important; }
+:root[data-wazyo-preset="minimal"] .wz-hero-secondary { background:#fff!important; color:#17252a!important; border:1px solid #d1dcde!important; border-radius:10px!important; }
+:root[data-wazyo-preset="minimal"] .hero:not(.wz-hero) { background:#f7f9fa!important; color:#17252a!important; }
+:root[data-wazyo-preset="minimal"] .hero-badge { background:#fff!important; color:#17252a!important; border:1px solid #dfe7e8!important; border-radius:12px!important; }
+:root[data-wazyo-preset="minimal"] .hero-badge span { color:#64748b!important; }
+:root[data-wazyo-preset="minimal"] .search-big { background:#fff!important; color:#17252a!important; border:1px solid #d1dcde!important; border-radius:14px!important; box-shadow:0 4px 20px #0f766e0d!important; }
+:root[data-wazyo-preset="minimal"] .search-big input { color:#17252a!important; }
+:root[data-wazyo-preset="minimal"] .wz-categories-wrap { background:#f7f9fa!important; }
+:root[data-wazyo-preset="minimal"] .wz-categories-label { color:#64748b!important; }
+:root[data-wazyo-preset="minimal"] .wz-categories-scroll .cat-btn { background:#fff!important; color:#17252a!important; border:1px solid #d1dcde!important; border-radius:18px!important; }
+:root[data-wazyo-preset="minimal"] .wz-categories-scroll .cat-btn.active { background:#087f8c!important; color:white!important; border-color:#087f8c!important; }
+:root[data-wazyo-preset="minimal"] .wz-products-head h2 { color:#17252a!important; }
+:root[data-wazyo-preset="minimal"] .wz-products-eyebrow { color:#087f8c!important; }
+:root[data-wazyo-preset="minimal"] .pcard { background:#fff!important; color:#17252a!important; border:1px solid #dfe7e8!important; border-radius:16px!important; box-shadow:0 5px 20px #1734380a!important; }
+:root[data-wazyo-preset="minimal"] .pcard::after { display:none!important; }
+:root[data-wazyo-preset="minimal"] .pcard-img { background:#fff!important; }
+:root[data-wazyo-preset="minimal"] .pcard-body { background:#fff!important; color:#17252a!important; }
+:root[data-wazyo-preset="minimal"] .pcard-name { color:#17252a!important; }
+:root[data-wazyo-preset="minimal"] .pcard-prix { color:#087f8c!important; }
+:root[data-wazyo-preset="minimal"] .btn-cart { background:#fff!important; color:#087f8c!important; border:1px solid #a5d0d3!important; border-radius:10px!important; }
+:root[data-wazyo-preset="minimal"] .btn-buy { background:#087f8c!important; color:#fff!important; border:1px solid #087f8c!important; border-radius:10px!important; }
+:root[data-wazyo-preset="minimal"] .footer { background:#e9f1f1!important; color:#17252a!important; border-color:#d1dcde!important; }
+:root[data-wazyo-preset="minimal"] .footer a,
+:root[data-wazyo-preset="minimal"] .footer button,
+:root[data-wazyo-preset="minimal"] .footer .ftag { color:#17252a!important; }
+:root[data-wazyo-preset="minimal"] .pp-root { background:#f7f9fa!important; color:#17252a!important; }
+:root[data-wazyo-preset="minimal"] .pp-page { background:#f7f9fa!important; color:#17252a!important; border-color:transparent!important; }
+:root[data-wazyo-preset="minimal"] .pp-info,
+:root[data-wazyo-preset="minimal"] .pp-section,
+:root[data-wazyo-preset="minimal"] .pp-order-card { background:#fff!important; color:#17252a!important; border-color:#dfe7e8!important; border-radius:14px!important; box-shadow:0 5px 20px #1734380a!important; }
+:root[data-wazyo-preset="minimal"] .pp-title,
+:root[data-wazyo-preset="minimal"] .pp-form-section-title,
+:root[data-wazyo-preset="minimal"] .pp-section-title { color:#17252a!important; }
+:root[data-wazyo-preset="minimal"] .pp-price { color:#087f8c!important; }
+:root[data-wazyo-preset="minimal"] .pp-root input,
+:root[data-wazyo-preset="minimal"] .pp-root select,
+:root[data-wazyo-preset="minimal"] .pp-root textarea { background:#fff!important; color:#17252a!important; border-color:#cbdadb!important; border-radius:9px!important; }
+
+:root[data-wazyo-preset="nature"] body,
+:root[data-wazyo-preset="nature"] .app { background:#edf3ed!important; color:#1d3327!important; }
+:root[data-wazyo-preset="nature"] .wz-header,
+:root[data-wazyo-preset="nature"] .wz-header--top,
+:root[data-wazyo-preset="nature"] .wz-header--scrolled { background:#244735!important; color:#fff!important; border-color:#315a42!important; box-shadow:0 2px 12px #183d2720!important; }
+:root[data-wazyo-preset="nature"] .wz-cart { background:#315a42!important; color:#fff!important; border-color:#517960!important; }
+:root[data-wazyo-preset="nature"] .wz-cart__count { background:#d4e7cd!important; color:#244735!important; }
+:root[data-wazyo-preset="nature"] .wz-hero-primary,
+:root[data-wazyo-preset="nature"] .btn-buy { background:#26734d!important; color:#fff!important; border-color:#26734d!important; }
+:root[data-wazyo-preset="nature"] .hero:not(.wz-hero) { background:#edf3ed!important; color:#1d3327!important; }
+:root[data-wazyo-preset="nature"] .search-big { background:#fff!important; color:#1d3327!important; border-color:#cdddcf!important; }
+:root[data-wazyo-preset="nature"] .search-big input { color:#1d3327!important; }
+:root[data-wazyo-preset="nature"] .wz-categories-scroll .cat-btn { background:#fff!important; color:#1d3327!important; border-color:#cdddcf!important; }
+:root[data-wazyo-preset="nature"] .wz-categories-scroll .cat-btn.active { background:#26734d!important; color:#fff!important; border-color:#26734d!important; }
+:root[data-wazyo-preset="nature"] .pcard { background:#fff!important; color:#1d3327!important; border-color:#d5e2d5!important; border-radius:12px!important; }
+:root[data-wazyo-preset="nature"] .pcard::after { display:none!important; }
+:root[data-wazyo-preset="nature"] .pcard-body { background:#fff!important; color:#1d3327!important; }
+:root[data-wazyo-preset="nature"] .pcard-name { color:#1d3327!important; }
+:root[data-wazyo-preset="nature"] .pcard-prix { color:#26734d!important; }
+:root[data-wazyo-preset="nature"] .btn-cart { background:#fff!important; color:#26734d!important; border-color:#b9d1bd!important; }
+:root[data-wazyo-preset="nature"] .footer { background:#244735!important; color:#fff!important; }
+:root[data-wazyo-preset="nature"] .footer a,:root[data-wazyo-preset="nature"] .footer button { color:#fff!important; }
+:root[data-wazyo-preset="nature"] .pp-root,:root[data-wazyo-preset="nature"] .pp-page { background:#edf3ed!important; color:#1d3327!important; }
+:root[data-wazyo-preset="nature"] .pp-info,:root[data-wazyo-preset="nature"] .pp-section,:root[data-wazyo-preset="nature"] .pp-order-card { background:#fff!important; color:#1d3327!important; border-color:#d5e2d5!important; }
+:root[data-wazyo-preset="nature"] .pp-title,:root[data-wazyo-preset="nature"] .pp-section-title { color:#1d3327!important; }
+
+:root[data-wazyo-preset="midnight"] body,
+:root[data-wazyo-preset="midnight"] .app { background:#091321!important; color:#e8f1fb!important; }
+:root[data-wazyo-preset="midnight"] .wz-header,
+:root[data-wazyo-preset="midnight"] .wz-header--top,
+:root[data-wazyo-preset="midnight"] .wz-header--scrolled { background:#101c2d!important; border-color:#263b54!important; }
+:root[data-wazyo-preset="midnight"] .wz-cart { background:#16263b!important; color:#e8f1fb!important; border-color:#2a435d!important; }
+:root[data-wazyo-preset="midnight"] .wz-hero-primary,:root[data-wazyo-preset="midnight"] .btn-buy { background:#38bdf8!important; color:#071321!important; border-color:#38bdf8!important; }
+:root[data-wazyo-preset="midnight"] .wz-categories-scroll .cat-btn { background:#122033!important; color:#dce8f6!important; border-color:#263b54!important; }
+:root[data-wazyo-preset="midnight"] .wz-categories-scroll .cat-btn.active { background:#38bdf8!important; color:#071321!important; border-color:#38bdf8!important; }
+:root[data-wazyo-preset="midnight"] .pcard { background:#122033!important; color:#e8f1fb!important; border-color:#263b54!important; }
+:root[data-wazyo-preset="midnight"] .pcard-body { background:#122033!important; color:#e8f1fb!important; }
+:root[data-wazyo-preset="midnight"] .pcard-name { color:#e8f1fb!important; }
+:root[data-wazyo-preset="midnight"] .pcard-prix { color:#38bdf8!important; }
+:root[data-wazyo-preset="midnight"] .btn-cart { background:#16263b!important; color:#e8f1fb!important; border-color:#2a435d!important; }
+:root[data-wazyo-preset="midnight"] .pp-root,:root[data-wazyo-preset="midnight"] .pp-page { background:#091321!important; color:#e8f1fb!important; }
+:root[data-wazyo-preset="midnight"] .pp-info,:root[data-wazyo-preset="midnight"] .pp-section,:root[data-wazyo-preset="midnight"] .pp-order-card { background:#122033!important; color:#e8f1fb!important; border-color:#263b54!important; }
+:root[data-wazyo-preset="midnight"] .pp-title,:root[data-wazyo-preset="midnight"] .pp-section-title { color:#e8f1fb!important; }
+`;
+
+function applyWazyoThemeSettings(s) {
+  const root = document.documentElement
+  const modes = {
+    wazyo:   { bg:'#0a0a0a', card:'#141414', accent:'#C9A84C', text:'#e0e0e0', sub:'#888888' },
+    amazon:  { bg:'#eaeded', card:'#ffffff', accent:'#ff9900', text:'#111827', sub:'#565959' },
+    minimal: { bg:'#f7f9fa', card:'#ffffff', accent:'#087f8c', text:'#17252a', sub:'#64748b' },
+    nature:  { bg:'#edf3ed', card:'#ffffff', accent:'#26734d', text:'#1d3327', sub:'#687b70' },
+    midnight:{ bg:'#091321', card:'#122033', accent:'#38bdf8', text:'#e8f1fb', sub:'#9db1c8' },
+  }
+  const savedPreset = String(s?.theme_preset || 'wazyo').toLowerCase()
+  const presetId = ['wazyo','amazon','minimal','nature','midnight'].includes(savedPreset) ? savedPreset : 'custom'
+  const preset = modes[presetId]
+  const bg = preset?.bg || s?.theme_bg || localStorage.getItem('sl_theme_bg') || '#0a0a0a'
+  const card = preset?.card || s?.theme_card || localStorage.getItem('sl_theme_card') || '#141414'
+  const accent = preset?.accent || s?.theme_accent || localStorage.getItem('sl_theme_accent') || '#C9A84C'
+  const text = preset?.text || s?.theme_text || localStorage.getItem('sl_theme_text') || '#e0e0e0'
+  const sub = preset?.sub || s?.theme_text_sub || localStorage.getItem('sl_theme_text_sub') || '#888888'
+  const hexToRgb = (hex) => {
+    let h = String(hex || '').trim().replace('#','')
+    if (h.length === 3) h = h.split('').map(c => c + c).join('')
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) return [0,0,0]
+    return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]
+  }
+  const lum = hex => {
+    const rgb = hexToRgb(hex).map(v => { const x=v/255; return x<=.03928 ? x/12.92 : Math.pow((x+.055)/1.055,2.4) })
+    return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2]
+  }
+  const bgLight = lum(bg) > .52
+  const cardText = lum(card) > .52 ? '#171717' : '#f7f7f7'
+  const cardSub = lum(card) > .52 ? '#666666' : '#bdbdbd'
+  root.dataset.wazyoPreset = presetId
+  root.dataset.themeMode = bgLight ? 'light' : 'dark'
+  const vars = {
+    '--bk':bg,'--bk2':bg,'--card':card,'--card2':card,'--card3':card,
+    '--br':accent,'--br2':accent,'--br3':accent,'--g3':text,'--g4':sub,
+    '--wz-card-text':cardText,'--wz-card-sub':cardSub,
+    '--wz-mode':bgLight?'light':'dark',
+    '--wz-page-border':bgLight?'rgba(0,0,0,.10)':'rgba(255,255,255,.08)',
+    '--wz-soft-fill':bgLight?'rgba(0,0,0,.035)':'rgba(255,255,255,.035)',
+  }
+  Object.entries(vars).forEach(([key,value])=>root.style.setProperty(key,value))
+  document.body.style.background = bg
+  try {
+    localStorage.setItem('sl_theme_bg',bg)
+    localStorage.setItem('sl_theme_card',card)
+    localStorage.setItem('sl_theme_accent',accent)
+    localStorage.setItem('sl_theme_text',text)
+    localStorage.setItem('sl_theme_text_sub',sub)
+    localStorage.setItem('sl_theme_preset',presetId)
+  } catch {}
+}
+
+
 export default function App() {
 
   const [isNotFound] = useState(() => {
@@ -253,68 +465,29 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  // ── Appliquer le thème + garde-fou de contraste ──
+  // ── Appliquer le thème global sauvegardé ──
   useEffect(() => {
-    getSettings().then(s => {
-      const r = document.documentElement
-      const hexToRgb = (hex) => {
-        if (!hex) return null
-        let h = String(hex).trim().replace('#','')
-        if (h.length === 3) h = h.split('').map(c => c + c).join('')
-        if (!/^[0-9a-fA-F]{6}$/.test(h)) return null
-        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]
+    let mounted = true
+    const refreshTheme = async () => {
+      try {
+        const s = await getSettings()
+        if (mounted) applyWazyoThemeSettings(s || {})
+      } catch (e) {
+        console.warn('Chargement du thème ignoré :', e)
       }
-      const lum = (hex) => {
-        const rgb = hexToRgb(hex)
-        if (!rgb) return .05
-        const c = rgb.map(v => {
-          const x = v / 255
-          return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4)
-        })
-        return .2126*c[0] + .7152*c[1] + .0722*c[2]
-      }
-      const contrast = (a,b) => {
-        const A = lum(a), B = lum(b)
-        const hi = Math.max(A,B), lo = Math.min(A,B)
-        return (hi + .05) / (lo + .05)
-      }
-      const pickText = (bg, preferred, fallbackLight='#fff', fallbackDark='#111') => {
-        if (preferred && contrast(preferred, bg) >= 4.2) return preferred
-        return lum(bg) > .52 ? fallbackDark : fallbackLight
-      }
-
-      const bg = s.theme_bg || localStorage.getItem('sl_theme_bg') || '#0a0a0a'
-      const card = s.theme_card || localStorage.getItem('sl_theme_card') || '#141414'
-      const accent = s.theme_accent || localStorage.getItem('sl_theme_accent') || '#C9A84C'
-      const bgLight = lum(bg) > .52
-      const text = pickText(bg, s.theme_text, '#ffffff', '#111111')
-      const sub = pickText(bg, s.theme_text_sub, '#b8b8b8', '#5f5f5f')
-      const cardText = lum(card) > .52 ? '#171717' : '#f7f7f7'
-      const cardSub = lum(card) > .52 ? '#666666' : '#bdbdbd'
-
-      r.style.setProperty('--bk', bg)
-      r.style.setProperty('--bk2', bg)
-      r.style.setProperty('--card', card)
-      r.style.setProperty('--card2', card)
-      r.style.setProperty('--card3', card)
-      r.style.setProperty('--br', accent)
-      r.style.setProperty('--br2', accent)
-      r.style.setProperty('--br3', accent)
-      r.style.setProperty('--g3', text)
-      r.style.setProperty('--g4', sub)
-      r.style.setProperty('--wz-card-text', cardText)
-      r.style.setProperty('--wz-card-sub', cardSub)
-      r.style.setProperty('--wz-mode', bgLight ? 'light' : 'dark')
-      r.style.setProperty('--wz-page-border', bgLight ? 'rgba(0,0,0,.10)' : 'rgba(255,255,255,.08)')
-      r.style.setProperty('--wz-soft-fill', bgLight ? 'rgba(0,0,0,.035)' : 'rgba(255,255,255,.035)')
-      r.dataset.themeMode = bgLight ? 'light' : 'dark'
-      document.body.style.background = bg
-      localStorage.setItem('sl_theme_bg', bg)
-      localStorage.setItem('sl_theme_card', card)
-      localStorage.setItem('sl_theme_accent', accent)
-      localStorage.setItem('sl_theme_text', text)
-      localStorage.setItem('sl_theme_text_sub', sub)
-    }).catch(() => {})
+    }
+    refreshTheme()
+    const onStorage = (event) => {
+      if (event.key === 'wazyo_theme_updated') refreshTheme()
+    }
+    const onFocus = () => refreshTheme()
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      mounted = false
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [])
 
   function toast(msg, type = 'default') {
@@ -416,21 +589,7 @@ export default function App() {
           hint: error?.hint,
           code: error?.code,
         })
-        const diagnosticMessage = [
-          error?.message,
-          error?.details,
-          error?.hint,
-          error?.code ? `Code: ${error.code}` : null,
-        ].filter(Boolean).join(' | ').slice(0, 420)
-
-        // Diagnostic temporaire pour identifier l'erreur SQL réelle.
-        // À retirer après le test, une fois le problème corrigé.
-        toast(
-          diagnosticMessage
-            ? `❌ Erreur commande : ${diagnosticMessage}`
-            : '❌ Commande non enregistrée. Aucun détail Supabase disponible.',
-          'error'
-        )
+        toast('❌ Commande non enregistrée. Vérifie les informations et réessaie.', 'error')
         return false
       }
 
@@ -474,10 +633,7 @@ export default function App() {
       return true
     } catch (e) {
       console.error('Erreur soumission commande:', e)
-      toast(
-        `❌ Erreur commande : ${String(e?.message || e || 'erreur inconnue').slice(0, 420)}`,
-        'error'
-      )
+      toast('❌ Une erreur est survenue. Vérifie tes informations et réessaie.', 'error')
       return false
     }
   }
@@ -566,6 +722,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <style>{STOREFRONT_THEME_CSS}</style>
       <AnnouncementBar />
       <Header
         cartCount={cartCount}
