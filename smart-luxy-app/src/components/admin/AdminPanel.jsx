@@ -233,31 +233,6 @@ function printInvoice(order) {
 // ═══════════════════════════════════════════════════
 //  ADMIN SETTINGS — Paramètres complets
 // ═══════════════════════════════════════════════════
-const WAZYO_ADMIN_LIGHT_STYLE = `
-.wazyo-amazon-panel{--wa-ink:#111827;--wa-muted:#64748b;--wa-border:#d5d9d9;--wa-card:#fff;--wa-bg:#f3f4f6;position:relative!important;box-sizing:border-box!important;background:var(--wa-bg)!important;color:var(--wa-ink)!important;border:1px solid #e5e7eb!important;border-radius:12px!important;padding:20px 20px 20px 218px!important;min-height:420px!important;font-family:Arial,Helvetica,sans-serif!important}
-.wazyo-amazon-panel *{box-sizing:border-box}
-.wazyo-amazon-panel h3{color:#111827!important;font-family:Arial,Helvetica,sans-serif!important}
-.wazyo-panel-subtitle{color:#64748b!important;font-size:13px!important;margin:0 0 18px!important;line-height:1.5}
-.wazyo-settings-rail{position:absolute!important;top:18px!important;left:14px!important;width:188px!important;display:flex!important;flex-direction:column!important;gap:4px!important;padding:12px 8px!important;background:#fff!important;border:1px solid #d5d9d9!important;border-radius:9px!important;box-shadow:0 1px 2px #00000008!important}
-.wazyo-settings-rail strong{font-size:10px!important;letter-spacing:.08em!important;color:#565959!important;padding:7px 9px 10px!important}
-.wazyo-settings-rail button{width:100%!important;text-align:left!important;border:1px solid transparent!important;background:transparent!important;color:#232f3e!important;padding:9px 10px!important;border-radius:6px!important;font-size:12px!important;font-weight:600!important;cursor:pointer!important}
-.wazyo-settings-rail button:hover{background:#f0f2f2!important;border-color:#d5d9d9!important;color:#c45500!important}
-.wazyo-settings-panel>div[style]:not(#wz-free-shipping),.wazyo-theme-panel>div[style]{background:#fff!important;border:1px solid #d5d9d9!important;border-radius:8px!important;box-shadow:0 1px 2px #00000008!important;color:#111827!important;padding:14px!important;margin-bottom:10px!important;scroll-margin-top:14px!important}
-.wazyo-settings-panel>div[style]:not(#wz-free-shipping) div[style*="font-weight: 800"],.wazyo-settings-panel>div[style]:not(#wz-free-shipping) div[style*="fontWeight: 800"]{color:#232f3e!important}.wazyo-settings-panel>div[style]:not(#wz-free-shipping) [style*="color: white"]{color:#232f3e!important}
-.wazyo-settings-panel label{color:#565959!important;font-size:11px!important;font-weight:700!important}
-.wazyo-settings-panel input:not([type="checkbox"]):not([type="color"]),.wazyo-theme-panel input:not([type="checkbox"]):not([type="color"]){background:#fff!important;color:#111827!important;border:1px solid #888c8c!important;border-radius:6px!important;min-height:34px!important}
-.wazyo-settings-panel input:focus,.wazyo-theme-panel input:focus{outline:2px solid #007185!important;outline-offset:1px!important}
-.wazyo-settings-panel button,.wazyo-theme-panel button{font-family:Arial,Helvetica,sans-serif!important}
-.wazyo-theme-panel>div[id="wz-palettes"]>div{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
-.wazyo-theme-panel>div[id="wz-saved-themes"]>div{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
-.wazyo-theme-panel>div[id="wz-palettes"] button,.wazyo-theme-panel>div[id="wz-saved-themes"] button{border-radius:7px!important;padding:9px!important;min-height:72px!important;box-shadow:none!important}
-.wazyo-theme-panel>div[id="wz-colors"]>div{background:#f8fafc!important;border:1px solid #e5e7eb!important;border-radius:7px!important}
-.wazyo-theme-panel>div[id="wz-preview"]{background:#fff!important}
-.wazyo-theme-panel>div[id="wz-preview"] span{color:#565959!important}
-.wazyo-amazon-panel button{transition:background-color .15s,border-color .15s,box-shadow .15s!important}
-@media(max-width:760px){.wazyo-amazon-panel{padding:14px!important}.wazyo-settings-rail{position:static!important;width:auto!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin-bottom:16px!important}.wazyo-settings-rail strong{grid-column:1/-1}.wazyo-theme-panel>div[id="wz-palettes"]>div,.wazyo-theme-panel>div[id="wz-saved-themes"]>div{grid-template-columns:repeat(2,minmax(0,1fr))!important}.wazyo-settings-panel div[style*="grid-template-columns: 1fr 1fr"]{grid-template-columns:1fr!important}}
-`;
-
 function AdminSettings({ onLogout, onToast }) {
   const [adminEmail, setAdminEmail] = useState('')
   useEffect(() => {
@@ -395,21 +370,11 @@ function AdminSettings({ onLogout, onToast }) {
   }
 
   return (
-    <div className="wazyo-amazon-panel wazyo-settings-panel">
-      <style>{WAZYO_ADMIN_LIGHT_STYLE}</style>
-      <nav className="wazyo-settings-rail" aria-label="Sections des paramètres">
-        <strong>PARAMÈTRES</strong>
-        <button onClick={() => document.getElementById('wz-account')?.scrollIntoView({behavior:'smooth',block:'start'})}>🔐 Compte admin</button>
-        <button onClick={() => document.getElementById('wz-shop')?.scrollIntoView({behavior:'smooth',block:'start'})}>🏪 Boutique</button>
-        <button onClick={() => document.getElementById('wz-payment')?.scrollIntoView({behavior:'smooth',block:'start'})}>💳 Paiements</button>
-        <button onClick={() => document.getElementById('wz-maintenance')?.scrollIntoView({behavior:'smooth',block:'start'})}>🔧 Maintenance</button>
-        <button onClick={() => document.getElementById('wz-session')?.scrollIntoView({behavior:'smooth',block:'start'})}>🚪 Session</button>
-      </nav>
-      <h3 style={{ color:'#111827', fontSize:20, fontWeight:800, marginBottom:6 }}>Paramètres</h3>
-      <p className="wazyo-panel-subtitle">Gérez les informations et les options de votre boutique Wazyo.</p>
+    <div>
+      <h3 style={{ color:'white', fontSize:16, fontWeight:800, marginBottom:20 }}>⚙️ Paramètres</h3>
 
       {/* ── COMPTE ADMIN ── */}
-      <div id="wz-account" style={section}>
+      <div style={section}>
         <div style={sectionTitle}>🔐 Compte administrateur</div>
         <div style={{
           background:'rgba(34,197,94,.08)',
@@ -430,7 +395,7 @@ function AdminSettings({ onLogout, onToast }) {
       </div>
 
       {/* ── INFOS BOUTIQUE ── */}
-      <div id="wz-shop" style={section}>
+      <div style={section}>
         <div style={sectionTitle}>🏪 Informations de la boutique</div>
 
         <div style={{ marginBottom: 10 }}>
@@ -461,8 +426,8 @@ function AdminSettings({ onLogout, onToast }) {
         }}>{shopSaving ? '⏳…' : '💾 Sauvegarder'}</button>
       </div>
 
-      {/* ── LIVRAISON GRATUITE — logique et présentation conservées ── */}
-      <div id="wz-free-shipping" style={section}>
+      {/* ── LIVRAISON GRATUITE ── */}
+      <div style={section}>
         <div style={sectionTitle}>🚚 Seuil livraison gratuite</div>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginBottom: 12, lineHeight: 1.5 }}>
           Si le total commande dépasse ce montant, la livraison devient gratuite automatiquement. Laisser vide pour désactiver.
@@ -483,7 +448,7 @@ function AdminSettings({ onLogout, onToast }) {
       </div>
 
       {/* ── PAIEMENT CCP / BARIDIMOB ── */}
-      <div id="wz-payment" style={section}>
+      <div style={section}>
         <div style={sectionTitle}>💳 Moyens de paiement</div>
         <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:16, lineHeight:1.5 }}>
           Active BaridiMob et/ou CCP en plus du paiement à la livraison. Les clients pourront choisir sur la page produit.
@@ -566,7 +531,7 @@ function AdminSettings({ onLogout, onToast }) {
       </div>
 
       {/* ── MODE MAINTENANCE ── */}
-      <div id="wz-maintenance" style={{ ...section, border: `1px solid ${maintenance ? 'rgba(239,68,68,.3)' : 'rgba(255,255,255,.07)'}` }}>
+      <div style={{ ...section, border: `1px solid ${maintenance ? 'rgba(239,68,68,.3)' : 'rgba(255,255,255,.07)'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={sectionTitle}>🔧 Mode maintenance</div>
@@ -589,7 +554,7 @@ function AdminSettings({ onLogout, onToast }) {
       </div>
 
       {/* ── DÉCONNEXION ── */}
-      <div id="wz-session" style={section}>
+      <div style={section}>
         <div style={sectionTitle}>🚪 Session admin</div>
         <button
           onClick={onLogout}
@@ -963,6 +928,31 @@ function LivraisonManager({ orders, onToast }) {
   )
 }
 
+const WAZYO_ADMIN_LIGHT_STYLE = `
+.wazyo-amazon-panel{--wa-ink:#111827;--wa-muted:#64748b;--wa-border:#d5d9d9;--wa-card:#fff;--wa-bg:#f3f4f6;position:relative!important;box-sizing:border-box!important;background:var(--wa-bg)!important;color:var(--wa-ink)!important;border:1px solid #e5e7eb!important;border-radius:12px!important;padding:20px 20px 20px 218px!important;min-height:420px!important;font-family:Arial,Helvetica,sans-serif!important}
+.wazyo-amazon-panel *{box-sizing:border-box}
+.wazyo-amazon-panel h3{color:#111827!important;font-family:Arial,Helvetica,sans-serif!important}
+.wazyo-panel-subtitle{color:#64748b!important;font-size:13px!important;margin:0 0 18px!important;line-height:1.5}
+.wazyo-settings-rail{position:absolute!important;top:18px!important;left:14px!important;width:188px!important;display:flex!important;flex-direction:column!important;gap:4px!important;padding:12px 8px!important;background:#fff!important;border:1px solid #d5d9d9!important;border-radius:9px!important;box-shadow:0 1px 2px #00000008!important}
+.wazyo-settings-rail strong{font-size:10px!important;letter-spacing:.08em!important;color:#565959!important;padding:7px 9px 10px!important}
+.wazyo-settings-rail button{width:100%!important;text-align:left!important;border:1px solid transparent!important;background:transparent!important;color:#232f3e!important;padding:9px 10px!important;border-radius:6px!important;font-size:12px!important;font-weight:600!important;cursor:pointer!important}
+.wazyo-settings-rail button:hover{background:#f0f2f2!important;border-color:#d5d9d9!important;color:#c45500!important}
+.wazyo-settings-panel>div[style]:not(#wz-free-shipping),.wazyo-theme-panel>div[style]{background:#fff!important;border:1px solid #d5d9d9!important;border-radius:8px!important;box-shadow:0 1px 2px #00000008!important;color:#111827!important;padding:14px!important;margin-bottom:10px!important;scroll-margin-top:14px!important}
+.wazyo-settings-panel>div[style]:not(#wz-free-shipping) div[style*="font-weight: 800"],.wazyo-settings-panel>div[style]:not(#wz-free-shipping) div[style*="fontWeight: 800"]{color:#232f3e!important}.wazyo-settings-panel>div[style]:not(#wz-free-shipping) [style*="color: white"]{color:#232f3e!important}
+.wazyo-settings-panel label{color:#565959!important;font-size:11px!important;font-weight:700!important}
+.wazyo-settings-panel input:not([type="checkbox"]):not([type="color"]),.wazyo-theme-panel input:not([type="checkbox"]):not([type="color"]){background:#fff!important;color:#111827!important;border:1px solid #888c8c!important;border-radius:6px!important;min-height:34px!important}
+.wazyo-settings-panel input:focus,.wazyo-theme-panel input:focus{outline:2px solid #007185!important;outline-offset:1px!important}
+.wazyo-settings-panel button,.wazyo-theme-panel button{font-family:Arial,Helvetica,sans-serif!important}
+.wazyo-theme-panel>div[id="wz-palettes"]>div{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+.wazyo-theme-panel>div[id="wz-saved-themes"]>div{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+.wazyo-theme-panel>div[id="wz-palettes"] button,.wazyo-theme-panel>div[id="wz-saved-themes"] button{border-radius:7px!important;padding:9px!important;min-height:72px!important;box-shadow:none!important}
+.wazyo-theme-panel>div[id="wz-colors"]>div{background:#f8fafc!important;border:1px solid #e5e7eb!important;border-radius:7px!important}
+.wazyo-theme-panel>div[id="wz-preview"]{background:#fff!important}
+.wazyo-theme-panel>div[id="wz-preview"] span{color:#565959!important}
+.wazyo-amazon-panel button{transition:background-color .15s,border-color .15s,box-shadow .15s!important}
+@media(max-width:760px){.wazyo-amazon-panel{padding:14px!important}.wazyo-settings-rail{position:static!important;width:auto!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin-bottom:16px!important}.wazyo-settings-rail strong{grid-column:1/-1}.wazyo-theme-panel>div[id="wz-palettes"]>div,.wazyo-theme-panel>div[id="wz-saved-themes"]>div{grid-template-columns:repeat(2,minmax(0,1fr))!important}.wazyo-settings-panel div[style*="grid-template-columns: 1fr 1fr"]{grid-template-columns:1fr!important}}
+`;
+
 function ThemeEditor({ onToast }) {
   const [theme, setTheme] = useState({
     theme_bg: '#0a0a0a', theme_card: '#141414',
@@ -975,18 +965,34 @@ function ThemeEditor({ onToast }) {
   const [savingCustom, setSavingCustom] = useState(false)
 
   const DEFAULT_THEME = { theme_bg:'#0a0a0a', theme_card:'#141414', theme_accent:'#C9A84C', theme_text:'#e0e0e0', theme_text_sub:'#888888' }
+  const SITE_THEMES = [
+    { id:'wazyo', name:'Wazyo classique', description:'Noir & or — identité actuelle', bg:'#0a0a0a', card:'#141414', accent:'#C9A84C', text:'#e0e0e0', sub:'#888888', swatches:['#0a0a0a','#141414','#C9A84C','#e0e0e0'] },
+    { id:'amazon', name:'Amazon clair', description:'Fond clair, boutons orange, cartes compactes', bg:'#eaeded', card:'#ffffff', accent:'#ff9900', text:'#111827', sub:'#565959', swatches:['#eaeded','#ffffff','#ff9900','#131921'] },
+    { id:'minimal', name:'Minimal moderne', description:'Blanc doux & turquoise', bg:'#f7f9fa', card:'#ffffff', accent:'#087f8c', text:'#17252a', sub:'#64748b', swatches:['#f7f9fa','#ffffff','#087f8c','#17252a'] },
+    { id:'midnight', name:'Bleu nuit', description:'Bleu profond & cyan', bg:'#091321', card:'#122033', accent:'#38bdf8', text:'#e8f1fb', sub:'#9db1c8', swatches:['#091321','#122033','#38bdf8','#e8f1fb'] },
+    { id:'nature', name:'Nature', description:'Vert sauge & ivoire', bg:'#edf3ed', card:'#ffffff', accent:'#26734d', text:'#1d3327', sub:'#687b70', swatches:['#edf3ed','#ffffff','#26734d','#1d3327'] },
+  ]
+  const [siteTheme, setSiteTheme] = useState('wazyo')
 
   useEffect(() => {
     getSettings().then(s => {
-      const loadedTheme = {
-        theme_bg:       s.theme_bg       || DEFAULT_THEME.theme_bg,
-        theme_card:     s.theme_card     || DEFAULT_THEME.theme_card,
-        theme_accent:   s.theme_accent   || DEFAULT_THEME.theme_accent,
-        theme_text:     s.theme_text     || DEFAULT_THEME.theme_text,
+      const savedPreset = SITE_THEMES.some(p => p.id === s.theme_preset) ? s.theme_preset : (s.theme_preset === 'custom' ? 'custom' : 'wazyo')
+      const preset = SITE_THEMES.find(p => p.id === savedPreset)
+      const loadedTheme = preset ? {
+        theme_bg: preset.bg, theme_card: preset.card, theme_accent: preset.accent,
+        theme_text: preset.text, theme_text_sub: preset.sub,
+      } : {
+        theme_bg: s.theme_bg || DEFAULT_THEME.theme_bg,
+        theme_card: s.theme_card || DEFAULT_THEME.theme_card,
+        theme_accent: s.theme_accent || DEFAULT_THEME.theme_accent,
+        theme_text: s.theme_text || DEFAULT_THEME.theme_text,
         theme_text_sub: s.theme_text_sub || DEFAULT_THEME.theme_text_sub,
       }
+      setSiteTheme(savedPreset)
       setTheme(loadedTheme)
-      applyToDOM(loadedTheme)
+      applyToDOM(loadedTheme, savedPreset)
+      const matchingPalette = PRESETS.findIndex(p => p.bg === loadedTheme.theme_bg && p.card === loadedTheme.theme_card && p.accent === loadedTheme.theme_accent)
+      setActivePreset(matchingPalette >= 0 ? matchingPalette : null)
       try {
         const parsed = JSON.parse(s.custom_themes || '[]')
         setCustomThemes(Array.isArray(parsed) ? parsed : [])
@@ -997,37 +1003,48 @@ function ThemeEditor({ onToast }) {
     })
   }, [])
 
-  // Applique un objet CSS complet au DOM en une seule passe
-  function applyToDOM(t) {
+  // Applique les couleurs et la structure visuelle choisies, sans toucher aux fonctions métier.
+  function applyToDOM(t, presetId = siteTheme) {
     const r = document.documentElement
+    r.dataset.wazyoPreset = presetId || 'custom'
     r.style.setProperty('--bk', t.theme_bg)
     r.style.setProperty('--bk2', t.theme_bg)
     r.style.setProperty('--card', t.theme_card)
     r.style.setProperty('--card2', t.theme_card)
+    r.style.setProperty('--card3', t.theme_card)
     r.style.setProperty('--br', t.theme_accent)
     r.style.setProperty('--br2', t.theme_accent)
     r.style.setProperty('--br3', t.theme_accent)
     r.style.setProperty('--g3', t.theme_text)
     r.style.setProperty('--g4', t.theme_text_sub)
+    r.style.setProperty('--wz-card-text', t.theme_text)
+    r.style.setProperty('--wz-card-sub', t.theme_text_sub)
     document.body.style.background = t.theme_bg
   }
 
-  // Pour un seul champ modifié manuellement (color picker)
+  function selectSiteTheme(p) {
+    const next = { theme_bg:p.bg, theme_card:p.card, theme_accent:p.accent, theme_text:p.text, theme_text_sub:p.sub }
+    setSiteTheme(p.id)
+    setTheme(next)
+    setActivePreset(null)
+    applyToDOM(next, p.id)
+  }
+
+  // Une modification manuelle devient un thème personnalisé.
   function apply(key, val) {
     const next = { ...theme, [key]: val }
     setTheme(next)
-    applyToDOM(next)
+    setSiteTheme('custom')
+    applyToDOM(next, 'custom')
     setActivePreset(null)
   }
 
-  // Pour appliquer un preset entier d'un coup — corrige le bug de closure
+  // Les anciennes palettes restent utilisables, mais appliquent un style personnalisé.
   function applyPreset(p, idx) {
-    const next = {
-      theme_bg: p.bg, theme_card: p.card, theme_accent: p.accent,
-      theme_text: p.text, theme_text_sub: p.sub,
-    }
+    const next = { theme_bg:p.bg, theme_card:p.card, theme_accent:p.accent, theme_text:p.text, theme_text_sub:p.sub }
     setTheme(next)
-    applyToDOM(next)
+    setSiteTheme('custom')
+    applyToDOM(next, 'custom')
     setActivePreset(idx)
   }
 
@@ -1035,7 +1052,9 @@ function ThemeEditor({ onToast }) {
     setSaving(true)
     try {
       for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
-      onToast && onToast('✅ Thème sauvegardé ! Visible pour tous les clients.', 'default')
+      await saveSetting('theme_preset', siteTheme)
+      try { localStorage.setItem('wazyo_theme_updated', String(Date.now())) } catch {}
+      onToast && onToast('✅ Thème complet sauvegardé. Recharge la boutique pour vérifier le résultat.', 'default')
     } catch (e) {
       console.error('ThemeEditor save error:', e)
       onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de sauvegarder le thème'), 'error')
@@ -1051,7 +1070,7 @@ function ThemeEditor({ onToast }) {
     const newCustom = {
       name: newThemeName.trim(),
       bg: theme.theme_bg, card: theme.theme_card, accent: theme.theme_accent,
-      text: theme.theme_text, sub: theme.theme_text_sub,
+      text: theme.theme_text, sub: theme.theme_text_sub, preset: siteTheme,
       id: Date.now(),
     }
     try {
@@ -1077,7 +1096,8 @@ function ThemeEditor({ onToast }) {
 
   function restoreDefault() {
     setTheme(DEFAULT_THEME)
-    applyToDOM(DEFAULT_THEME)
+    setSiteTheme('wazyo')
+    applyToDOM(DEFAULT_THEME, 'wazyo')
     setActivePreset(0)
     onToast && onToast('↺ Thème par défaut restauré (pas encore sauvegardé — clique "Sauvegarder" pour confirmer)', 'default')
   }
@@ -1108,17 +1128,43 @@ function ThemeEditor({ onToast }) {
     <div className="wazyo-amazon-panel wazyo-theme-panel">
       <style>{WAZYO_ADMIN_LIGHT_STYLE}</style>
       <nav className="wazyo-settings-rail" aria-label="Sections du thème">
-        <strong>THÈME</strong>
+        <strong>APPARENCE DU SITE</strong>
+        <button onClick={() => document.getElementById('wz-full-themes')?.scrollIntoView({behavior:'smooth',block:'start'})}>🖥️ Thèmes complets</button>
         <button onClick={() => document.getElementById('wz-palettes')?.scrollIntoView({behavior:'smooth',block:'start'})}>🎨 Palettes</button>
         <button onClick={() => document.getElementById('wz-saved-themes')?.scrollIntoView({behavior:'smooth',block:'start'})}>⭐ Mes thèmes</button>
-        <button onClick={() => document.getElementById('wz-custom-theme')?.scrollIntoView({behavior:'smooth',block:'start'})}>💾 Enregistrer</button>
         <button onClick={() => document.getElementById('wz-colors')?.scrollIntoView({behavior:'smooth',block:'start'})}>🖌️ Couleurs</button>
         <button onClick={() => document.getElementById('wz-preview')?.scrollIntoView({behavior:'smooth',block:'start'})}>👁️ Aperçu</button>
       </nav>
-      <h3 style={{ color:'#111827', fontSize:20, fontWeight:800, marginBottom:6 }}>Thème de la boutique</h3>
+      <h3 style={{ color:'#111827', fontSize:20, fontWeight:800, marginBottom:6 }}>🎨 Thème complet de la boutique</h3>
       <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:18, lineHeight:1.5 }}>
         Personnalise les couleurs de tout le site. L'aperçu est en temps réel.
       </p>
+
+      {/* Thèmes complets : modifient à la fois palette et style de la boutique */}
+      <div id="wz-full-themes" style={{ ...sec, background:'#fff', border:'1px solid #d5d9d9', borderRadius:8, padding:14, marginBottom:10 }}>
+        <div style={{fontSize:11,fontWeight:800,color:'#565959',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:9}}>Choisir le design global</div>
+        <p style={{fontSize:12,color:'#64748b',lineHeight:1.5,margin:'0 0 12px'}}>Ce choix change les couleurs, les cartes, les boutons, les formulaires et l’apparence générale de la boutique. Il ne touche pas aux commandes, stocks, affiliations ou livraisons.</p>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:9}}>
+          {SITE_THEMES.map(p => (
+            <button key={p.id} onClick={() => selectSiteTheme(p)} aria-pressed={siteTheme===p.id} style={{
+              padding:0,overflow:'hidden',cursor:'pointer',textAlign:'left',borderRadius:8,
+              border:siteTheme===p.id?'2px solid #007185':'1px solid #d5d9d9',
+              background:'#fff',boxShadow:siteTheme===p.id?'0 0 0 2px rgba(0,113,133,.12)':'0 1px 2px #00000008',
+            }}>
+              <div style={{height:48,background:p.bg,padding:8,display:'flex',gap:5,alignItems:'flex-end'}}>
+                <span style={{width:24,height:27,borderRadius:4,background:p.card,border:'1px solid '+p.sub+'55'}} />
+                <span style={{flex:1,height:20,borderRadius:4,background:p.card,border:'1px solid '+p.sub+'55'}} />
+                <span style={{width:24,height:20,borderRadius:4,background:p.accent}} />
+              </div>
+              <div style={{padding:'9px 10px'}}>
+                <div style={{fontSize:12,fontWeight:800,color:'#232f3e',display:'flex',alignItems:'center',gap:5}}>{siteTheme===p.id?'✓ ':''}{p.name}</div>
+                <div style={{fontSize:10,color:'#64748b',lineHeight:1.4,marginTop:3}}>{p.description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div style={{fontSize:11,color:'#64748b',marginTop:10}}>Sélection actuelle : <strong style={{color:'#232f3e'}}>{SITE_THEMES.find(p=>p.id===siteTheme)?.name || 'Personnalisé'}</strong>. Clique sur « Sauvegarder le thème » pour publier.</div>
+      </div>
 
       {/* Palettes */}
       <div id="wz-palettes" style={sec}>
@@ -1156,7 +1202,7 @@ function ThemeEditor({ onToast }) {
               <div key={ct.id} style={{ position:'relative' }}>
                 <button onClick={() => {
                   const t = { theme_bg:ct.bg, theme_card:ct.card, theme_accent:ct.accent, theme_text:ct.text, theme_text_sub:ct.sub }
-                  setTheme(t); applyToDOM(t); setActivePreset(null)
+                  setTheme(t); setSiteTheme('custom'); applyToDOM(t, 'custom'); setActivePreset(null)
                 }} style={{
                   width:'100%', background: ct.card, border:`2px solid ${ct.accent}80`, borderRadius:12,
                   padding:'12px 10px', cursor:'pointer', textAlign:'left',
@@ -1180,7 +1226,7 @@ function ThemeEditor({ onToast }) {
       )}
 
       {/* ── Sauvegarder la combinaison actuelle comme thème perso ── */}
-      <div id="wz-custom-theme" style={sec}>
+      <div style={sec}>
         <span style={lbl}>💾 Enregistrer la combinaison actuelle</span>
         <p style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginBottom:10, lineHeight:1.5 }}>
           Donne un nom à tes couleurs actuelles pour les retrouver et les réappliquer n'importe quand.
