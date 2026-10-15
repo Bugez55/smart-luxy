@@ -980,6 +980,7 @@ function ThemeEditor({ onToast }) {
     { id:'minimal', name:'Minimal moderne', description:'Blanc doux & turquoise', bg:'#f7f9fa', card:'#ffffff', accent:'#087f8c', text:'#17252a', sub:'#64748b', swatches:['#f7f9fa','#ffffff','#087f8c','#17252a'] },
     { id:'midnight', name:'Bleu nuit', description:'Bleu profond & cyan', bg:'#091321', card:'#122033', accent:'#38bdf8', text:'#e8f1fb', sub:'#9db1c8', swatches:['#091321','#122033','#38bdf8','#e8f1fb'] },
     { id:'nature', name:'Nature', description:'Vert sauge & ivoire', bg:'#edf3ed', card:'#ffffff', accent:'#26734d', text:'#1d3327', sub:'#687b70', swatches:['#edf3ed','#ffffff','#26734d','#1d3327'] },
+    { id:'cinematic', name:'Cinéma premium', description:'Grande photo animée, titre central, profondeur et transitions', bg:'#080a0f', card:'#11151e', accent:'#d5b770', text:'#f7f4ed', sub:'#aaa398', swatches:['#080a0f','#11151e','#d5b770','#f7f4ed'] },
   ]
   const [siteTheme, setSiteTheme] = useState('wazyo')
 
@@ -1016,6 +1017,7 @@ function ThemeEditor({ onToast }) {
   function applyToDOM(t, presetId = siteTheme) {
     const r = document.documentElement
     r.dataset.wazyoPreset = presetId || 'custom'
+    r.dataset.themeMode = ['amazon','minimal','nature'].includes(presetId) ? 'light' : 'dark'
     r.style.setProperty('--bk', t.theme_bg)
     r.style.setProperty('--bk2', t.theme_bg)
     r.style.setProperty('--card', t.theme_card)
@@ -1060,10 +1062,26 @@ function ThemeEditor({ onToast }) {
   async function save() {
     setSaving(true)
     try {
+      // Persister la palette ET l'identifiant structurel du thème.
       for (const [k, v] of Object.entries(theme)) await saveSetting(k, v)
       await saveSetting('theme_preset', siteTheme)
-      try { localStorage.setItem('wazyo_theme_updated', String(Date.now())) } catch {}
-      onToast && onToast('✅ Thème complet sauvegardé. Recharge la boutique pour vérifier le résultat.', 'default')
+
+      // Vérifier directement auprès de Supabase (sans cache local) avant d'annoncer le succès.
+      const verifyKeys = ['theme_preset','theme_bg','theme_card','theme_accent','theme_text','theme_text_sub']
+      const { data, error } = await supabase
+        .from('settings')
+        .select('key,value')
+        .in('key', verifyKeys)
+      if (error) throw error
+      const saved = Object.fromEntries((data || []).map(row => [row.key, row.value]))
+      if (String(saved.theme_preset || '') !== String(siteTheme)) {
+        throw new Error('Le thème sélectionné n’a pas été confirmé par Supabase')
+      }
+
+      // Appliquer au panneau immédiatement et prévenir les autres onglets.
+      applyToDOM(theme, siteTheme)
+      try { localStorage.setItem('wazyo_theme_updated', JSON.stringify({ preset:siteTheme, updatedAt:Date.now() })) } catch {}
+      onToast && onToast(`✅ Thème « ${SITE_THEMES.find(p => p.id === siteTheme)?.name || 'personnalisé'} » sauvegardé. Recharge la boutique pour le voir partout.`, 'default')
     } catch (e) {
       console.error('ThemeEditor save error:', e)
       onToast && onToast('❌ Erreur : ' + (e?.message || 'Impossible de sauvegarder le thème'), 'error')
@@ -1160,10 +1178,11 @@ function ThemeEditor({ onToast }) {
               border:siteTheme===p.id?'2px solid #007185':'1px solid #d5d9d9',
               background:'#fff',boxShadow:siteTheme===p.id?'0 0 0 2px rgba(0,113,133,.12)':'0 1px 2px #00000008',
             }}>
-              <div style={{height:48,background:p.bg,padding:8,display:'flex',gap:5,alignItems:'flex-end'}}>
-                <span style={{width:24,height:27,borderRadius:4,background:p.card,border:'1px solid '+p.sub+'55'}} />
-                <span style={{flex:1,height:20,borderRadius:4,background:p.card,border:'1px solid '+p.sub+'55'}} />
-                <span style={{width:24,height:20,borderRadius:4,background:p.accent}} />
+              <div style={{height:58,background:p.id === 'cinematic' ? 'linear-gradient(125deg,#080a0f 0%,#202533 42%,#090b11 72%,#8f7440 100%)' : p.bg,padding:8,display:'flex',gap:5,alignItems:'flex-end',position:'relative',overflow:'hidden'}}>
+                {p.id === 'cinematic' && <span style={{position:'absolute',inset:'-20% 25% -50% 25%',background:'radial-gradient(ellipse,rgba(213,183,112,.45),transparent 70%)',filter:'blur(6px)'}} />}
+                <span style={{width:24,height:27,borderRadius:4,background:p.card,border:'1px solid '+p.sub+'55',position:'relative'}} />
+                <span style={{flex:1,height:p.id === 'cinematic' ? 36 : 20,borderRadius:4,background:p.card,border:'1px solid '+p.sub+'55',position:'relative',opacity:.92}} />
+                <span style={{width:24,height:20,borderRadius:p.id === 'cinematic' ? 999 : 4,background:p.accent,position:'relative'}} />
               </div>
               <div style={{padding:'9px 10px'}}>
                 <div style={{fontSize:12,fontWeight:800,color:'#232f3e',display:'flex',alignItems:'center',gap:5}}>{siteTheme===p.id?'✓ ':''}{p.name}</div>
