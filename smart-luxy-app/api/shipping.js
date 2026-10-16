@@ -1,4 +1,5 @@
-// api/shipping.js — intégration serveur Yalidine
+
+ // api/shipping.js — intégration serveur Yalidine
 import { requireAdmin } from './_auth.js'
 import { applyCors } from './_cors.js'
 
@@ -17,58 +18,66 @@ async function getDispatch(client, orderId) {
 }
 
 async function reconcileOrder(client, orderId, tracking) {
-  const { data: current, error: readError } = await client
-    .from('orders')
-    .select('id,statut,tracking_code,livraison_company')
-    .eq('id', orderId)
-    .maybeSingle()
+  const trackingCode = String(tracking || '').trim()
 
-  if (readError || !current) {
-    return { ok: false, error: readError?.message || 'Commande introuvable' }
+  if (!trackingCode) {
+    return { ok: false, error: 'Numéro de suivi manquant.' }
   }
 
-  const trackingCode = String(tracking)
+  const { data, error } = await client.rpc('reconcile_yalidine_order', {
+    p_order_id: String(orderId).trim().toUpperCase(),
+    p_tracking_code: trackingCode,
+  })
 
-  if (current.tracking_code && String(current.tracking_code) !== trackingCode) {
-    return { ok: false, conflict: true, error: 'La commande possède déjà un autre tracking.' }
+  if (error) {
+    console.error('Erreur synchronisation commande:', error.message)
+    return {
+      ok: false,
+      error: 'Impossible de synchroniser la commande.',
+    }
   }
 
-  if (current.statut === 'cancelled') {
-    return { ok: false, conflict: true, error: 'La commande a été annulée.' }
+  if (!data || data.ok !== true) {
+    return {
+      ok: false,
+      conflict: data?.conflict === true,
+      error: data?.error || 'La commande n’a pas pu être synchronisée.',
+    }
   }
 
-  const updates = {
-    tracking_code: trackingCode,
-    livraison_company: 'yalidine',
-  }
-
-  if (current.statut === 'new' || current.statut === 'confirmed') {
-    updates.statut = 'shipped'
-  }
-
-  const { error: updateError } = await client
-    .from('orders')
-    .update(updates)
-    .eq('id', orderId)
-
-  if (updateError) return { ok: false, error: updateError.message }
   return { ok: true }
 }
 
 async function markUnknown(client, dispatch, message) {
   if (!dispatch) return
-  await client
+
+  const { error } = await client
     .from('shipping_dispatches')
-    .update({ status: 'unknown', last_error: String(message || '').slice(0, 1000) })
+    .update({
+      status: 'unknown',
+      last_error: String(message || '').slice(0, 1000),
+    })
     .eq('id', dispatch.id)
+
+  if (error) {
+    console.error('Erreur mise à jour expédition incertaine:', error.message)
+  }
 }
 
 export default async function handler(req, res) {
   const allowed = applyCors(req, res)
 
-  if (req.method === 'OPTIONS') return res.status(allowed ? 204 : 403).end()
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-  if (!allowed) return res.status(403).json({ error: 'Origine non autorisée' })
+  if (req.method === 'OPTIONS') {
+    return res.status(allowed ? 204 : 403).end()
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  if (!allowed) {
+    return res.status(403).json({ error: 'Origine non autorisée' })
+  }
 
   const auth = await requireAdmin(req, res)
   if (!auth.ok) return auth.response
@@ -79,12 +88,14 @@ export default async function handler(req, res) {
   if (provider !== 'yalidine') {
     return res.status(400).json({ error: 'Fournisseur non supporté' })
   }
+
   if (!/^SL-[A-Z0-9]+$/.test(orderId)) {
     return res.status(400).json({ error: 'Commande invalide' })
   }
 
   const apiId = process.env.YALIDINE_API_ID
   const apiToken = process.env.YALIDINE_API_TOKEN
+
   if (!apiId || !apiToken) {
     return res.status(500).json({
       error: 'Yalidine n’est pas configuré côté serveur. Ajoute YALIDINE_API_ID et YALIDINE_API_TOKEN dans Vercel.',
@@ -92,19 +103,27 @@ export default async function handler(req, res) {
   }
 
   let dispatch
+
   try {
     dispatch = await getDispatch(auth.client, orderId)
   } catch (error) {
     console.error('Erreur lecture shipping_dispatches:', error)
-    return res.status(500).json({ error: 'Impossible de vérifier l’état de l’expédition.' })
+    return res.status(500).json({
+      error: 'Impossible de vérifier l’état de l’expédition.',
+    })
   }
 
-  // Already created: never call Yalidine again. Reconcile Wazyo if necessary.
+  // Si le colis existe déjà, ne jamais le recréer.
   if (dispatch?.status === 'created' && dispatch.tracking_code) {
-    const reconciled = await reconcileOrder(auth.client, orderId, dispatch.tracking_code)
+    const reconciled = await reconcileOrder(
+      auth.client,
+      orderId,
+      dispatch.tracking_code
+    )
+
     if (!reconciled.ok) {
       return res.status(reconciled.conflict ? 409 : 500).json({
-        error: reconciled.error || 'Le suivi existe mais la commande n’a pas pu être synchronisée.',
+        error: reconciled.error,
         tracking: dispatch.tracking_code,
       })
     }
@@ -117,15 +136,22 @@ export default async function handler(req, res) {
     })
   }
 
-  // An in-flight/unknown external call must not be retried automatically:
-  // the provider may already have created a parcel and a second POST could duplicate it.
+  // Ne pas relancer automatiquement une tentative incertaine.
   if (dispatch?.status === 'creating') {
     const age = Date.now() - new Date(dispatch.updated_at).getTime()
+
     if (Number.isFinite(age) && age < CLAIM_TTL_MS) {
-      return res.status(409).json({ error: 'Une expédition Yalidine est déjà en cours pour cette commande.' })
+      return res.status(409).json({
+        error: 'Une expédition Yalidine est déjà en cours pour cette commande.',
+      })
     }
 
-    await markUnknown(auth.client, dispatch, 'Tentative Yalidine devenue incertaine après délai. Vérification manuelle requise avant tout nouvel envoi.')
+    await markUnknown(
+      auth.client,
+      dispatch,
+      'Tentative Yalidine devenue incertaine après délai. Vérification manuelle requise.'
+    )
+
     return res.status(409).json({
       error: 'L’expédition précédente est incertaine. Vérifie Yalidine avant de relancer pour éviter un doublon.',
     })
@@ -137,19 +163,28 @@ export default async function handler(req, res) {
     })
   }
 
-  // Query the order only when we are actually allowed to create a first/retry attempt.
-  const { data: order, error } = await auth.client
+  // Une commande annulée ou déjà expédiée ne doit pas être envoyée à nouveau.
+  const { data: order, error: orderError } = await auth.client
     .from('orders')
     .select('id,nom_client,telephone,wilaya,commune,adresse,total,frais_livraison,mode_livraison,items,statut')
     .eq('id', orderId)
     .in('statut', ['new', 'confirmed'])
     .maybeSingle()
 
-  if (error || !order) {
-    return res.status(404).json({ error: 'Commande introuvable ou déjà expédiée' })
+  if (orderError) {
+    console.error('Erreur lecture commande:', orderError.message)
+    return res.status(500).json({
+      error: 'Impossible de vérifier la commande.',
+    })
   }
 
-  // Claim this order/provider pair durably before the external side effect.
+  if (!order) {
+    return res.status(404).json({
+      error: 'Commande introuvable, annulée ou déjà expédiée.',
+    })
+  }
+
+  // Réserver l'expédition en base avant l'appel externe.
   try {
     if (dispatch?.status === 'failed') {
       const { data: claimed, error: claimError } = await auth.client
@@ -165,41 +200,79 @@ export default async function handler(req, res) {
         .maybeSingle()
 
       if (claimError || !claimed) {
-        return res.status(409).json({ error: 'Une autre tentative d’expédition est déjà en cours.' })
+        return res.status(409).json({
+          error: 'Une autre tentative d’expédition est déjà en cours.',
+        })
       }
+
       dispatch = { ...dispatch, ...claimed, status: 'creating' }
     } else {
       const { data: created, error: createError } = await auth.client
         .from('shipping_dispatches')
-        .insert({ provider: 'yalidine', order_id: order.id, status: 'creating', attempts: 1 })
+        .insert({
+          provider: 'yalidine',
+          order_id: order.id,
+          status: 'creating',
+          attempts: 1,
+        })
         .select('id,provider,order_id,status,attempts,tracking_code,label_url,last_error,created_at,updated_at')
         .single()
 
       if (createError) {
         if (createError.code === '23505') {
           const latest = await getDispatch(auth.client, orderId)
+
           if (latest?.status === 'created' && latest.tracking_code) {
-            const reconciled = await reconcileOrder(auth.client, orderId, latest.tracking_code)
+            const reconciled = await reconcileOrder(
+              auth.client,
+              orderId,
+              latest.tracking_code
+            )
+
             if (!reconciled.ok) {
-              return res.status(reconciled.conflict ? 409 : 500).json({ error: reconciled.error, tracking: latest.tracking_code })
+              return res.status(reconciled.conflict ? 409 : 500).json({
+                error: reconciled.error,
+                tracking: latest.tracking_code,
+              })
             }
-            return res.status(200).json({ success: true, idempotent: true, tracking: latest.tracking_code, label_url: latest.label_url || null })
+
+            return res.status(200).json({
+              success: true,
+              idempotent: true,
+              tracking: latest.tracking_code,
+              label_url: latest.label_url || null,
+            })
           }
-          return res.status(409).json({ error: 'Une autre tentative d’expédition est déjà en cours.' })
+
+          return res.status(409).json({
+            error: 'Une autre tentative d’expédition est déjà en cours.',
+          })
         }
+
         console.error('Erreur création shipping_dispatch:', createError)
-        return res.status(500).json({ error: 'Impossible de verrouiller l’expédition.' })
+
+        return res.status(500).json({
+          error: 'Impossible de verrouiller l’expédition.',
+        })
       }
+
       dispatch = created
     }
   } catch (error) {
     console.error('Erreur verrouillage expédition:', error)
-    return res.status(500).json({ error: 'Impossible de verrouiller l’expédition.' })
+
+    return res.status(500).json({
+      error: 'Impossible de verrouiller l’expédition.',
+    })
   }
 
   const items = Array.isArray(order.items) ? order.items : []
-  const description = items.map(i => `${i.nom} x${i.qty}`).join(', ')
-  const wilayaId = String(order.wilaya || '').match(/^\d+/)?.[0] || ''
+  const description = items
+    .map((item) => `${item.nom || 'Produit'} x${item.qty || 1}`)
+    .join(', ')
+
+  const wilayaId =
+    String(order.wilaya || '').match(/^\d+/)?.[0] || ''
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
@@ -238,28 +311,55 @@ export default async function handler(req, res) {
     const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-      const providerMessage = data?.message || data?.detail || 'Yalidine a refusé la création du colis'
+      const providerMessage =
+        data?.message ||
+        data?.detail ||
+        'Yalidine a refusé la création du colis'
+
+      // Une réponse serveur peut laisser planer un doute sur la création.
       if (response.status >= 500) {
-        await markUnknown(auth.client, dispatch, `Réponse Yalidine ${response.status}: ${providerMessage}`)
-        return res.status(502).json({ error: 'Réponse serveur Yalidine incertaine. Vérifie le portail Yalidine avant de relancer.' })
+        await markUnknown(
+          auth.client,
+          dispatch,
+          `Réponse Yalidine ${response.status}: ${providerMessage}`
+        )
+
+        return res.status(502).json({
+          error: 'Réponse serveur Yalidine incertaine. Vérifie le portail Yalidine avant de relancer.',
+        })
       }
 
-      await auth.client
+      const { error: updateError } = await auth.client
         .from('shipping_dispatches')
-        .update({ status: 'failed', last_error: String(providerMessage).slice(0, 1000) })
+        .update({
+          status: 'failed',
+          last_error: String(providerMessage).slice(0, 1000),
+        })
         .eq('id', dispatch.id)
+
+      if (updateError) {
+        console.error('Erreur sauvegarde échec expédition:', updateError.message)
+      }
 
       return res.status(502).json({ error: providerMessage })
     }
 
     if (!data?.tracking) {
-      await markUnknown(auth.client, dispatch, 'Réponse Yalidine sans numéro de tracking.')
-      return res.status(502).json({ error: 'Réponse Yalidine sans numéro de tracking. Vérification manuelle requise.' })
+      await markUnknown(
+        auth.client,
+        dispatch,
+        'Réponse Yalidine sans numéro de tracking.'
+      )
+
+      return res.status(502).json({
+        error: 'Réponse Yalidine sans numéro de tracking. Vérification manuelle requise.',
+      })
     }
 
-    const tracking = String(data.tracking)
+    const tracking = String(data.tracking).trim()
     const labelUrl = data.label_url ? String(data.label_url) : null
 
+    // Sauvegarder le numéro de suivi avant la réconciliation de commande.
     const { error: dispatchUpdateError } = await auth.client
       .from('shipping_dispatches')
       .update({
@@ -271,20 +371,32 @@ export default async function handler(req, res) {
       .eq('id', dispatch.id)
 
     if (dispatchUpdateError) {
-      console.error('Erreur enregistrement tracking Yalidine:', dispatchUpdateError)
+      console.error(
+        'Erreur enregistrement tracking Yalidine:',
+        dispatchUpdateError
+      )
+
       return res.status(500).json({
         error: 'Colis créé chez Yalidine mais le suivi n’a pas pu être enregistré. Ne relance pas l’envoi avant vérification.',
         tracking,
       })
     }
 
-    const reconciled = await reconcileOrder(auth.client, order.id, tracking)
+    const reconciled = await reconcileOrder(
+      auth.client,
+      order.id,
+      tracking
+    )
+
     if (!reconciled.ok) {
-      console.error('Erreur synchronisation commande après Yalidine:', reconciled.error)
+      console.error(
+        'Erreur synchronisation commande après Yalidine:',
+        reconciled.error
+      )
+
       return res.status(500).json({
-        error: reconciled.conflict
-          ? reconciled.error
-          : 'Colis créé et suivi enregistré, mais la commande n’a pas pu être synchronisée.',
+        error: reconciled.error ||
+          'Colis créé et suivi enregistré, mais la commande n’a pas pu être synchronisée.',
         tracking,
       })
     }
@@ -295,9 +407,15 @@ export default async function handler(req, res) {
       label_url: labelUrl,
     })
   } catch (error) {
-    const message = error?.name === 'AbortError' ? 'Délai dépassé vers Yalidine' : (error?.message || 'Erreur réseau Yalidine')
+    const message =
+      error?.name === 'AbortError'
+        ? 'Délai dépassé vers Yalidine'
+        : error?.message || 'Erreur réseau Yalidine'
+
     console.error('Erreur Yalidine:', error)
+
     await markUnknown(auth.client, dispatch, message)
+
     return res.status(502).json({
       error: 'La tentative Yalidine est incertaine. Vérifie Yalidine avant de relancer pour éviter un doublon.',
     })
