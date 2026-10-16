@@ -260,7 +260,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
   }
   function isValidTel(v) {
     const digits = (v || '').replace(/[^\d]/g, '')
-    return /^0\d{9}$/.test(digits)
+    return /^0[567]\d{8}$/.test(digits)
   }
 
   function formatAlgerianPhone(v) {
