@@ -326,11 +326,11 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
 
   function switchLang() { setLang(l => l === 'fr' ? 'ar' : 'fr') }
 
-  // Téléphone algérien : 10 chiffres, commence par 0 (ex: 05/06/07 mobile,
-  // 02/03/04 fixe). On nettoie les espaces/tirets avant de vérifier.
+  // Aligné sur le serveur : numéro mobile algérien 05/06/07 + 8 chiffres.
+  // Les espaces et séparateurs sont supprimés avant la vérification.
   function isValidTel(v) {
     const digits = (v || '').replace(/[^\d]/g, '')
-    return /^0\d{9}$/.test(digits)
+    return /^0[567]\d{8}$/.test(digits)
   }
 
   function triggerTelError() {
