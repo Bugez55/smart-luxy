@@ -218,6 +218,60 @@ export default function ProductGrid({
         @media(max-width:640px){
           .pcard{border-color:rgba(255,255,255,.06);}
         }
+
+        /* WAZYO — mise en valeur renforcée des produits (présentation uniquement) */
+        .pcard{
+          border-radius:20px!important;
+          background:linear-gradient(160deg,rgba(255,255,255,.035),rgba(255,255,255,.012)) , var(--card)!important;
+          box-shadow:0 8px 26px rgba(0,0,0,.16);
+        }
+        .pcard-img{
+          height:clamp(230px,25vw,310px)!important;
+          background:radial-gradient(ellipse at 50% 38%,rgba(201,168,76,.10),transparent 58%),linear-gradient(145deg,#171717,#0c0c0c)!important;
+          isolation:isolate;
+        }
+        .pcard-img::before{
+          content:"";
+          position:absolute;
+          inset:10px;
+          border:1px solid rgba(255,255,255,.055);
+          border-radius:14px;
+          pointer-events:none;
+          z-index:1;
+        }
+        .pcard-img img{
+          object-fit:contain!important;
+          padding:12px;
+          box-sizing:border-box;
+          filter:drop-shadow(0 12px 16px rgba(0,0,0,.22));
+        }
+        .pcard .pcard-badge{z-index:3;box-shadow:0 5px 16px rgba(0,0,0,.22);}
+        .pcard-body{padding:17px 17px 18px!important;gap:11px!important;}
+        .pcard-name{font-size:15px!important;line-height:1.4!important;min-height:2.7em;}
+        .pcard-prix{font-size:23px!important;letter-spacing:-.025em;}
+        .pcard-actions{gap:9px!important;padding-top:3px;}
+        .pcard-actions button{min-height:42px;border-radius:12px!important;}
+        @media(max-width:900px){
+          .pcard-img{height:clamp(205px,32vw,270px)!important;}
+          .pcard-body{padding:14px!important;}
+        }
+        @media(max-width:640px){
+          .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px!important;padding-left:12px!important;padding-right:12px!important;}
+          .pcard{border-radius:16px!important;}
+          .pcard-img{height:clamp(155px,49vw,220px)!important;}
+          .pcard-img::before{inset:7px;border-radius:11px;}
+          .pcard-img img{padding:9px;}
+          .pcard-body{padding:12px 11px 13px!important;gap:8px!important;}
+          .pcard-name{font-size:12px!important;min-height:2.8em;}
+          .pcard-prix{font-size:17px!important;}
+          .pcard-old{font-size:10px!important;}
+          .pcard .pcard-badge{font-size:8px!important;padding:7px 8px!important;border-radius:10px!important;}
+          .pcard-actions{grid-template-columns:1fr!important;gap:7px!important;}
+          .pcard-actions button{min-height:38px;font-size:11px!important;padding:8px!important;}
+        }
+        @media(prefers-reduced-motion:reduce){
+          .pcard,.pcard-img img,.pcard::after{transition:none!important;animation:none!important;}
+        }
       `}</style>
 
       <div className="wz-products-head">
