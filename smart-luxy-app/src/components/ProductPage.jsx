@@ -1941,31 +1941,198 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
         </div>
       )}
 
-      {/* ── FAQ ── */}
+      {/* ── FAQ PREMIUM ── */}
       {faq.length > 0 && (
-        <div className="pp-section pp-faq" style={{ padding:'0 16px 16px' }}>
-          <h3 style={{ fontSize:16, fontWeight:900, color:'var(--g3)', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>❓ Questions fréquentes</h3>
-          {faq.map((item,i) => {
-            const isOpen = openFaq === i
-            return (
-              <div key={i} className={`pp-faq-item${isOpen ? ' is-open' : ''}`}>
-                <button
-                  className="pp-faq-q"
-                  onClick={() => setOpenFaq(isOpen ? null : i)}
-                  aria-expanded={isOpen}
+        <section
+          className="pp-section pp-faq"
+          aria-label="Questions fréquentes sur le produit"
+          style={{
+            padding: '24px 16px 28px',
+            margin: '12px 0',
+            borderRadius: 20,
+            background: 'linear-gradient(145deg, rgba(201,168,76,.07), rgba(255,255,255,.015))',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 12,
+              marginBottom: 20,
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                minWidth: 44,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 14,
+                background: 'rgba(201,168,76,.12)',
+                border: '1px solid rgba(201,168,76,.24)',
+                color: '#C9A84C',
+                fontSize: 22,
+                fontWeight: 900,
+              }}
+              aria-hidden="true"
+            >
+              ?
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3
+                style={{
+                  fontSize: 19,
+                  fontWeight: 900,
+                  color: 'var(--g3)',
+                  margin: '0 0 6px',
+                  lineHeight: 1.35,
+                }}
+              >
+                Questions fréquentes
+              </h3>
+
+              <p
+                style={{
+                  fontSize: 12,
+                  color: 'var(--g4)',
+                  lineHeight: 1.7,
+                  margin: 0,
+                }}
+              >
+                Tout ce que vous devez savoir avant de commander.
+              </p>
+            </div>
+
+            <span
+              style={{
+                flexShrink: 0,
+                padding: '5px 9px',
+                borderRadius: 20,
+                background: 'rgba(201,168,76,.12)',
+                border: '1px solid rgba(201,168,76,.2)',
+                color: '#C9A84C',
+                fontSize: 11,
+                fontWeight: 900,
+              }}
+            >
+              {faq.length} {faq.length > 1 ? 'questions' : 'question'}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gap: 10 }}>
+            {faq.map((item, i) => {
+              const isOpen = openFaq === i
+
+              return (
+                <div
+                  key={i}
+                  className={`pp-faq-item${isOpen ? ' is-open' : ''}`}
+                  style={{
+                    margin: 0,
+                    borderRadius: 14,
+                    overflow: 'hidden',
+                    border: isOpen
+                      ? '1px solid rgba(201,168,76,.42)'
+                      : '1px solid rgba(128,128,128,.16)',
+                    boxShadow: isOpen
+                      ? '0 8px 24px rgba(0,0,0,.10)'
+                      : 'none',
+                    transition: 'border-color .2s ease, box-shadow .2s ease',
+                  }}
                 >
-                  <span>{item.q}</span>
-                  <span className="pp-faq-chevron" aria-hidden="true">⌄</span>
-                </button>
-                {isOpen && (
-                  <div className="pp-faq-a">
-                    {item.r}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+                  <button
+                    type="button"
+                    className="pp-faq-q"
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    aria-expanded={isOpen}
+                    aria-controls={`pp-faq-answer-${i}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      width: '100%',
+                      minHeight: 54,
+                      padding: '15px 14px',
+                      textAlign: 'left',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 25,
+                        height: 25,
+                        minWidth: 25,
+                        borderRadius: 8,
+                        background: isOpen
+                          ? 'rgba(201,168,76,.18)'
+                          : 'rgba(128,128,128,.09)',
+                        color: '#C9A84C',
+                        fontSize: 12,
+                        fontWeight: 900,
+                      }}
+                      aria-hidden="true"
+                    >
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      {item.q}
+                    </span>
+
+                    <span
+                      className="pp-faq-chevron"
+                      aria-hidden="true"
+                      style={{
+                        fontSize: 19,
+                        flexShrink: 0,
+                        color: '#C9A84C',
+                      }}
+                    >
+                      ⌄
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div
+                      id={`pp-faq-answer-${i}`}
+                      className="pp-faq-a"
+                      style={{
+                        padding: '14px 16px 17px',
+                        fontSize: 13,
+                        lineHeight: 1.85,
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
+                      {item.r}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 7,
+              marginTop: 17,
+              color: 'var(--g4)',
+              fontSize: 11,
+              textAlign: 'center',
+            }}
+          >
+            <span aria-hidden="true">✓</span>
+            <span>Besoin d'aide ? Consultez les informations du produit.</span>
+          </div>
+        </section>
       )}
 
       {/* ── Partager le produit ── */}
