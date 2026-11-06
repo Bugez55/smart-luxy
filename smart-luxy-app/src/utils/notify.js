@@ -13,12 +13,12 @@ async function sendTelegram(payload, accessToken = null) {
       headers,
       body: JSON.stringify(payload),
     })
+    const body = await res.json().catch(() => ({}))
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
       console.error('❌ Telegram proxy erreur', res.status, body)
       return false
     }
-    return true
+    return body?.skipped !== true
   } catch (error) {
     console.error('❌ Telegram proxy — erreur réseau:', error)
     return false
