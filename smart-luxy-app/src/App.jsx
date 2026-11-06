@@ -656,6 +656,152 @@ const STOREFRONT_THEME_CSS = `
   }
 }
 
+
+/* WAZYO premium footer — existing contact and policy actions only. */
+:root[data-wazyo-preset="cinematic"] .wz-footer{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:48px 0 0!important;
+  padding:0 clamp(18px,4vw,58px)!important;
+  box-sizing:border-box!important;
+  background:
+    radial-gradient(ellipse at 12% 0%,rgba(213,183,112,.10),transparent 32%),
+    linear-gradient(180deg,#11141b 0%,#07090d 100%)!important;
+  border-top:1px solid rgba(213,183,112,.24)!important;
+  text-align:left!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer::before{display:none!important;}
+:root[data-wazyo-preset="cinematic"] .wz-footer-main{
+  width:min(1320px,100%);
+  margin:0 auto;
+  padding:42px 0 34px;
+  display:grid;
+  grid-template-columns:1.15fr 1fr .9fr;
+  gap:clamp(22px,4vw,60px);
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-brand{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:10px;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer .fbn{
+  color:#f7f4ed!important;
+  font-family:'Outfit',system-ui,sans-serif!important;
+  font-size:clamp(34px,4vw,48px)!important;
+  font-weight:850!important;
+  letter-spacing:.10em!important;
+  line-height:.95!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer .ftag{
+  margin:0!important;
+  color:rgba(247,244,237,.64)!important;
+  font-size:12px!important;
+  letter-spacing:.025em!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-location{
+  margin-top:7px;
+  color:#d5b770;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.18em;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-location i,
+:root[data-wazyo-preset="cinematic"] .wz-footer-bottom i{
+  color:rgba(213,183,112,.5);
+  font-style:normal;
+  padding:0 4px;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-label{
+  display:block;
+  margin:0 0 13px;
+  color:#d5b770;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.18em;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-contact,
+:root[data-wazyo-preset="cinematic"] .wz-footer-links{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:11px;
+  padding-top:7px;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-contact a,
+:root[data-wazyo-preset="cinematic"] .wz-footer-links button{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  max-width:100%;
+  padding:0;
+  border:0;
+  background:none;
+  color:rgba(247,244,237,.72)!important;
+  font-family:'Outfit',system-ui,sans-serif;
+  font-size:11px;
+  font-weight:600;
+  line-height:1.5;
+  text-align:left;
+  text-decoration:none;
+  cursor:pointer;
+  transition:color .2s ease,transform .2s ease;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-contact a span:first-child{
+  width:25px;
+  height:25px;
+  display:grid;
+  place-items:center;
+  flex:0 0 25px;
+  border:1px solid rgba(213,183,112,.20);
+  border-radius:50%;
+  color:#e3c783;
+  background:rgba(213,183,112,.06);
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-links button span{
+  color:#d5b770;
+  opacity:.75;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-contact a:hover,
+:root[data-wazyo-preset="cinematic"] .wz-footer-links button:hover{
+  color:#f0d79c!important;
+  transform:translateX(2px);
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-bottom{
+  width:min(1320px,100%);
+  margin:0 auto;
+  padding:17px 0 19px;
+  border-top:1px solid rgba(213,183,112,.13);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+  color:rgba(247,244,237,.42);
+  font-size:9px;
+  font-weight:650;
+}
+:root[data-wazyo-preset="cinematic"] .wz-footer-bottom span:last-child{
+  color:rgba(213,183,112,.70);
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.16em;
+}
+@media(max-width:760px){
+  :root[data-wazyo-preset="cinematic"] .wz-footer{margin-top:34px!important;}
+  :root[data-wazyo-preset="cinematic"] .wz-footer-main{
+    grid-template-columns:1fr 1fr;
+    gap:24px 18px;
+    padding:32px 0 25px;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-footer-brand{grid-column:1 / -1;}
+  :root[data-wazyo-preset="cinematic"] .wz-footer-bottom{align-items:flex-start;flex-direction:column;}
+}
+@media(max-width:420px){
+  :root[data-wazyo-preset="cinematic"] .wz-footer-main{grid-template-columns:1fr;}
+  :root[data-wazyo-preset="cinematic"] .wz-footer-brand{grid-column:auto;}
+}
+
 `;
 
 function applyWazyoThemeSettings(s) {
@@ -1404,74 +1550,48 @@ export default function App() {
         <ProductGallery products={products} onProductClick={openProductDetail} />
       )}
 
-      <footer className="footer">
-        <div className="fbn">Wazyo</div>
-        <p className="ftag">{CONFIG.slogan}</p>
+      <footer className="footer wz-footer">
+        <div className="wz-footer-main">
+          <div className="wz-footer-brand">
+            <div className="fbn">WAZYO</div>
+            <p className="ftag">{CONFIG.slogan}</p>
+            <span className="wz-footer-location">BOUTIQUE EN LIGNE <i>·</i> ALGÉRIE</span>
+          </div>
 
-        {/* Infos contact */}
-        <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:10, flexWrap:'wrap' }}>
-          <a href={`tel:+${CONFIG.telephone}`} style={{
-            color:'var(--g3)', fontSize:12, textDecoration:'none',
-            display:'flex', alignItems:'center', gap:4,
-          }}>📞 +{CONFIG.telephone}</a>
-          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
-          <a href={`mailto:${CONFIG.email}`} style={{
-            color:'var(--g3)', fontSize:12, textDecoration:'none',
-            display:'flex', alignItems:'center', gap:4,
-          }}>✉️ {CONFIG.email}</a>
-          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
-          <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noreferrer" style={{
-            color:'rgba(37,211,102,.5)', fontSize:12, textDecoration:'none',
-            display:'flex', alignItems:'center', gap:4,
-          }}>💬 WhatsApp</a>
+          <div className="wz-footer-contact">
+            <span className="wz-footer-label">RESTONS EN CONTACT</span>
+            <a href={`tel:+${CONFIG.telephone}`}>
+              <span aria-hidden="true">☎</span>
+              <span>+​{CONFIG.telephone}</span>
+            </a>
+            <a href={`mailto:${CONFIG.email}`}>
+              <span aria-hidden="true">✉</span>
+              <span>{CONFIG.email}</span>
+            </a>
+            <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noreferrer">
+              <span aria-hidden="true">◉</span>
+              <span>Nous contacter sur WhatsApp</span>
+            </a>
+          </div>
+
+          <div className="wz-footer-links">
+            <span className="wz-footer-label">INFORMATIONS</span>
+            <button type="button" onClick={() => setPolitiqueTab('confidentialite')}>
+              Politique de confidentialité <span aria-hidden="true">↗</span>
+            </button>
+            <button type="button" onClick={() => setPolitiqueTab('retour')}>
+              Politique de retour <span aria-hidden="true">↗</span>
+            </button>
+            <button type="button" onClick={() => setTrackingOpen(true)}>
+              Suivre ma commande <span aria-hidden="true">↗</span>
+            </button>
+          </div>
         </div>
 
-        <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:12, flexWrap:'wrap' }}>
-          <button
-            onClick={() => setPolitiqueTab('confidentialite')}
-            style={{
-              background:'none', border:'none',
-              color:'var(--g3)', fontSize:12,
-              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
-              padding:0, transition:'color .2s',
-            }}
-            onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
-          >
-            🔒 Politique de confidentialité
-          </button>
-          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
-          <button
-            onClick={() => setPolitiqueTab('retour')}
-            style={{
-              background:'none', border:'none',
-              color:'var(--g3)', fontSize:12,
-              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
-              padding:0, transition:'color .2s',
-            }}
-            onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
-          >
-            🔄 Politique de retour
-          </button>
-          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
-          <button
-            onClick={() => setTrackingOpen(true)}
-            style={{
-              background:'none', border:'none',
-              color:'var(--g3)', fontSize:12,
-              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
-              padding:0, transition:'color .2s',
-            }}
-            onMouseEnter={e => e.target.style.color = '#C9A84C'}
-            onMouseLeave={e => e.target.style.color = 'var(--g3)'}
-          >
-            📦 Suivre ma commande
-          </button>
+        <div className="wz-footer-bottom">
+          <span>© {new Date().getFullYear()} WAZYO · Tous droits réservés</span>
+          <span>ACHETEZ <i>·</i> DÉCOUVREZ <i>·</i> PROFITEZ</span>
         </div>
-        <p style={{ color:'var(--g3)', fontSize:11, marginTop:12 }}>
-          © {new Date().getFullYear()} Wazyo · Tous droits réservés
-        </p>
       </footer>
 
       {/* Direct checkout depuis la page d'accueil */}
