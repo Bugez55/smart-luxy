@@ -41,11 +41,11 @@ language sql
 stable
 security invoker
 set search_path = pg_catalog, public
-as $
+as $$
   select r.wilaya, r.bureau, r.domicile
   from public.shipping_rates r
   order by r.wilaya;
-$;
+$$;
 
 revoke all on function public.get_public_shipping_rates() from public;
 grant execute on function public.get_public_shipping_rates() to anon, authenticated;
@@ -222,7 +222,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, private, extensions, pg_temp
-as $
+as $$
 declare
   o public.orders;
   v_headers jsonb;
