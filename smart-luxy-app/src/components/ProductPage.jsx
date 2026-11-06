@@ -7,28 +7,6 @@ import { getSettings } from '../utils/useSettings'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
-const LIVRAISON = {
-  'Adrar':{bureau:1000,domicile:1600},'Chlef':{bureau:400,domicile:800},'Laghouat':{bureau:600,domicile:1100},
-  'Oum El Bouaghi':{bureau:400,domicile:950},'Batna':{bureau:400,domicile:950},'Béjaïa':{bureau:400,domicile:850},
-  'Biskra':{bureau:600,domicile:1100},'Béchar':{bureau:750,domicile:1400},'Blida':{bureau:400,domicile:800},
-  'Bouira':{bureau:400,domicile:850},'Tamanrasset':{bureau:1000,domicile:1800},'Tébessa':{bureau:600,domicile:1100},
-  'Tlemcen':{bureau:400,domicile:850},'Tiaret':{bureau:400,domicile:850},'Tizi Ouzou':{bureau:0,domicile:300},
-  'Alger':{bureau:300,domicile:750},'Djelfa':{bureau:600,domicile:1100},'Jijel':{bureau:400,domicile:950},
-  'Sétif':{bureau:400,domicile:900},'Saïda':{bureau:400,domicile:850},'Skikda':{bureau:400,domicile:950},
-  'Sidi Bel Abbès':{bureau:400,domicile:850},'Annaba':{bureau:400,domicile:900},'Guelma':{bureau:400,domicile:950},
-  'Constantine':{bureau:400,domicile:900},'Médéa':{bureau:400,domicile:850},'Mostaganem':{bureau:400,domicile:800},
-  "M'Sila":{bureau:400,domicile:900},'Mascara':{bureau:400,domicile:850},'Ouargla':{bureau:750,domicile:1200},
-  'Oran':{bureau:400,domicile:850},'El Bayadh':{bureau:400,domicile:900},'Illizi':{bureau:1500,domicile:1900},
-  'Bordj Bou Arréridj':{bureau:400,domicile:900},'Boumerdès':{bureau:400,domicile:850},'El Tarf':{bureau:400,domicile:1000},
-  'Tindouf':{bureau:1500,domicile:1900},'Tissemsilt':{bureau:400,domicile:850},'El Oued':{bureau:750,domicile:1200},
-  'Khenchela':{bureau:600,domicile:1000},'Souk Ahras':{bureau:600,domicile:1000},'Tipaza':{bureau:400,domicile:850},
-  'Mila':{bureau:400,domicile:950},'Aïn Defla':{bureau:400,domicile:850},'Naâma':{bureau:600,domicile:1200},
-  'Aïn Témouchent':{bureau:400,domicile:850},'Ghardaïa':{bureau:750,domicile:1200},'Relizane':{bureau:400,domicile:800},
-  'Timimoun':{bureau:1000,domicile:1600},'Touggourt':{bureau:750,domicile:1200},'Djanet':{bureau:1500,domicile:1900},
-  'In Salah':{bureau:1000,domicile:1800},'In Guezzam':{bureau:1500,domicile:1900},
-  'Bordj Badji Mokhtar':{bureau:1500,domicile:1900},'Ouled Djellal':{bureau:600,domicile:1100},
-}
-
 export default function ProductPage({ product: p, allProducts, cartItems = [], affiliateOffer = null, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
   const [openFaq, setOpenFaq] = useState(null)
   const [ordered, setOrdered] = useState(false)
@@ -65,15 +43,18 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
   const [stickyVisible, setStickyVisible] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [shippingRates, setShippingRates] = useState({})
+  const [shippingRatesLoaded, setShippingRatesLoaded] = useState(false)
+  const [shippingRatesError, setShippingRatesError] = useState(false)
   const [freeShip, setFreeShip] = useState(null)
   const formRef = useRef()
   const topRef = useRef()
 
   async function loadShippingRates() {
-    const [{ data: rates }, settings] = await Promise.all([
-      supabase.from('shipping_rates').select('wilaya,bureau,domicile'),
+    const [{ data: rates, error: ratesError }, settings] = await Promise.all([
+      supabase.rpc('get_public_shipping_rates'),
       getSettings(),
     ])
+    if (ratesError) throw ratesError
     const map = {}
     for (const row of rates || []) map[row.wilaya] = { bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 }
     setShippingRates(map)
@@ -86,14 +67,28 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
       ccp_actif:       settings?.ccp_actif === 'true',
       baridimob_actif: settings?.baridimob_actif === 'true',
     })
+    setShippingRatesLoaded(true)
+    setShippingRatesError(false)
   }
 
   useEffect(() => {
-    loadShippingRates().catch(() => {})
-    const onFocus = () => loadShippingRates().catch(() => {})
+    let mounted = true
+    const refreshRates = () => loadShippingRates().catch(error => {
+      console.error('Chargement des tarifs de livraison impossible:', error)
+      if (mounted) {
+        setShippingRatesLoaded(false)
+        setShippingRatesError(true)
+      }
+    })
+    refreshRates()
+    const onFocus = () => refreshRates()
     window.addEventListener('focus', onFocus)
-    const timer = window.setInterval(() => loadShippingRates().catch(() => {}), 30000)
-    return () => { window.removeEventListener('focus', onFocus); window.clearInterval(timer) }
+    const timer = window.setInterval(refreshRates, 30000)
+    return () => {
+      mounted = false
+      window.removeEventListener('focus', onFocus)
+      window.clearInterval(timer)
+    }
   }, [])
 
   const imgs = (() => { try { return typeof p.images==='string' ? JSON.parse(p.images) : (p.images||[]) } catch { return [] } })()
@@ -196,7 +191,7 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
   const shippingThresholdSubtotal = hasModels && modelOrderItems.length > 0
     ? modelLinesGrossSubtotal
     : Number(currentPrix || 0) * (Number(currentQty) || 1)
-  const fraisLiv = freeShip !== null && shippingThresholdSubtotal >= freeShip ? 0 : fraisLivBase
+  const fraisLiv = shippingRatesLoaded && fraisLivBase !== null && freeShip !== null && shippingThresholdSubtotal >= freeShip ? 0 : fraisLivBase
   const totalFinal = displayItemsSubtotal + (fraisLiv || 0)
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
   const wilayasOptions = WILAYAS.map(w => `${w.code} — ${w.nom}`)
@@ -598,6 +593,10 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
 
   async function handleOrder() {
     if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
+    if (!shippingRatesLoaded || fraisLivBase === null) {
+      setShippingRatesError(true)
+      return
+    }
     if (!isValidTel(form.tel)) { setTelError(true); setTelShake(true); setTimeout(() => setTelShake(false), 500); return }
     // Anti-bot honeypot — si ce champ caché est rempli, c'est un robot
     if (form.website) { console.warn('Bot détecté'); return }
@@ -1775,7 +1774,7 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:8 }}>
                 <span>🚚 Frais livraison</span>
-                <span style={{ color:fraisLiv===0?'#22c55e':undefined }}>{fraisLiv===null?'—':fraisLiv===0?lang==='ar' ? 'مجاناً' : 'Gratuit':fmt(fraisLiv)}</span>
+                <span style={{ color:fraisLiv===0?'#22c55e':undefined }}>{fraisLiv===null ? (shippingRatesLoaded ? (lang === 'ar' ? 'غير متاح' : 'Indisponible') : (lang === 'ar' ? 'جار التحميل…' : 'Chargement…')) : fraisLiv===0 ? lang==='ar' ? 'مجاناً' : 'Gratuit' : fmt(fraisLiv)}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, borderTop:'1px solid var(--g3)', fontSize:17, fontWeight:900, color:'var(--g3)' }}>
                 <span>💰 Total à payer</span>
