@@ -16,7 +16,7 @@ insert into public.admin_users(user_id) values ('UUID_DU_USER_AUTH');
 Si Supabase contient déjà tes tables, applique `supabase/security_patch.sql`, puis `supabase/functional_fixes_2026.sql` dans le SQL Editor. Cette seconde migration est réexécutable et :
 - conserve les tarifs de livraison déjà saisis dans `shipping_rates` ;
 - autorise leur lecture publique uniquement via `get_public_shipping_rates()` ;
-- ajoute les colonnes et fonctions attendues par Meta CAPI ;
+- ajoute la colonne Purchase manquante pour Meta CAPI et conserve le limiteur Lead déjà installé en production ;
 - ajoute la réconciliation de commande après création d'un colis Yalidine ;
 - ajoute les colonnes de réservation des notifications Telegram ;
 - aligne la limite et les types MIME du bucket `product-images` sur l'import d'images.
