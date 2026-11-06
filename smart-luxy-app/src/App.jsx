@@ -13,7 +13,7 @@ import SuccessScreen from './components/SuccessScreen'
 import PolitiquesPage from './components/PolitiquesPage'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminPanel from './components/admin/AdminPanel'
-import { notifyTelegram, genId, alertStockBas, resumeQuotidien } from './utils/notify'
+import { notifyTelegram, genId } from './utils/notify'
 import CONFIG from './config'
 import { getSettings, saveSetting } from './utils/useSettings'
 import NotFound from './components/NotFound'
@@ -880,10 +880,7 @@ export default function App() {
         return false
       }
 
-      // Stock is decremented atomically inside create_order().
-      for (const alert of order.stock_alerts || []) {
-        alertStockBas({ nom: alert.nom }, Number(alert.stock))
-      }
+      // Le serveur Telegram relit la commande et vérifie les stocks bas.
 
       const contentIds = (order.items || []).map(i => i.id)
 

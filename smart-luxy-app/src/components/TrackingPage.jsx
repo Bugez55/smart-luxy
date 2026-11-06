@@ -34,7 +34,14 @@ export default function TrackingPage({ onClose }) {
       p_order_id: normalizedId,
     })
     setLoading(false)
-    if (rpcError || !data) { setError('Aucune commande trouvée avec ce numéro.'); return }
+    if (rpcError) {
+      const limited = String(rpcError.message || '').toLowerCase().includes('trop de tentatives')
+      setError(limited
+        ? 'Trop de tentatives de suivi. Réessaie dans quelques minutes.'
+        : 'Impossible de vérifier le suivi pour le moment.')
+      return
+    }
+    if (!data) { setError('Aucune commande trouvée avec ce numéro.'); return }
     setOrder(data)
   }
 

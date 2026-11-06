@@ -5,78 +5,6 @@ import { getSettings } from '../utils/useSettings'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
-const LIVRAISON = {
-  'Adrar':              { bureau: 1000, domicile: 1600 },
-  'Chlef':              { bureau: 400,  domicile: 800  },
-  'Laghouat':           { bureau: 600,  domicile: 1100 },
-  'Oum El Bouaghi':     { bureau: 400,  domicile: 950  },
-  'Batna':              { bureau: 400,  domicile: 950  },
-  'Béjaïa':             { bureau: 400,  domicile: 850  },
-  'Biskra':             { bureau: 600,  domicile: 1100 },
-  'Béchar':             { bureau: 750,  domicile: 1400 },
-  'Blida':              { bureau: 400,  domicile: 800  },
-  'Bouira':             { bureau: 400,  domicile: 850  },
-  'Tamanrasset':        { bureau: 1000, domicile: 1800 },
-  'Tébessa':            { bureau: 600,  domicile: 1100 },
-  'Tlemcen':            { bureau: 400,  domicile: 850  },
-  'Tiaret':             { bureau: 400,  domicile: 850  },
-  'Tizi Ouzou':         { bureau: 0,    domicile: 300  },
-  'Alger':              { bureau: 300,  domicile: 750  },
-  'Djelfa':             { bureau: 600,  domicile: 1100 },
-  'Jijel':              { bureau: 400,  domicile: 950  },
-  'Sétif':              { bureau: 400,  domicile: 900  },
-  'Saïda':              { bureau: 400,  domicile: 850  },
-  'Skikda':             { bureau: 400,  domicile: 950  },
-  'Sidi Bel Abbès':     { bureau: 400,  domicile: 850  },
-  'Annaba':             { bureau: 400,  domicile: 900  },
-  'Guelma':             { bureau: 400,  domicile: 950  },
-  'Constantine':        { bureau: 400,  domicile: 900  },
-  'Médéa':              { bureau: 400,  domicile: 850  },
-  'Mostaganem':         { bureau: 400,  domicile: 800  },
-  "M'Sila":             { bureau: 400,  domicile: 900  },
-  'Mascara':            { bureau: 400,  domicile: 850  },
-  'Ouargla':            { bureau: 750,  domicile: 1200 },
-  'Oran':               { bureau: 400,  domicile: 850  },
-  'El Bayadh':          { bureau: 400,  domicile: 900  },
-  'Illizi':             { bureau: 1500, domicile: 1900 },
-  'Bordj Bou Arréridj': { bureau: 400,  domicile: 900  },
-  'Boumerdès':          { bureau: 400,  domicile: 850  },
-  'El Tarf':            { bureau: 400,  domicile: 1000 },
-  'Tindouf':            { bureau: 1500, domicile: 1900 },
-  'Tissemsilt':         { bureau: 400,  domicile: 850  },
-  'El Oued':            { bureau: 750,  domicile: 1200 },
-  'Khenchela':          { bureau: 600,  domicile: 1000 },
-  'Souk Ahras':         { bureau: 600,  domicile: 1000 },
-  'Tipaza':             { bureau: 400,  domicile: 850  },
-  'Mila':               { bureau: 400,  domicile: 950  },
-  'Aïn Defla':          { bureau: 400,  domicile: 850  },
-  'Naâma':              { bureau: 600,  domicile: 1200 },
-  'Aïn Témouchent':     { bureau: 400,  domicile: 850  },
-  'Ghardaïa':           { bureau: 750,  domicile: 1200 },
-  'Relizane':           { bureau: 400,  domicile: 800  },
-  'Timimoun':           { bureau: 1000, domicile: 1600 },
-  'Bordj Badji Mokhtar':{ bureau: 1500, domicile: 1900 },
-  'Ouled Djellal':      { bureau: 600,  domicile: 1100 },
-  'Béni Abbès':         { bureau: 750,  domicile: 1400 },
-  'In Salah':           { bureau: 1000, domicile: 1800 },
-  'In Guezzam':         { bureau: 1500, domicile: 1900 },
-  'Touggourt':          { bureau: 750,  domicile: 1200 },
-  'Djanet':             { bureau: 1500, domicile: 1900 },
-  "El M'Ghair":         { bureau: 750,  domicile: 1200 },
-  'El Meniaa':          { bureau: 750,  domicile: 1200 },
-  'Aflou':              { bureau: 600,  domicile: 1100 },
-  'Aïn Oussera':        { bureau: 600,  domicile: 1100 },
-  'Barika':             { bureau: 400,  domicile: 950  },
-  'Bir El Ater':        { bureau: 600,  domicile: 1100 },
-  'Bou Saâda':          { bureau: 400,  domicile: 900  },
-  'El Abiodh Sidi Cheikh': { bureau: 400, domicile: 900 },
-  'El Aricha':          { bureau: 400,  domicile: 850  },
-  'El Kantara':         { bureau: 600,  domicile: 1100 },
-  'Ksar Chellala':      { bureau: 400,  domicile: 850  },
-  'Ksar El Boukhari':   { bureau: 400,  domicile: 850  },
-  'Messaad':            { bureau: 600,  domicile: 1100 },
-}
-
 const T = {
   fr: {
     title: 'Passer commande',
@@ -285,24 +213,34 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
   const [telShake, setTelShake] = useState(false)
   const [freeShip, setFreeShip] = useState(null)
   const [shippingRates, setShippingRates] = useState({})
+  const [shippingRatesLoaded, setShippingRatesLoaded] = useState(false)
+  const [shippingRatesError, setShippingRatesError] = useState(false)
 
   async function loadShippingRates() {
-    const [{ data: rates }, settings] = await Promise.all([
-      supabase.from('shipping_rates').select('wilaya,bureau,domicile'),
+    const [{ data: rates, error: ratesError }, settings] = await Promise.all([
+      supabase.rpc('get_public_shipping_rates'),
       getSettings(),
     ])
+    if (ratesError) throw ratesError
     const map = {}
     for (const row of rates || []) map[row.wilaya] = { bureau: Number(row.bureau) || 0, domicile: Number(row.domicile) || 0 }
     setShippingRates(map)
     const value = Number(settings?.free_ship)
     setFreeShip(Number.isFinite(value) && value > 0 ? value : null)
+    setShippingRatesLoaded(true)
+    setShippingRatesError(false)
   }
 
   useEffect(() => {
-    loadShippingRates().catch(() => {})
-    const onFocus = () => loadShippingRates().catch(() => {})
+    const refreshRates = () => loadShippingRates().catch(error => {
+      console.error('Chargement des tarifs de livraison impossible:', error)
+      setShippingRatesLoaded(false)
+      setShippingRatesError(true)
+    })
+    refreshRates()
+    const onFocus = () => refreshRates()
     window.addEventListener('focus', onFocus)
-    const timer = window.setInterval(() => loadShippingRates().catch(() => {}), 30000)
+    const timer = window.setInterval(refreshRates, 30000)
     return () => { window.removeEventListener('focus', onFocus); window.clearInterval(timer) }
   }, [])
 
@@ -313,7 +251,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
   const prixLiv = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][modeLiv] : null
   const fraisLivBase = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
-  const fraisLiv = freeShip !== null && totalProduits >= freeShip ? 0 : fraisLivBase
+  const fraisLiv = shippingRatesLoaded && fraisLivBase !== null && freeShip !== null && totalProduits >= freeShip ? 0 : fraisLivBase
   const totalFinal = totalProduits + (fraisLiv || 0)
 
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
@@ -341,6 +279,10 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
 
   async function handleSubmit() {
     if (!form.nom || !form.tel || !form.wilaya || !form.commune) return
+    if (!shippingRatesLoaded || fraisLivBase === null) {
+      console.warn('Commande bloquée : tarif de livraison non disponible.')
+      return
+    }
     if (!isValidTel(form.tel)) { triggerTelError(); return }
     setLoading(true)
     try {
@@ -535,7 +477,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
                 {t.fraisLiv} {modeLiv === 'domicile' ? '🏠' : '📦'}
               </span>
               <span style={{ fontWeight: 800, color: fraisLiv === 0 ? '#4CAF50' : '#C9A84C', fontSize: 15 }}>
-                {fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
+                {fraisLiv === null ? (shippingRatesError ? (rtl ? 'تعذر تحميل التعريفة' : 'Erreur de chargement') : shippingRatesLoaded ? t.indisponible : 'Chargement…') : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
               </span>
             </div>
           )}
@@ -601,7 +543,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--g4)' }}>
               <span>{t.fraisLiv}</span>
               <span style={{ color: fraisLiv === 0 ? '#4CAF50' : '#aaa' }}>
-                {fraisLiv === null ? '—' : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
+                {fraisLiv === null ? (shippingRatesError ? (rtl ? 'تعذر تحميل التعريفة' : 'Erreur de chargement') : shippingRatesLoaded ? t.indisponible : 'Chargement…') : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #2a2a2a', fontSize: 17, fontWeight: 900, color:'var(--g3)' }}>
@@ -612,7 +554,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
 
           <ConfirmButton
             loading={loading}
-            disabled={!form.nom || !form.tel || !form.wilaya || !form.commune}
+            disabled={!form.nom || !form.tel || !form.wilaya || !form.commune || !shippingRatesLoaded || fraisLivBase === null}
             onClick={handleSubmit}
             label={t.confirmer}
             labelLoading={t.envoi}

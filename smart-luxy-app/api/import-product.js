@@ -523,9 +523,13 @@ async function fetchImageSafely(rawUrl) {
     }
 
     const contentType = response.headers.get('content-type') || ''
-    if (!contentType.toLowerCase().startsWith('image/')) {
+    const normalizedContentType = contentType.split(';')[0].trim().toLowerCase()
+    const allowedImageTypes = new Set([
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+    ])
+    if (!allowedImageTypes.has(normalizedContentType)) {
       throw new Error(
-        `Le serveur distant n'a pas renvoyé une image (${contentType || 'type inconnu'})`
+        `Format d'image non autorisé (${normalizedContentType || 'type inconnu'})`
       )
     }
 
@@ -543,11 +547,11 @@ async function fetchImageSafely(rawUrl) {
   throw new Error('Trop de redirections image')
 }
 
-async function readResponseBuffer(response, maxBytes) {
+async function readResponseBuffer(response, maxBytes, errorMessage = 'Réponse trop volumineuse') {
   if (!response.body?.getReader) {
     const arrayBuffer = await response.arrayBuffer()
     if (arrayBuffer.byteLength > maxBytes) {
-      throw new Error('Image trop volumineuse')
+      throw new Error(errorMessage)
     }
     return Buffer.from(arrayBuffer)
   }
@@ -564,7 +568,7 @@ async function readResponseBuffer(response, maxBytes) {
       total += value.byteLength
       if (total > maxBytes) {
         await reader.cancel()
-        throw new Error('Image trop volumineuse')
+        throw new Error(errorMessage)
       }
 
       chunks.push(Buffer.from(value))
@@ -639,6 +643,25 @@ async function downloadAndStoreImage(
   }
 
   return publicData.publicUrl
+}
+
+// Stocke les images une par une : une image distante défectueuse ne doit
+// pas faire échouer tout l'import. Les URLs originales restent disponibles
+// en solution de repli lorsque Storage refuse un fichier.
+async function storeAliExpressImages(supabase, imageUrls) {
+  const uniqueUrls = [...new Set(
+    (Array.isArray(imageUrls) ? imageUrls : [])
+      .filter(url => typeof url === 'string' && /^https?:\/\//i.test(url))
+  )].slice(0, 12)
+
+  return Promise.all(uniqueUrls.map(async (imageUrl, index) => {
+    try {
+      return await downloadAndStoreImage(supabase, imageUrl, index)
+    } catch (error) {
+      console.warn('Image AliExpress non stockée :', error?.message || error)
+      return imageUrl
+    }
+  }))
 }
 
 // ─────────────────────────────────────────────
@@ -757,6 +780,7 @@ export default async function handler(req, res) {
     ) {
       const storedImages =
         await storeAliExpressImages(
+          auth.client,
           result.images
         )
 
@@ -828,18 +852,11 @@ export default async function handler(req, res) {
       })
     }
 
-    const html =
-      await response.text()
-
-    if (
-      html.length >
-      MAX_RESPONSE_BYTES
-    ) {
-      return res.status(413).json({
-        error:
-          'Réponse distante trop volumineuse.'
-      })
-    }
+    const html = (await readResponseBuffer(
+      response,
+      MAX_RESPONSE_BYTES,
+      'Réponse distante trop volumineuse.'
+    )).toString('utf8')
 
     const aliResult =
       isAliExpress
@@ -903,6 +920,7 @@ export default async function handler(req, res) {
     ) {
       const storedImages =
         await storeAliExpressImages(
+          auth.client,
           result.images
         )
 

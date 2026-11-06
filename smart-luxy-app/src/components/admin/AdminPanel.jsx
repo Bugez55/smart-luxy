@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
-import { alertStockBas, resumeQuotidien } from '../../utils/notify'
+import { alertStocksBas, resumeQuotidien } from '../../utils/notify'
 import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
@@ -2370,8 +2370,8 @@ export default function AdminPanel({ onLogout, onToast }) {
         <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
           <button
             onClick={async () => {
-              await resumeQuotidien(orders, products)
-              onToast && onToast('📊 Résumé envoyé sur Telegram !', 'default')
+              const sent = await resumeQuotidien()
+              onToast && onToast(sent ? '📊 Résumé envoyé sur Telegram !' : '❌ Le résumé Telegram n’a pas pu être envoyé.', sent ? 'default' : 'error')
             }}
             style={{
               background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)',
@@ -2389,8 +2389,13 @@ export default function AdminPanel({ onLogout, onToast }) {
                 onToast && onToast('✅ Tous les stocks sont OK !', 'default')
                 return
               }
-              for (const p of bas) await alertStockBas(p, p.stock)
-              onToast && onToast(`⚠️ ${bas.length} alerte(s) stock envoyée(s) sur Telegram`, 'default')
+              const sent = await alertStocksBas(bas.map(p => p.id))
+              onToast && onToast(
+                sent
+                  ? `⚠️ Alerte groupée envoyée pour ${bas.length} produit(s) en stock bas.`
+                  : '❌ Les alertes de stock n’ont pas pu être envoyées.',
+                sent ? 'default' : 'error'
+              )
             }}
             style={{
               background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.2)',
