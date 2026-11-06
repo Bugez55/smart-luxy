@@ -1,0 +1,32 @@
+name: WAZYO build
+
+on:
+  push:
+    branches:
+      - "fix/**"
+    paths:
+      - "smart-luxy-app/**"
+      - ".github/workflows/wazyo-build.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "smart-luxy-app/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: smart-luxy-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build storefront
+        run: npm run build
