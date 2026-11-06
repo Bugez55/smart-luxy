@@ -308,3 +308,25 @@ grant execute on function public.get_affiliate_dashboard() to authenticated;
 -- Fixed, deterministic path for the shipment timestamp trigger.
 alter function public.touch_shipping_dispatch_updated_at()
   set search_path = pg_catalog, public;
+
+
+-- 9) Legacy affiliate RLS policies must target authenticated admins only.
+-- Older production databases created these tables/policies outside schema.sql.
+-- Keep this compatibility block conditional so clean installs without the
+-- optional affiliate module do not fail.
+do $$
+begin
+  if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'influencers' and policyname = 'influencers_admin_all') then
+    execute 'alter policy influencers_admin_all on public.influencers to authenticated';
+  end if;
+  if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'affiliate_links' and policyname = 'affiliate_links_admin_all') then
+    execute 'alter policy affiliate_links_admin_all on public.affiliate_links to authenticated';
+  end if;
+  if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'affiliate_clicks' and policyname = 'affiliate_clicks_admin_all') then
+    execute 'alter policy affiliate_clicks_admin_all on public.affiliate_clicks to authenticated';
+  end if;
+  if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'affiliate_order_attributions' and policyname = 'affiliate_order_attributions_admin_all') then
+    execute 'alter policy affiliate_order_attributions_admin_all on public.affiliate_order_attributions to authenticated';
+  end if;
+end
+$$;
