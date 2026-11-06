@@ -1006,7 +1006,7 @@ export default function ProductGrid({
         }
         .wz-editorial-card-media{
           position:absolute;
-          z-index:-2;
+          z-index:0;
           inset:0 0 0 28%;
           display:flex;
           align-items:center;
@@ -1026,7 +1026,7 @@ export default function ProductGrid({
         }
         .wz-editorial-card-shade{
           position:absolute;
-          z-index:-1;
+          z-index:1;
           inset:0;
           background:
             linear-gradient(90deg,#0b0d12 0%,rgba(11,13,18,.96) 28%,rgba(11,13,18,.64) 49%,rgba(11,13,18,.04) 100%),
@@ -1091,6 +1091,7 @@ export default function ProductGrid({
         }
         .wz-editorial-card-index{
           position:absolute;
+          z-index:2;
           right:18px;
           bottom:14px;
           color:rgba(213,183,112,.55);
