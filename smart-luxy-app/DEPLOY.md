@@ -23,6 +23,9 @@ Si Supabase contient déjà tes tables, applique `supabase/security_patch.sql`, 
 
 **Les tarifs restent modifiables dans l'administration.** Ne remplace pas cette table par des montants codés dans le frontend.
 
+
+Les fonctions déclencheur internes sont également retirées de l’API RPC publique ; les RPC client nécessaires à la commande, aux promotions, au tracking et aux liens influenceur restent accessibles selon leur usage. Les RPC administrateur continuent de vérifier `is_admin()`.
+
 La migration supprime également des règles RLS historiques trop permissives sur les commandes, produits, notes clients, réglages, bannières et stockage. Elle conserve les politiques admin basées sur `is_admin()`, la lecture publique filtrée des réglages, la lecture des bannières actives et des images. Elle ne supprime aucune commande ni aucun tarif.
 
 La configuration du bucket `product-images` conserve les types MIME déjà autorisés (dont HEIC/vidéo) et toute limite de taille supérieure déjà configurée.
