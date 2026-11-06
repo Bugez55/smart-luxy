@@ -64,6 +64,21 @@ export async function alertStockBas(produit, stock) {
   }, accessToken)
 }
 
+export async function alertStocksBas(productIds) {
+  const ids = [...new Set((Array.isArray(productIds) ? productIds : [])
+    .map(Number)
+    .filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 100)
+  if (!ids.length) return false
+
+  const accessToken = await getAdminAccessToken()
+  if (!accessToken) {
+    console.warn('Alerte groupée ignorée : session administrateur absente.')
+    return false
+  }
+
+  return sendTelegram({ type: 'stock_alerts', productIds: ids }, accessToken)
+}
+
 export async function resumeQuotidien() {
   const accessToken = await getAdminAccessToken()
   if (!accessToken) {
