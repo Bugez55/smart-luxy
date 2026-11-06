@@ -1,4 +1,3 @@
-
 export default function TrustMarquee() {
   const items = [
     { icon: '✓', text: 'Produits sélectionnés' },
@@ -6,154 +5,96 @@ export default function TrustMarquee() {
   ]
 
   return (
-    <section
-      aria-label="Avantages Wazyo"
-      className="wz-trust-marquee"
-      style={{
-        position: 'relative',
-        overflow: 'hidden',
-        background: 'linear-gradient(180deg, #11100e 0%, #0d0d0d 100%)',
-        borderTop: '1px solid rgba(255,255,255,.07)',
-        borderBottom: '1px solid rgba(255,255,255,.07)',
-      }}
-    >
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          inset: '0 20%',
-          background: 'radial-gradient(circle at center, rgba(201,168,76,.07), transparent 58%)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      <div
-        className="wz-trust-track"
-        style={{
-          position: 'relative',
-          display: 'flex',
-          width: 'max-content',
-          whiteSpace: 'nowrap',
-          animation: 'wzTrustMarquee 26s linear infinite',
-          willChange: 'transform',
-        }}
-      >
-        {[0, 1].map(group => (
-          <div
-            key={group}
-            className="wz-trust-group"
-            aria-hidden={group === 1 ? 'true' : undefined}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 34,
-              padding: '14px 17px',
-            }}
-          >
-            {items.map((item, index) => (
-              <div
-                key={`${group}-${index}`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  color: 'rgba(255,255,255,.7)',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: '.16em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    width: 24,
-                    height: 24,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid rgba(201,168,76,.34)',
-                    borderRadius: '50%',
-                    color: '#C9A84C',
-                    background: 'rgba(201,168,76,.06)',
-                    fontSize: item.icon === '✓' ? 13 : 12,
-                    lineHeight: 1,
-                    flexShrink: 0,
-                  }}
-                >
-                  {item.icon}
-                </span>
-                <span>{item.text}</span>
-              </div>
-            ))}
-            <span
-              aria-hidden="true"
-              style={{ color: '#C9A84C', opacity: .65, fontSize: 12 }}
-            >
-              •
-            </span>
+    <section className="wz-trust-marquee" aria-label="Les engagements WAZYO">
+      <div className="wz-trust-inner">
+        {items.map((item, index) => (
+          <div className="wz-trust-item" key={item.text}>
+            <span className="wz-trust-icon" aria-hidden="true">{item.icon}</span>
+            <span className="wz-trust-text">{item.text}</span>
+            {index < items.length - 1 && <span className="wz-trust-divider" aria-hidden="true" />}
           </div>
         ))}
       </div>
 
       <style>{`
-        @keyframes wzTrustMarquee {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
+        .wz-trust-marquee{
+          position:relative;
+          width:100%;
+          overflow:hidden;
+          background:linear-gradient(90deg,#090a0d 0%,#11131a 50%,#090a0d 100%);
+          border-top:1px solid rgba(213,183,112,.13);
+          border-bottom:1px solid rgba(213,183,112,.16);
         }
-
-        @media (prefers-reduced-motion: reduce) {
-          .wz-trust-track {
-            animation: none !important;
-            transform: none !important;
-          }
-          .wz-trust-group:last-child { display: none !important; }
-          .wz-trust-group:first-child {
-            justify-content: center;
-            width: 100%;
-            box-sizing: border-box;
-            flex-wrap: wrap;
-          }
-          .wz-trust-marquee { width: 100%; }
+        .wz-trust-marquee::before{
+          content:"";
+          position:absolute;
+          top:0;
+          left:50%;
+          width:min(460px,48vw);
+          height:1px;
+          transform:translateX(-50%);
+          background:linear-gradient(90deg,transparent,rgba(213,183,112,.54),transparent);
         }
-
-        @media (max-width: 640px) {
-          .wz-trust-track { animation-duration: 26s !important; }
-          .wz-trust-group {
-            gap: 22px !important;
-            padding: 11px 14px !important;
-          }
-
-          .footer {
-            padding: 26px 14px 22px !important;
-            gap: 8px !important;
-          }
-
-          .footer > div:nth-of-type(2),
-          .footer > div:nth-of-type(3) {
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: center !important;
-            justify-content: center !important;
-            flex-wrap: wrap !important;
-            gap: 10px 14px !important;
-            margin-top: 9px !important;
-          }
-
-          .footer > div:nth-of-type(2) > span,
-          .footer > div:nth-of-type(3) > span {
-            display: none !important;
-          }
-
-          .footer > div:nth-of-type(2) > a,
-          .footer > div:nth-of-type(3) > button {
-            font-size: 12px !important;
-            line-height: 1.45 !important;
-          }
-
-          .footer > p:last-child {
-            margin-top: 8px !important;
-          }
+        .wz-trust-inner{
+          width:min(760px,100%);
+          min-height:66px;
+          margin:0 auto;
+          padding:10px 20px;
+          box-sizing:border-box;
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          align-items:center;
+        }
+        .wz-trust-item{
+          position:relative;
+          min-width:0;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          gap:12px;
+          padding:8px 18px;
+        }
+        .wz-trust-icon{
+          width:30px;
+          height:30px;
+          flex:0 0 30px;
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          border:1px solid rgba(213,183,112,.36);
+          border-radius:50%;
+          background:rgba(213,183,112,.07);
+          color:#e2c781;
+          font-size:14px;
+          font-weight:800;
+          line-height:1;
+        }
+        .wz-trust-text{
+          color:rgba(247,244,237,.84);
+          font-family:'Outfit',system-ui,sans-serif;
+          font-size:11px;
+          font-weight:750;
+          letter-spacing:.075em;
+          text-transform:uppercase;
+        }
+        .wz-trust-divider{
+          position:absolute;
+          top:50%;
+          right:0;
+          width:1px;
+          height:26px;
+          transform:translateY(-50%);
+          background:linear-gradient(180deg,transparent,rgba(213,183,112,.38),transparent);
+        }
+        @media(max-width:520px){
+          .wz-trust-inner{min-height:58px;padding:8px 8px;}
+          .wz-trust-item{gap:8px;padding:7px 8px;}
+          .wz-trust-icon{width:26px;height:26px;flex-basis:26px;font-size:12px;}
+          .wz-trust-text{font-size:9px;letter-spacing:.035em;}
+          .wz-trust-divider{height:22px;}
+        }
+        @media(prefers-reduced-motion:reduce){
+          .wz-trust-marquee *{animation:none!important;transition:none!important;}
         }
       `}</style>
     </section>
