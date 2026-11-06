@@ -1318,4 +1318,93 @@ set public = true,
     file_size_limit = 6291456,
     allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif','image/avif']::text[];
 
+
+-- 6) Rate-limit public tracking lookups without exposing customer contact details.
+create table if not exists private.order_tracking_rate_limits (
+  key_hash text not null,
+  request_at timestamptz not null default now()
+);
+create index if not exists idx_order_tracking_rate_limits_key_time
+  on private.order_tracking_rate_limits(key_hash, request_at desc);
+revoke all on private.order_tracking_rate_limits from public, anon, authenticated;
+
+create or replace function public.get_order_tracking(p_order_id text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, private, pg_temp
+as $$
+declare
+  o public.orders;
+  v_headers jsonb;
+  v_ip text;
+  v_key text;
+  v_count integer;
+begin
+  begin
+    v_headers := coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb;
+    v_ip := trim(split_part(coalesce(v_headers->>'x-forwarded-for', ''), ',', 1));
+    if v_ip is null or v_ip = '' then
+      v_ip := trim(v_headers->>'cf-connecting-ip');
+    end if;
+    if v_ip is not null and v_ip <> '' then
+      begin
+        perform v_ip::inet;
+      exception when others then
+        v_ip := null;
+      end;
+    end if;
+  exception when others then
+    v_ip := null;
+  end;
+
+  if v_ip is not null then
+    v_key := encode(digest('tracking-ip:' || v_ip, 'sha256'), 'hex');
+    perform pg_advisory_xact_lock(hashtext('wazyo-tracking:' || v_key));
+    delete from private.order_tracking_rate_limits
+    where request_at < now() - interval '30 minutes';
+
+    select count(*) into v_count
+    from private.order_tracking_rate_limits
+    where key_hash = v_key
+      and request_at >= now() - interval '10 minutes';
+
+    if v_count >= 30 then
+      raise exception 'Trop de tentatives de suivi. Réessaie dans quelques minutes.';
+    end if;
+
+    insert into private.order_tracking_rate_limits(key_hash)
+    values (v_key);
+  end if;
+
+  select * into o
+  from public.orders
+  where id = upper(trim(coalesce(p_order_id, '')));
+
+  if not found then
+    return null;
+  end if;
+
+  return jsonb_build_object(
+    'id', o.id,
+    'statut', o.statut,
+    'created_at', o.created_at,
+    'items', o.items,
+    'sous_total', o.sous_total,
+    'promo_code', o.promo_code,
+    'promo_reduction', o.promo_reduction,
+    'total', o.total,
+    'mode_livraison', o.mode_livraison,
+    'frais_livraison', o.frais_livraison,
+    'wilaya', o.wilaya,
+    'commune', o.commune,
+    'tracking_code', o.tracking_code,
+    'livraison_company', o.livraison_company
+  );
+end;
+$$;
+
+revoke all on function public.get_order_tracking(text) from public;
+grant execute on function public.get_order_tracking(text) to anon, authenticated;
+
 commit;
