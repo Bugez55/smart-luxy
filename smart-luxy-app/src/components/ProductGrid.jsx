@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
@@ -159,118 +160,288 @@ export default function ProductGrid({
       `}</style>
 
       <style>{`
-        /* Wazyo premium product-card micro-interactions */
+        /* WAZYO — cartes produits premium */
 
         .pcard{
           position:relative;
           overflow:hidden;
-          border:1px solid rgba(255,255,255,.055);
-          transition:transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+          isolation:isolate;
+          border:1px solid rgba(255,255,255,.065);
+          border-radius:20px!important;
+          background:linear-gradient(160deg,rgba(255,255,255,.035),rgba(255,255,255,.012)),var(--card)!important;
+          box-shadow:0 10px 30px rgba(0,0,0,.20);
+          transition:
+            transform .38s cubic-bezier(.22,1,.36,1),
+            box-shadow .38s ease,
+            border-color .38s ease;
           will-change:transform;
         }
+
         .pcard::after{
           content:"";
           position:absolute;
           inset:0;
           border-radius:inherit;
           pointer-events:none;
-          background:linear-gradient(135deg,rgba(255,255,255,.07),transparent 28%,transparent 72%,rgba(255,255,255,.025));
-          opacity:.45;
-          transition:opacity .28s ease;
-        }
-.pcard-img{
-          position:relative;
-          overflow:hidden;
-          background:#111;
-        }
-        .pcard-img img{
-          transition:transform .42s cubic-bezier(.2,.7,.2,1), filter .28s ease;
-          transform-origin:center;
-          -webkit-user-drag:none;
-        }
-        .pcard .pcard-badge{
-          font-size:11px !important;
-          line-height:1 !important;
-          padding:9px 13px !important;
-          border-radius:14px !important;
-          letter-spacing:.01em;
-          backdrop-filter:blur(8px);
-        }
-        .pcard .pcard-badge[style*="right: 10px"]{
-          padding:9px 11px !important;
-        }
-        @media (hover:hover) and (pointer:fine){
-          .pcard:hover{
-            transform:translateY(-4px);
-            border-color:rgba(255,255,255,.11);
-            box-shadow:0 18px 40px rgba(0,0,0,.28);
-          }
-          .pcard:hover::after{opacity:.8;}
-          .pcard:hover .pcard-img img{
-            transform:scale(1.045);
-            filter:saturate(1.03);
-          }
-        }
-        @media (hover:none){
-          .pcard:active{transform:scale(.992);}
-          .pcard:active .pcard-img img{transform:scale(1.018);}
-        }
-        @media(max-width:640px){
-          .pcard{border-color:rgba(255,255,255,.06);}
+          background:linear-gradient(
+            135deg,
+            rgba(255,255,255,.055),
+            transparent 30%,
+            transparent 72%,
+            rgba(213,183,112,.035)
+          );
+          opacity:.55;
+          transition:opacity .35s ease;
+          z-index:1;
         }
 
-        /* WAZYO — mise en valeur renforcée des produits (présentation uniquement) */
-        .pcard{
-          border-radius:20px!important;
-          background:linear-gradient(160deg,rgba(255,255,255,.035),rgba(255,255,255,.012)) , var(--card)!important;
-          box-shadow:0 8px 26px rgba(0,0,0,.16);
-        }
         .pcard-img{
-          height:clamp(230px,25vw,310px)!important;
-          background:radial-gradient(ellipse at 50% 38%,rgba(201,168,76,.10),transparent 58%),linear-gradient(145deg,#171717,#0c0c0c)!important;
+          position:relative;
+          overflow:hidden;
+          height:clamp(230px,25vw,300px)!important;
+          background:
+            radial-gradient(ellipse at 50% 40%,rgba(213,183,112,.12),transparent 60%),
+            linear-gradient(145deg,#171b24,#0c0f15)!important;
           isolation:isolate;
+          cursor:pointer;
         }
+
         .pcard-img::before{
           content:"";
           position:absolute;
-          inset:10px;
-          border:1px solid rgba(255,255,255,.055);
+          inset:11px;
+          border:1px solid rgba(255,255,255,.065);
           border-radius:14px;
           pointer-events:none;
           z-index:1;
         }
+
         .pcard-img img{
+          width:100%;
+          height:100%;
           object-fit:contain!important;
-          padding:12px;
+          padding:15px;
           box-sizing:border-box;
-          filter:drop-shadow(0 12px 16px rgba(0,0,0,.22));
+          transform-origin:center;
+          filter:drop-shadow(0 14px 20px rgba(0,0,0,.27));
+          transition:
+            transform .65s cubic-bezier(.2,.7,.3,1),
+            filter .5s ease;
+          -webkit-user-drag:none;
         }
-        .pcard .pcard-badge{z-index:3;box-shadow:0 5px 16px rgba(0,0,0,.22);}
-        .pcard-body{padding:17px 17px 18px!important;gap:11px!important;}
-        .pcard-name{font-size:15px!important;line-height:1.4!important;min-height:2.7em;}
-        .pcard-prix{font-size:23px!important;letter-spacing:-.025em;}
-        .pcard-actions{gap:9px!important;padding-top:3px;}
-        .pcard-actions button{min-height:42px;border-radius:12px!important;}
+
+        .pcard .pcard-badge{
+          z-index:3;
+          font-size:10px!important;
+          line-height:1!important;
+          padding:8px 12px!important;
+          border-radius:999px!important;
+          letter-spacing:.04em;
+          backdrop-filter:blur(10px);
+          box-shadow:0 6px 18px rgba(0,0,0,.24);
+        }
+
+        .pcard-quickview{
+          position:absolute;
+          inset:auto 14px 14px;
+          width:auto;
+          height:36px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          margin:0 auto;
+          padding:0 16px;
+          border:1px solid rgba(213,183,112,.32);
+          border-radius:999px;
+          background:rgba(8,10,15,.78);
+          color:#f7f4ed;
+          font-size:9px;
+          font-weight:900;
+          letter-spacing:.14em;
+          text-transform:uppercase;
+          opacity:0;
+          transform:translateY(8px);
+          transition:opacity .3s ease,transform .3s ease;
+          backdrop-filter:blur(12px);
+          pointer-events:none;
+          z-index:2;
+        }
+
+        .pcard-body{
+          position:relative;
+          z-index:2;
+          padding:17px 17px 18px!important;
+          gap:11px!important;
+        }
+
+        .pcard-name{
+          font-size:15px!important;
+          line-height:1.4!important;
+          min-height:2.7em;
+          transition:color .25s ease;
+        }
+
+        .pcard-prix{
+          font-size:23px!important;
+          letter-spacing:-.035em;
+          font-variant-numeric:tabular-nums;
+        }
+
+        .pcard-prices{
+          display:flex;
+          align-items:baseline;
+        }
+
+        .pcard-actions{
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:9px!important;
+          padding-top:4px;
+        }
+
+        .pcard-actions button{
+          min-height:43px;
+          border-radius:12px!important;
+          transition:
+            transform .22s ease,
+            box-shadow .22s ease,
+            background .22s ease;
+        }
+
+        @media (hover:hover) and (pointer:fine){
+          .pcard:hover{
+            transform:translateY(-5px);
+            border-color:rgba(213,183,112,.27);
+            box-shadow:
+              0 24px 55px rgba(0,0,0,.34),
+              0 8px 25px rgba(213,183,112,.055);
+          }
+
+          .pcard:hover::after{opacity:.9;}
+
+          .pcard:hover .pcard-img img{
+            transform:scale(1.055);
+            filter:drop-shadow(0 18px 24px rgba(0,0,0,.32));
+          }
+
+          .pcard:hover .pcard-quickview{
+            opacity:1;
+            transform:translateY(0);
+          }
+
+          .pcard:hover .pcard-name{
+            color:var(--br3);
+          }
+
+          .pcard-actions button:hover{
+            transform:translateY(-2px);
+          }
+        }
+
+        @media (hover:none){
+          .pcard:active{transform:scale(.992);}
+          .pcard:active .pcard-img img{transform:scale(1.018);}
+          .pcard-quickview{display:none!important;}
+        }
+
+        /* Ajustements propres au thème Cinéma premium */
+        :root[data-wazyo-preset="cinematic"] .pcard{
+          border-radius:21px!important;
+          border-color:rgba(213,183,112,.20)!important;
+          background:linear-gradient(155deg,#191d27,#0d1017)!important;
+          box-shadow:
+            0 17px 44px rgba(0,0,0,.27),
+            inset 0 1px 0 rgba(255,255,255,.035)!important;
+        }
+
+        :root[data-wazyo-preset="cinematic"] .pcard-img{
+          background:
+            radial-gradient(ellipse at 50% 42%,rgba(213,183,112,.15),transparent 62%),
+            linear-gradient(145deg,#111722,#090c12)!important;
+        }
+
+        :root[data-wazyo-preset="cinematic"] .pcard-img::before{
+          border-color:rgba(213,183,112,.12);
+        }
+
+        :root[data-wazyo-preset="cinematic"] .pcard-body{
+          background:transparent!important;
+        }
+
+        :root[data-wazyo-preset="cinematic"] .pcard-actions button{
+          min-height:44px;
+        }
+
         @media(max-width:900px){
           .pcard-img{height:clamp(205px,32vw,270px)!important;}
           .pcard-body{padding:14px!important;}
         }
+
         @media(max-width:640px){
-          .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px!important;padding-left:12px!important;padding-right:12px!important;}
+          .pgrid{
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:12px!important;
+            padding-left:12px!important;
+            padding-right:12px!important;
+          }
+
           .pcard{border-radius:16px!important;}
-          .pcard-img{height:clamp(155px,49vw,220px)!important;}
-          .pcard-img::before{inset:7px;border-radius:11px;}
+
+          .pcard-img{
+            height:clamp(155px,49vw,220px)!important;
+          }
+
+          .pcard-img::before{
+            inset:7px;
+            border-radius:11px;
+          }
+
           .pcard-img img{padding:9px;}
-          .pcard-body{padding:12px 11px 13px!important;gap:8px!important;}
-          .pcard-name{font-size:12px!important;min-height:2.8em;}
+
+          .pcard-body{
+            padding:12px 11px 13px!important;
+            gap:8px!important;
+          }
+
+          .pcard-name{
+            font-size:12px!important;
+            min-height:2.8em;
+          }
+
           .pcard-prix{font-size:17px!important;}
           .pcard-old{font-size:10px!important;}
-          .pcard .pcard-badge{font-size:8px!important;padding:7px 8px!important;border-radius:10px!important;}
-          .pcard-actions{grid-template-columns:1fr!important;gap:7px!important;}
-          .pcard-actions button{min-height:38px;font-size:11px!important;padding:8px!important;}
+
+          .pcard .pcard-badge{
+            font-size:8px!important;
+            padding:7px 8px!important;
+            border-radius:10px!important;
+          }
+
+          .pcard-actions{
+            grid-template-columns:1fr!important;
+            gap:7px!important;
+          }
+
+          .pcard-actions button{
+            min-height:39px;
+            font-size:11px!important;
+            padding:8px!important;
+          }
         }
+
         @media(prefers-reduced-motion:reduce){
-          .pcard,.pcard-img img,.pcard::after{transition:none!important;animation:none!important;}
+          .pcard,
+          .pcard-img img,
+          .pcard::after,
+          .pcard-quickview,
+          .pcard-actions button{
+            transition:none!important;
+            animation:none!important;
+          }
+
+          .pcard:hover{
+            transform:none!important;
+          }
         }
       `}</style>
 
@@ -305,6 +476,16 @@ export default function ProductGrid({
           letter-spacing:.18em;
           text-transform:uppercase;
           margin-bottom:7px;
+        }
+        .wz-products-eyebrow::after{
+          content:"";
+          display:inline-block;
+          width:26px;
+          height:1px;
+          margin-left:10px;
+          vertical-align:middle;
+          background:currentColor;
+          opacity:.65;
         }
         .wz-products-head h2{
           margin:0;
@@ -507,6 +688,11 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
         ) : (
           <span className="pcard-emoji">{p.emoji || '📦'}</span>
         )}
+
+        <span className="pcard-quickview" aria-hidden="true">
+          Voir le produit
+        </span>
+
         {imgs.length > 1 && (
           <span
             style={{
@@ -587,15 +773,15 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
               position: 'absolute',
               bottom: 8,
               left: 8,
-              background: 'rgba(239,68,68,.94)',
-              color: 'white',
-              fontSize: 10,
+              background: 'rgba(213,183,112,.96)',
+              color: '#17140d',
+              border: '1px solid rgba(255,255,255,.24)',
+              fontSize: 9,
               fontWeight: 900,
-              padding: '4px 9px',
+              padding: '5px 9px',
               borderRadius: 999,
-              animation: 'stockPulse 1.5s ease-in-out infinite',
               zIndex: 4,
-              boxShadow: '0 6px 18px rgba(239,68,68,.25)',
+              boxShadow: '0 6px 18px rgba(0,0,0,.22)',
             }}
           >
             Plus que {p.stock}
@@ -661,12 +847,12 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
               alignItems: 'center',
               alignSelf: 'flex-start',
               gap: 5,
-              padding: '2px 0',
-              borderRadius: 0,
-              background: 'transparent',
-              border: '0',
-              color: '#86efac',
-              fontSize: 10,
+              padding: '4px 9px',
+              borderRadius: 999,
+              background: 'rgba(134,239,172,.07)',
+              border: '1px solid rgba(134,239,172,.16)',
+              color: '#9ed6ae',
+              fontSize: 9,
               fontWeight: 800,
               marginTop: -1,
             }}
@@ -710,8 +896,6 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
           </button>
         </div>
       </div>
-
-      <style>{`@keyframes stockPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }`}</style>
     </article>
   )
 }
