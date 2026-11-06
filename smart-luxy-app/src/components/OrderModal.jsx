@@ -160,8 +160,9 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
   function select(val) { onChange(val); setOpen(false) }
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} className="wz-order-select" style={{ position: 'relative' }}>
       <div
+        className="wz-order-select-trigger"
         onClick={() => !disabled && setOpen(o => !o)}
         style={{
           background: '#1e1e1e', border: `1px solid ${open ? '#C9A84C' : '#333'}`,
@@ -183,7 +184,7 @@ function SearchSelect({ options, value, onChange, placeholder, disabled, rtl }) 
       </div>
 
       {open && (
-        <div style={{
+        <div className="wz-order-select-menu" style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
           background: 'var(--card2)', border: '1px solid #C9A84C',
           borderRadius: 10, marginTop: 4, overflow: 'hidden',
@@ -225,7 +226,7 @@ function ConfirmButton({ loading, disabled, onClick, label, labelLoading }) {
     onClick(e)
   }
   return (
-    <button onClick={handleClick} disabled={disabled || loading} style={{
+    <button className="wz-order-confirm" onClick={handleClick} disabled={disabled || loading} style={{
       width: '100%', padding: '14px',
       background: disabled ? '#1e1e1e' : 'linear-gradient(135deg,#C9A84C,#E9C46A)',
       border: disabled ? '1px solid #2a2a2a' : 'none',
@@ -383,6 +384,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
 
   return (
     <div
+      className="wz-order-overlay"
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         zIndex: 400,
@@ -392,7 +394,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
       }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div style={{
+      <div className="wz-order-modal" style={{
         background: 'var(--card)', width: '100%', maxWidth: 600,
         height: '92dvh', maxHeight: '92dvh',
         borderRadius: '20px 20px 0 0',
@@ -402,7 +404,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
       }}>
 
         {/* Header */}
-        <div style={{
+        <div className="wz-order-header" style={{
           background: 'var(--card2)', borderBottom: '1px solid #2a2a2a',
           padding: '14px 16px', flexShrink: 0,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -427,7 +429,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
         </div>
 
         {/* Réassurance */}
-        <div style={{
+        <div className="wz-order-reassurance" style={{
           display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6,
           padding: '9px 12px', background: 'rgba(201,168,76,.05)',
           borderBottom: '1px solid rgba(201,168,76,.12)', flexShrink: 0,
@@ -448,10 +450,10 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
         </div>
 
         {/* Corps */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+        <div className="wz-order-body" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
 
           {/* Récap articles */}
-          <div style={{
+          <div className="wz-order-summary" style={{
             background: '#1c1c1c', border: '1px solid #2a2a2a',
             borderRadius: 12, padding: 12, marginBottom: 16,
           }}>
@@ -471,7 +473,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
             <div style={labelStyle}>{t.livraison}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {['domicile', 'bureau'].map(mode => (
-                <button key={mode} onClick={() => setModeLiv(mode)} style={{
+                <button className="wz-delivery-mode" key={mode} onClick={() => setModeLiv(mode)} style={{
                   padding: '12px 8px',
                   background: modeLiv === mode ? 'rgba(201,168,76,.12)' : '#1e1e1e',
                   border: `2px solid ${modeLiv === mode ? '#C9A84C' : '#2a2a2a'}`,
@@ -585,7 +587,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
         </div>
 
         {/* Footer */}
-        <div style={{ background: 'var(--card2)', borderTop: '1px solid #2a2a2a', padding: '12px 16px', flexShrink: 0 }}>
+        <div className="wz-order-footer" style={{ background: 'var(--card2)', borderTop: '1px solid #2a2a2a', padding: '12px 16px', flexShrink: 0 }}>
           <div style={{
             display: 'flex', justifyContent: 'center', alignItems: 'center',
             gap: 8, marginBottom: 10, color: 'var(--g4)', fontSize: 10,
@@ -618,7 +620,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
             labelLoading={t.envoi}
           />
 
-          <button onClick={waOrder} style={{
+          <button className="wz-order-whatsapp" onClick={waOrder} style={{
             width: '100%', padding: '12px',
             background: '#25D366', border: 'none', borderRadius: 12,
             color:'var(--g3)', fontSize: 14, fontWeight: 800, cursor: 'pointer',
@@ -637,6 +639,110 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
         @keyframes omTelShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
         input:focus, textarea:focus { border-color: #C9A84C !important; }
         input::placeholder, textarea::placeholder { color: #444; }
+
+        /* WAZYO order form — premium surface treatment, behavior unchanged. */
+        .wz-order-overlay{
+          background:rgba(3,4,7,.82)!important;
+          backdrop-filter:blur(10px)!important;
+          -webkit-backdrop-filter:blur(10px)!important;
+        }
+        .wz-order-modal{
+          background:linear-gradient(155deg,#151821 0%,#090b10 100%)!important;
+          border:1px solid rgba(213,183,112,.22)!important;
+          border-bottom:0!important;
+          box-shadow:0 -20px 60px rgba(0,0,0,.44)!important;
+        }
+        .wz-order-header{
+          background:rgba(9,11,16,.97)!important;
+          border-bottom:1px solid rgba(213,183,112,.20)!important;
+        }
+        .wz-order-header h2{
+          color:#f7f4ed!important;
+          font-family:'Outfit',system-ui,sans-serif;
+          letter-spacing:-.02em;
+        }
+        .wz-order-header button{
+          border-radius:9px!important;
+          border:1px solid rgba(213,183,112,.22)!important;
+        }
+        .wz-order-reassurance{
+          background:rgba(213,183,112,.055)!important;
+          border-bottom-color:rgba(213,183,112,.18)!important;
+        }
+        .wz-order-body{
+          scrollbar-width:thin;
+          scrollbar-color:rgba(213,183,112,.3) transparent;
+        }
+        .wz-order-summary{
+          background:linear-gradient(145deg,#181c25,#0d1016)!important;
+          border-color:rgba(213,183,112,.16)!important;
+          border-radius:13px!important;
+        }
+        .wz-order-body label{
+          color:rgba(247,244,237,.72)!important;
+          letter-spacing:.055em;
+        }
+        .wz-order-body input,
+        .wz-order-body textarea{
+          background:#0b0e14!important;
+          border-color:rgba(213,183,112,.18)!important;
+          border-radius:9px!important;
+          color:#f7f4ed!important;
+        }
+        .wz-order-body input:focus,
+        .wz-order-body textarea:focus{
+          border-color:rgba(213,183,112,.64)!important;
+          box-shadow:0 0 0 3px rgba(213,183,112,.075)!important;
+        }
+        .wz-order-body input::placeholder,
+        .wz-order-body textarea::placeholder{color:rgba(247,244,237,.32)!important;}
+        .wz-order-select-trigger{
+          background:#0b0e14!important;
+          border-color:rgba(213,183,112,.20)!important;
+          border-radius:9px!important;
+          color:#f7f4ed!important;
+        }
+        .wz-order-select-menu{
+          background:#151821!important;
+          border-color:rgba(213,183,112,.55)!important;
+          border-radius:10px!important;
+        }
+        .wz-order-select-menu > div > div{
+          border-bottom-color:rgba(255,255,255,.055)!important;
+        }
+        .wz-delivery-mode{border-radius:10px!important;}
+        .wz-order-footer{
+          background:rgba(8,10,14,.98)!important;
+          border-top-color:rgba(213,183,112,.20)!important;
+          padding-bottom:calc(12px + env(safe-area-inset-bottom))!important;
+        }
+        .wz-order-confirm{
+          border:1px solid #e2c582!important;
+          border-radius:10px!important;
+          background:linear-gradient(135deg,#ead49c 0%,#c6a45f 100%)!important;
+          color:#17130b!important;
+        }
+        .wz-order-confirm:disabled{
+          background:#252832!important;
+          border-color:rgba(255,255,255,.07)!important;
+          color:rgba(255,255,255,.35)!important;
+        }
+        .wz-order-whatsapp{
+          border-radius:10px!important;
+          color:#fff!important;
+        }
+        @media(min-width:600px){
+          .wz-order-modal{
+            border:1px solid rgba(213,183,112,.22)!important;
+            border-radius:22px!important;
+            max-height:92vh!important;
+          }
+        }
+        @media(max-width:520px){
+          .wz-order-reassurance{grid-template-columns:1fr 1fr 1fr!important;gap:4px!important;padding:8px 7px!important;}
+          .wz-order-reassurance > div{font-size:8px!important;}
+          .wz-order-body{padding:13px!important;}
+        }
       `}</style>
     </div>
   )
