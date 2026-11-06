@@ -1045,7 +1045,7 @@ begin
   end if;
 
   v_total := greatest(0, v_subtotal - v_discount) + v_shipping;
-  v_id := 'SL-' || upper(encode(gen_random_bytes(16), 'hex'));
+  v_id := 'SL-' || upper(encode(gen_random_bytes(5), 'hex'));
 
   insert into public.orders (
     id, nom_client, telephone, wilaya, commune, adresse, note,
