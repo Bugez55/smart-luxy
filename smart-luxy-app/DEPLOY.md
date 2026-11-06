@@ -23,6 +23,10 @@ Si Supabase contient déjà tes tables, applique `supabase/security_patch.sql`, 
 
 **Les tarifs restent modifiables dans l'administration.** Ne remplace pas cette table par des montants codés dans le frontend.
 
+La migration supprime également des règles RLS historiques trop permissives sur les commandes, produits, notes clients, réglages, bannières et stockage. Elle conserve les politiques admin basées sur `is_admin()`, la lecture publique filtrée des réglages, la lecture des bannières actives et des images. Elle ne supprime aucune commande ni aucun tarif.
+
+La configuration du bucket `product-images` conserve les types MIME déjà autorisés (dont HEIC/vidéo) et toute limite de taille supérieure déjà configurée.
+
 Exécute cette migration avant de déployer le nouveau frontend et les API. Puis exécute `supabase/feature_compatibility_preflight.sql` : il vérifie en lecture seule les fonctions et colonnes des variantes et du programme influenceurs. Ces objets ne sont pas définis dans les SQL actuellement versionnés ; ils peuvent avoir été ajoutés manuellement en production. Ne les supprime ni ne les remplace avant d'avoir vérifié ce rapport.
 
 ## 3. Vercel
