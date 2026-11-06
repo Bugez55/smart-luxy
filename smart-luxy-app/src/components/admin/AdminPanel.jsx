@@ -2370,8 +2370,8 @@ export default function AdminPanel({ onLogout, onToast }) {
         <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
           <button
             onClick={async () => {
-              await resumeQuotidien(orders, products)
-              onToast && onToast('📊 Résumé envoyé sur Telegram !', 'default')
+              const sent = await resumeQuotidien()
+              onToast && onToast(sent ? '📊 Résumé envoyé sur Telegram !' : '❌ Le résumé Telegram n’a pas pu être envoyé.', sent ? 'default' : 'error')
             }}
             style={{
               background:'rgba(201,168,76,.12)', border:'1px solid rgba(201,168,76,.25)',
@@ -2389,8 +2389,14 @@ export default function AdminPanel({ onLogout, onToast }) {
                 onToast && onToast('✅ Tous les stocks sont OK !', 'default')
                 return
               }
-              for (const p of bas) await alertStockBas(p, p.stock)
-              onToast && onToast(`⚠️ ${bas.length} alerte(s) stock envoyée(s) sur Telegram`, 'default')
+              const results = await Promise.all(bas.map(p => alertStockBas(p, p.stock)))
+              const sentCount = results.filter(Boolean).length
+              onToast && onToast(
+                sentCount === bas.length
+                  ? `⚠️ ${sentCount} alerte(s) stock envoyée(s) sur Telegram`
+                  : `⚠️ ${sentCount}/${bas.length} alerte(s) envoyée(s). Vérifie la configuration Telegram ou la session admin.`,
+                sentCount === bas.length ? 'default' : 'error'
+              )
             }}
             style={{
               background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.2)',
