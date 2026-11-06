@@ -318,7 +318,7 @@ function applyWazyoThemeSettings(s) {
     midnight:{ bg:'#091321', card:'#122033', accent:'#38bdf8', text:'#e8f1fb', sub:'#9db1c8' },
     cinematic:{ bg:'#080a0f', card:'#11151e', accent:'#d5b770', text:'#f7f4ed', sub:'#aaa398' },
   }
-  const savedPreset = String(s?.theme_preset || 'wazyo').toLowerCase()
+  const savedPreset = String(s?.theme_preset || 'cinematic').toLowerCase()
   const presetId = ['wazyo','amazon','minimal','nature','midnight','cinematic'].includes(savedPreset) ? savedPreset : 'custom'
   const preset = modes[presetId]
   const bg = preset?.bg || s?.theme_bg || localStorage.getItem('sl_theme_bg') || '#0a0a0a'
