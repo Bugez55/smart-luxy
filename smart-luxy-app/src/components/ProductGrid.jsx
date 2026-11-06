@@ -160,8 +160,6 @@ export default function ProductGrid({
       `}</style>
 
       <style>{`
-        /* WAZYO — cartes produits premium */
-
         .pcard{
           position:relative;
           overflow:hidden;
@@ -170,10 +168,7 @@ export default function ProductGrid({
           border-radius:20px!important;
           background:linear-gradient(160deg,rgba(255,255,255,.035),rgba(255,255,255,.012)),var(--card)!important;
           box-shadow:0 10px 30px rgba(0,0,0,.20);
-          transition:
-            transform .38s cubic-bezier(.22,1,.36,1),
-            box-shadow .38s ease,
-            border-color .38s ease;
+          transition:transform .38s cubic-bezier(.22,1,.36,1),box-shadow .38s ease,border-color .38s ease;
           will-change:transform;
         }
 
@@ -183,13 +178,7 @@ export default function ProductGrid({
           inset:0;
           border-radius:inherit;
           pointer-events:none;
-          background:linear-gradient(
-            135deg,
-            rgba(255,255,255,.055),
-            transparent 30%,
-            transparent 72%,
-            rgba(213,183,112,.035)
-          );
+          background:linear-gradient(135deg,rgba(255,255,255,.055),transparent 30%,transparent 72%,rgba(213,183,112,.035));
           opacity:.55;
           transition:opacity .35s ease;
           z-index:1;
@@ -199,9 +188,7 @@ export default function ProductGrid({
           position:relative;
           overflow:hidden;
           height:clamp(230px,25vw,300px)!important;
-          background:
-            radial-gradient(ellipse at 50% 40%,rgba(213,183,112,.12),transparent 60%),
-            linear-gradient(145deg,#171b24,#0c0f15)!important;
+          background:radial-gradient(ellipse at 50% 40%,rgba(213,183,112,.12),transparent 60%),linear-gradient(145deg,#171b24,#0c0f15)!important;
           isolation:isolate;
           cursor:pointer;
         }
@@ -224,9 +211,7 @@ export default function ProductGrid({
           box-sizing:border-box;
           transform-origin:center;
           filter:drop-shadow(0 14px 20px rgba(0,0,0,.27));
-          transition:
-            transform .65s cubic-bezier(.2,.7,.3,1),
-            filter .5s ease;
+          transition:transform .65s cubic-bezier(.2,.7,.3,1),filter .5s ease;
           -webkit-user-drag:none;
         }
 
@@ -287,10 +272,7 @@ export default function ProductGrid({
           font-variant-numeric:tabular-nums;
         }
 
-        .pcard-prices{
-          display:flex;
-          align-items:baseline;
-        }
+        .pcard-prices{display:flex;align-items:baseline;}
 
         .pcard-actions{
           display:grid;
@@ -302,40 +284,23 @@ export default function ProductGrid({
         .pcard-actions button{
           min-height:43px;
           border-radius:12px!important;
-          transition:
-            transform .22s ease,
-            box-shadow .22s ease,
-            background .22s ease;
+          transition:transform .22s ease,box-shadow .22s ease,background .22s ease;
         }
 
         @media (hover:hover) and (pointer:fine){
           .pcard:hover{
             transform:translateY(-5px);
             border-color:rgba(213,183,112,.27);
-            box-shadow:
-              0 24px 55px rgba(0,0,0,.34),
-              0 8px 25px rgba(213,183,112,.055);
+            box-shadow:0 24px 55px rgba(0,0,0,.34),0 8px 25px rgba(213,183,112,.055);
           }
-
           .pcard:hover::after{opacity:.9;}
-
           .pcard:hover .pcard-img img{
             transform:scale(1.055);
             filter:drop-shadow(0 18px 24px rgba(0,0,0,.32));
           }
-
-          .pcard:hover .pcard-quickview{
-            opacity:1;
-            transform:translateY(0);
-          }
-
-          .pcard:hover .pcard-name{
-            color:var(--br3);
-          }
-
-          .pcard-actions button:hover{
-            transform:translateY(-2px);
-          }
+          .pcard:hover .pcard-quickview{opacity:1;transform:translateY(0);}
+          .pcard:hover .pcard-name{color:var(--br3);}
+          .pcard-actions button:hover{transform:translateY(-2px);}
         }
 
         @media (hover:none){
@@ -344,33 +309,20 @@ export default function ProductGrid({
           .pcard-quickview{display:none!important;}
         }
 
-        /* Ajustements propres au thème Cinéma premium */
         :root[data-wazyo-preset="cinematic"] .pcard{
           border-radius:21px!important;
           border-color:rgba(213,183,112,.20)!important;
           background:linear-gradient(155deg,#191d27,#0d1017)!important;
-          box-shadow:
-            0 17px 44px rgba(0,0,0,.27),
-            inset 0 1px 0 rgba(255,255,255,.035)!important;
+          box-shadow:0 17px 44px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.035)!important;
         }
 
         :root[data-wazyo-preset="cinematic"] .pcard-img{
-          background:
-            radial-gradient(ellipse at 50% 42%,rgba(213,183,112,.15),transparent 62%),
-            linear-gradient(145deg,#111722,#090c12)!important;
+          background:radial-gradient(ellipse at 50% 42%,rgba(213,183,112,.15),transparent 62%),linear-gradient(145deg,#111722,#090c12)!important;
         }
 
-        :root[data-wazyo-preset="cinematic"] .pcard-img::before{
-          border-color:rgba(213,183,112,.12);
-        }
-
-        :root[data-wazyo-preset="cinematic"] .pcard-body{
-          background:transparent!important;
-        }
-
-        :root[data-wazyo-preset="cinematic"] .pcard-actions button{
-          min-height:44px;
-        }
+        :root[data-wazyo-preset="cinematic"] .pcard-img::before{border-color:rgba(213,183,112,.12);}
+        :root[data-wazyo-preset="cinematic"] .pcard-body{background:transparent!important;}
+        :root[data-wazyo-preset="cinematic"] .pcard-actions button{min-height:44px;}
 
         @media(max-width:900px){
           .pcard-img{height:clamp(205px,32vw,270px)!important;}
@@ -384,64 +336,36 @@ export default function ProductGrid({
             padding-left:12px!important;
             padding-right:12px!important;
           }
-
           .pcard{border-radius:16px!important;}
-
-          .pcard-img{
-            height:clamp(155px,49vw,220px)!important;
-          }
-
-          .pcard-img::before{
-            inset:7px;
-            border-radius:11px;
-          }
-
+          .pcard-img{height:clamp(155px,49vw,220px)!important;}
+          .pcard-img::before{inset:7px;border-radius:11px;}
           .pcard-img img{padding:9px;}
-
-          .pcard-body{
-            padding:12px 11px 13px!important;
-            gap:8px!important;
-          }
-
-          .pcard-name{
-            font-size:12px!important;
-            min-height:2.8em;
-          }
-
+          .pcard-body{padding:12px 11px 13px!important;gap:8px!important;}
+          .pcard-name{font-size:12px!important;min-height:2.8em;}
           .pcard-prix{font-size:17px!important;}
           .pcard-old{font-size:10px!important;}
-
-          .pcard .pcard-badge{
-            font-size:8px!important;
-            padding:7px 8px!important;
-            border-radius:10px!important;
-          }
+          .pcard .pcard-badge{font-size:8px!important;padding:7px 8px!important;border-radius:10px!important;}
 
           .pcard-actions{
-            grid-template-columns:1fr!important;
-            gap:7px!important;
+            grid-template-columns:repeat(2,minmax(0,1fr))!important;
+            gap:6px!important;
           }
-
           .pcard-actions button{
-            min-height:39px;
-            font-size:11px!important;
-            padding:8px!important;
+            min-width:0;
+            min-height:38px;
+            padding:6px 2px!important;
+            font-size:9px!important;
+            letter-spacing:-.015em;
+            white-space:nowrap;
           }
         }
 
         @media(prefers-reduced-motion:reduce){
-          .pcard,
-          .pcard-img img,
-          .pcard::after,
-          .pcard-quickview,
-          .pcard-actions button{
+          .pcard,.pcard-img img,.pcard::after,.pcard-quickview,.pcard-actions button{
             transition:none!important;
             animation:none!important;
           }
-
-          .pcard:hover{
-            transform:none!important;
-          }
+          .pcard:hover{transform:none!important;}
         }
       `}</style>
 
@@ -559,9 +483,8 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   const pointerStartX = useRef(null)
   const pointerStartY = useRef(null)
   const pointerId = useRef(null)
-  const touchStartX = useRef(null)
-  const touchStartY = useRef(null)
   const suppressNextClick = useRef(false)
+
   const imgs = (() => {
     try {
       return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || [])
@@ -573,23 +496,26 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   const selectedIndex = Math.max(0, imgs.findIndex(img => img?.url === selectedImg))
   const currentIndex = imgs.length ? (selectedImg ? selectedIndex : 0) : 0
   const mainImg = selectedImg || imgs[0]?.url || p.img
+
   const productModels = (() => {
     try {
       const raw = typeof p.models === 'string' ? JSON.parse(p.models) : (p.models || [])
       return Array.isArray(raw) ? raw.filter(m => m && String(m.name || '').trim()) : []
-    } catch { return [] }
+    } catch {
+      return []
+    }
   })()
+
   const isModelProduct = p.show_models === true && productModels.length > 0
   const modelPrices = isModelProduct ? productModels.map(m =>
     m.price !== '' && m.price !== null && m.price !== undefined && Number.isFinite(Number(m.price))
       ? Math.max(0, Number(m.price))
       : Number(p.prix || 0)
   ) : []
+
   const cardPrice = isModelProduct ? Math.min(...modelPrices) : Number(p.prix || 0)
   const hasDiscount = !isModelProduct && Number(p.prix_old) > Number(p.prix)
-  const discount = hasDiscount
-    ? Math.round(100 - (Number(p.prix) / Number(p.prix_old)) * 100)
-    : 0
+  const discount = hasDiscount ? Math.round(100 - (Number(p.prix) / Number(p.prix_old)) * 100) : 0
   const saving = hasDiscount ? Math.max(0, Number(p.prix_old) - Number(p.prix)) : 0
   const outOfStock = p.stock !== null && p.stock !== undefined && p.stock <= 0
   const lowStock = p.stock !== null && p.stock !== undefined && p.stock > 0 && p.stock <= 5
@@ -615,8 +541,6 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
     const dx = e.clientX - pointerStartX.current
     const dy = e.clientY - pointerStartY.current
 
-    // Dès qu'on détecte une vraie intention horizontale, on capture
-    // le pointeur pour ne pas perdre le geste sur mobile.
     if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.08) {
       suppressNextClick.current = true
       try {
@@ -664,11 +588,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   }
 
   return (
-    <article
-      className="pcard"
-      style={{ opacity: outOfStock ? 0.68 : 1, background: cardBg }}
-    >
-      {/* Image */}
+    <article className="pcard" style={{ opacity: outOfStock ? 0.68 : 1, background: cardBg }}>
       <div
         className="pcard-img"
         onClick={handleImageClick}
@@ -689,9 +609,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
           <span className="pcard-emoji">{p.emoji || '📦'}</span>
         )}
 
-        <span className="pcard-quickview" aria-hidden="true">
-          Voir le produit
-        </span>
+        <span className="pcard-quickview" aria-hidden="true">Voir le produit</span>
 
         {imgs.length > 1 && (
           <span
@@ -714,10 +632,7 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
         {p.badge && <div className="pcard-badge">{p.badge}</div>}
 
         {discount > 0 && (
-          <div
-            className="pcard-badge"
-            style={{ left: 'auto', right: 10, background: '#ef4444', color: 'white' }}
-          >
+          <div className="pcard-badge" style={{ left: 'auto', right: 10, background: '#ef4444', color: 'white' }}>
             -{discount}%
           </div>
         )}
@@ -787,55 +702,35 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
             Plus que {p.stock}
           </div>
         )}
-
       </div>
 
-      {/* Body */}
       <div className="pcard-body">
         <div className="pcard-name" onClick={() => onOpen(p)}>
           {p.nom}
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 6,
-            minHeight: 16,
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, minHeight: 16 }}>
           {reviewData ? (
             <Stars avg={reviewData.avg} count={reviewData.count} />
           ) : (
-            <span
-              style={{
-                fontSize: 10,
-                color: 'var(--g4)',
-                fontWeight: 600,
-              }}
-            >
+            <span style={{ fontSize: 10, color: 'var(--g4)', fontWeight: 600 }}>
               Pas encore d’avis
             </span>
           )}
 
           {p.ventes > 0 && (
-            <span
-              style={{
-                fontSize: 10,
-                color: 'var(--g4)',
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-              }}
-            >
+            <span style={{ fontSize: 10, color: 'var(--g4)', fontWeight: 700, whiteSpace: 'nowrap' }}>
               {p.ventes} vendu{p.ventes > 1 ? 's' : ''}
             </span>
           )}
         </div>
 
-        {/* Prix */}
         <div className="pcard-prices" style={{ gap: 9, flexWrap: 'wrap' }}>
-          {isModelProduct && <span style={{ fontSize:9, color:'var(--g4)', fontWeight:800, alignSelf:'center' }}>À partir de</span>}
+          {isModelProduct && (
+            <span style={{ fontSize: 9, color: 'var(--g4)', fontWeight: 800, alignSelf: 'center' }}>
+              À partir de
+            </span>
+          )}
           <span className="pcard-prix">{fmt(cardPrice)}</span>
           {hasDiscount && <span className="pcard-old">{fmt(p.prix_old)}</span>}
         </div>
@@ -861,7 +756,6 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
           </div>
         )}
 
-        {/* Boutons */}
         <div className="pcard-actions">
           <button
             className="btn-cart"
