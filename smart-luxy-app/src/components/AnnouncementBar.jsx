@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
@@ -36,10 +35,6 @@ export default function AnnouncementBar() {
       role="region"
       aria-label="Annonces et informations de la boutique"
     >
-      <div className="wz-announcement__glow" aria-hidden="true" />
-      <div className="wz-announcement__edge wz-announcement__edge--left" aria-hidden="true" />
-      <div className="wz-announcement__edge wz-announcement__edge--right" aria-hidden="true" />
-
       <div className="wz-announcement__viewport">
         <div
           className="wz-announcement__track"
@@ -48,8 +43,8 @@ export default function AnnouncementBar() {
           <div className="wz-announcement__group">
             {messages.map((msg, index) => (
               <span className="wz-announcement__item" key={`primary-${index}`}>
+                <span className="wz-announcement__spark" aria-hidden="true">✦</span>
                 <span>{msg}</span>
-                <span className="wz-announcement__separator" aria-hidden="true">✦</span>
               </span>
             ))}
           </div>
@@ -57,8 +52,8 @@ export default function AnnouncementBar() {
           <div className="wz-announcement__group" aria-hidden="true">
             {messages.map((msg, index) => (
               <span className="wz-announcement__item" key={`duplicate-${index}`}>
+                <span className="wz-announcement__spark">✦</span>
                 <span>{msg}</span>
-                <span className="wz-announcement__separator">✦</span>
               </span>
             ))}
           </div>
@@ -67,40 +62,38 @@ export default function AnnouncementBar() {
 
       <style>{`
         .wz-announcement{
-          --announcement-bg:#090b10;
           position:relative;
           z-index:101;
           width:100%;
-          height:42px;
+          height:36px;
           overflow:hidden;
           isolation:isolate;
           box-sizing:border-box;
-          border-top:1px solid rgba(213,183,112,.08);
-          border-bottom:1px solid rgba(213,183,112,.20);
-          background:linear-gradient(100deg,#090b10 0%,#151923 50%,#090b10 100%);
+          border-bottom:1px solid rgba(213,183,112,.18);
+          background:
+            radial-gradient(ellipse at 50% -80%,rgba(213,183,112,.13),transparent 62%),
+            linear-gradient(90deg,#08090c 0%,#11131a 48%,#08090c 100%);
           box-shadow:inset 0 -1px 0 rgba(255,255,255,.025);
         }
-
-        .wz-announcement__glow{
+        .wz-announcement::before{
+          content:"";
           position:absolute;
-          inset:-35px 18% auto;
-          height:70px;
-          background:radial-gradient(ellipse,rgba(213,183,112,.12),transparent 68%);
-          filter:blur(12px);
+          top:0;
+          left:50%;
+          width:min(520px,54vw);
+          height:1px;
+          transform:translateX(-50%);
+          background:linear-gradient(90deg,transparent,rgba(213,183,112,.55),transparent);
           pointer-events:none;
-          z-index:0;
         }
-
         .wz-announcement__viewport{
           position:relative;
-          z-index:1;
           width:100%;
           height:100%;
           display:flex;
           align-items:center;
           overflow:hidden;
         }
-
         .wz-announcement__track{
           display:flex;
           align-items:center;
@@ -110,82 +103,74 @@ export default function AnnouncementBar() {
           animation:wzAnnouncementScroll linear infinite;
           will-change:transform;
         }
-
         .wz-announcement__group{
           display:flex;
           align-items:center;
           flex:0 0 auto;
           width:max-content;
         }
-
         .wz-announcement__item{
           display:inline-flex;
           align-items:center;
-          gap:18px;
+          gap:11px;
           flex:0 0 auto;
-          padding:0 clamp(18px,3vw,38px);
-          color:rgba(247,244,237,.88);
-          font-size:clamp(10px,.9vw,11.5px);
+          padding:0 clamp(18px,2.7vw,34px);
+          color:rgba(247,244,237,.82);
+          font-family:'Outfit',system-ui,sans-serif;
+          font-size:10px;
           font-weight:650;
           line-height:1;
-          letter-spacing:.045em;
+          letter-spacing:.055em;
           white-space:nowrap;
         }
-
-        .wz-announcement__separator{
+        .wz-announcement__spark{
           color:#d5b770;
-          font-size:11px;
-          opacity:.72;
-          text-shadow:0 0 12px rgba(213,183,112,.45);
+          font-size:10px;
+          opacity:.82;
+          text-shadow:0 0 12px rgba(213,183,112,.32);
         }
-
-        .wz-announcement__edge{
-          position:absolute;
-          top:0;
-          bottom:0;
-          z-index:2;
-          width:clamp(28px,6vw,76px);
-          pointer-events:none;
-        }
-
-        .wz-announcement__edge--left{
-          left:0;
-          background:linear-gradient(90deg,#090b10 0%,rgba(9,11,16,.78) 30%,transparent 100%);
-        }
-
-        .wz-announcement__edge--right{
-          right:0;
-          background:linear-gradient(270deg,#090b10 0%,rgba(9,11,16,.78) 30%,transparent 100%);
-        }
-
         .wz-announcement:hover .wz-announcement__track{
           animation-play-state:paused;
         }
-
         @keyframes wzAnnouncementScroll{
           from{transform:translate3d(0,0,0);}
           to{transform:translate3d(-50%,0,0);}
         }
-
         @media(max-width:640px){
-          .wz-announcement{height:38px;}
+          .wz-announcement{height:34px;}
           .wz-announcement__item{
-            gap:12px;
-            padding:0 17px;
-            font-size:10px;
+            gap:8px;
+            padding:0 16px;
+            font-size:9px;
             letter-spacing:.025em;
           }
-          .wz-announcement__separator{font-size:9px;}
+          .wz-announcement__spark{font-size:9px;}
         }
-
         @media(prefers-reduced-motion:reduce){
-          .wz-announcement{height:auto;min-height:40px;}
-          .wz-announcement__viewport{height:auto;min-height:40px;padding:8px 18px;box-sizing:border-box;}
-          .wz-announcement__track{width:100%;justify-content:center;animation:none!important;transform:none!important;}
-          .wz-announcement__group:first-child{width:100%;justify-content:center;flex-wrap:wrap;}
+          .wz-announcement{height:auto;min-height:36px;}
+          .wz-announcement__viewport{
+            height:auto;
+            min-height:36px;
+            padding:6px 14px;
+            box-sizing:border-box;
+          }
+          .wz-announcement__track{
+            width:100%;
+            justify-content:center;
+            animation:none!important;
+            transform:none!important;
+          }
+          .wz-announcement__group:first-child{
+            width:100%;
+            justify-content:center;
+            flex-wrap:wrap;
+          }
           .wz-announcement__group:last-child{display:none;}
-          .wz-announcement__item{white-space:normal;text-align:center;padding:5px 10px;}
-          .wz-announcement__edge{display:none;}
+          .wz-announcement__item{
+            white-space:normal;
+            text-align:center;
+            padding:5px 9px;
+          }
         }
       `}</style>
     </div>
