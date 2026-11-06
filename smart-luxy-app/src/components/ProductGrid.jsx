@@ -112,6 +112,26 @@ export default function ProductGrid({
       })
   }, [products])
 
+  const editorialSelections = (categories || [])
+    .filter(category => category && category !== 'Tous')
+    .map(category => {
+      const matchingProducts = (categoryProducts || []).filter(product => product.categorie === category)
+      const featuredProduct = matchingProducts.find(product => getCategoryCover(product))
+      return featuredProduct ? {
+        category,
+        product: featuredProduct,
+        image: getCategoryCover(featuredProduct),
+        count: matchingProducts.length,
+      } : null
+    })
+    .filter(Boolean)
+    .slice(0, 2)
+
+  function exploreEditorialCategory(category) {
+    onCatChange(category)
+    document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
     <>
       <div className="wz-categories-wrap">
@@ -890,6 +910,226 @@ export default function ProductGrid({
           ))}
         </div>
       )}
+
+      {editorialSelections.length > 0 && (
+        <section className="wz-editorial-section" aria-label="Découvrir nos univers">
+          <div className="wz-editorial-heading">
+            <span>LES UNIVERS WAZYO</span>
+            <h2>Des idées pour chaque envie.</h2>
+            <p>Parcourez des sélections variées, pensées autour de vos découvertes du moment.</p>
+          </div>
+
+          <div className="wz-editorial-grid">
+            {editorialSelections.map((selection, index) => (
+              <article
+                className={`wz-editorial-card wz-editorial-card--${index + 1}`}
+                key={selection.category}
+              >
+                <div className="wz-editorial-card-media">
+                  <img
+                    src={selection.image}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <div className="wz-editorial-card-shade" aria-hidden="true" />
+                <div className="wz-editorial-card-copy">
+                  <span className="wz-editorial-card-kicker">À EXPLORER · {selection.count} ARTICLE{selection.count > 1 ? 'S' : ''}</span>
+                  <h3>{selection.category}</h3>
+                  <p>Découvrez notre sélection dans cet univers.</p>
+                  <button type="button" onClick={() => exploreEditorialCategory(selection.category)}>
+                    Explorer l’univers <span aria-hidden="true">↗</span>
+                  </button>
+                </div>
+                <span className="wz-editorial-card-index" aria-hidden="true">0{index + 1}</span>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <style>{`
+        .wz-editorial-section{
+          width:min(1320px,100%);
+          margin:0 auto;
+          padding:12px clamp(14px,2.3vw,28px) 64px;
+          box-sizing:border-box;
+        }
+        .wz-editorial-heading{
+          display:grid;
+          grid-template-columns:1fr auto;
+          align-items:end;
+          gap:7px 20px;
+          margin-bottom:18px;
+        }
+        .wz-editorial-heading > span{
+          grid-column:1 / -1;
+          color:#d5b770;
+          font-size:9px;
+          font-weight:900;
+          letter-spacing:.22em;
+        }
+        .wz-editorial-heading h2{
+          margin:0;
+          color:#f7f4ed;
+          font-family:'Outfit',system-ui,sans-serif;
+          font-size:clamp(25px,3.2vw,38px);
+          font-weight:800;
+          line-height:1.04;
+          letter-spacing:-.045em;
+        }
+        .wz-editorial-heading p{
+          margin:0;
+          max-width:390px;
+          color:rgba(247,244,237,.52);
+          font-size:11px;
+          line-height:1.6;
+          text-align:right;
+        }
+        .wz-editorial-grid{
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:16px;
+        }
+        .wz-editorial-card{
+          position:relative;
+          isolation:isolate;
+          min-height:260px;
+          overflow:hidden;
+          display:flex;
+          align-items:flex-end;
+          border:1px solid rgba(213,183,112,.24);
+          border-radius:18px;
+          background:linear-gradient(140deg,#191d26,#090b10);
+          box-shadow:0 15px 38px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.05);
+        }
+        .wz-editorial-card-media{
+          position:absolute;
+          z-index:-2;
+          inset:0 0 0 28%;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          overflow:hidden;
+          background:radial-gradient(ellipse at 55% 50%,rgba(213,183,112,.20),transparent 64%);
+        }
+        .wz-editorial-card-media img{
+          display:block;
+          width:100%;
+          height:100%;
+          object-fit:contain;
+          padding:18px;
+          box-sizing:border-box;
+          filter:drop-shadow(0 20px 26px rgba(0,0,0,.42));
+          transition:transform .55s ease,filter .55s ease;
+        }
+        .wz-editorial-card-shade{
+          position:absolute;
+          z-index:-1;
+          inset:0;
+          background:
+            linear-gradient(90deg,#0b0d12 0%,rgba(11,13,18,.96) 28%,rgba(11,13,18,.64) 49%,rgba(11,13,18,.04) 100%),
+            linear-gradient(0deg,rgba(5,6,9,.48),transparent 45%);
+        }
+        .wz-editorial-card-copy{
+          position:relative;
+          z-index:2;
+          width:min(61%,330px);
+          padding:25px 25px 27px;
+        }
+        .wz-editorial-card-kicker{
+          display:block;
+          margin-bottom:11px;
+          color:#d5b770;
+          font-size:8px;
+          font-weight:900;
+          letter-spacing:.18em;
+        }
+        .wz-editorial-card-copy h3{
+          margin:0;
+          color:#fff;
+          font-family:'Outfit',system-ui,sans-serif;
+          font-size:clamp(23px,2.6vw,32px);
+          font-weight:800;
+          line-height:1.02;
+          letter-spacing:-.045em;
+          text-wrap:balance;
+        }
+        .wz-editorial-card-copy p{
+          margin:10px 0 17px;
+          color:rgba(255,255,255,.68);
+          font-size:11px;
+          line-height:1.6;
+        }
+        .wz-editorial-card-copy button{
+          min-height:38px;
+          display:inline-flex;
+          align-items:center;
+          gap:15px;
+          padding:0 14px;
+          border:1px solid rgba(213,183,112,.48);
+          border-radius:8px;
+          background:rgba(213,183,112,.08);
+          color:#f0d99f;
+          font-family:inherit;
+          font-size:9px;
+          font-weight:850;
+          letter-spacing:.07em;
+          text-transform:uppercase;
+          cursor:pointer;
+          transition:background .2s ease,border-color .2s ease,transform .2s ease;
+        }
+        .wz-editorial-card-copy button:hover{
+          transform:translateY(-2px);
+          border-color:#e6c988;
+          background:rgba(213,183,112,.16);
+        }
+        .wz-editorial-card-copy button:focus-visible{
+          outline:2px solid #f0d99f;
+          outline-offset:3px;
+        }
+        .wz-editorial-card-index{
+          position:absolute;
+          right:18px;
+          bottom:14px;
+          color:rgba(213,183,112,.55);
+          font-family:'Outfit',system-ui,sans-serif;
+          font-size:27px;
+          font-weight:300;
+          letter-spacing:-.08em;
+        }
+        @media(hover:hover) and (pointer:fine){
+          .wz-editorial-card:hover .wz-editorial-card-media img{
+            transform:scale(1.055);
+            filter:drop-shadow(0 24px 32px rgba(0,0,0,.5));
+          }
+        }
+        @media(max-width:760px){
+          .wz-editorial-grid{grid-template-columns:1fr;gap:12px;}
+          .wz-editorial-card{min-height:230px;}
+          .wz-editorial-card-copy{width:min(64%,320px);padding:20px;}
+          .wz-editorial-card-copy h3{font-size:27px;}
+        }
+        @media(max-width:480px){
+          .wz-editorial-section{padding:8px 12px 44px;}
+          .wz-editorial-heading{grid-template-columns:1fr;gap:7px;margin-bottom:13px;}
+          .wz-editorial-heading h2{font-size:27px;}
+          .wz-editorial-heading p{text-align:left;font-size:10px;}
+          .wz-editorial-card{min-height:205px;border-radius:14px;}
+          .wz-editorial-card-media{inset:0 0 0 25%;}
+          .wz-editorial-card-media img{padding:10px;}
+          .wz-editorial-card-copy{width:65%;padding:15px;}
+          .wz-editorial-card-kicker{font-size:7px;margin-bottom:8px;}
+          .wz-editorial-card-copy h3{font-size:23px;}
+          .wz-editorial-card-copy p{font-size:10px;margin:8px 0 12px;}
+          .wz-editorial-card-copy button{min-height:34px;padding:0 10px;font-size:8px;}
+          .wz-editorial-card-index{right:12px;bottom:10px;font-size:21px;}
+        }
+        @media(prefers-reduced-motion:reduce){
+          .wz-editorial-card-media img,.wz-editorial-card-copy button{transition:none!important;}
+        }
+      `}</style>
     </>
   )
 }
