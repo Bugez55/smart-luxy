@@ -236,6 +236,37 @@ async function handleAdminNotification(req, res, type) {
     }
   }
 
+  if (type === 'stock_alerts') {
+    const ids = [...new Set((Array.isArray(req.body?.productIds) ? req.body.productIds : [])
+      .map(Number)
+      .filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 100)
+    if (!ids.length) return res.status(400).json({ error: 'Liste de produits invalide' })
+
+    const { data: products, error } = await auth.client
+      .from('products')
+      .select('id,nom,stock')
+      .in('id', ids)
+      .not('stock', 'is', null)
+      .lte('stock', 5)
+      .order('stock', { ascending: true })
+
+    if (error) return res.status(500).json({ error: 'Impossible de vérifier les stocks' })
+    if (!products?.length) return res.status(200).json({ success: true, skipped: true })
+
+    const message = '⚠️ ÉTAT DES STOCKS — WAZYO\\n\\n' + products.map(product => {
+      const emoji = Number(product.stock) === 0 ? '🚫' : '⚠️'
+      return `${emoji} ${product.nom} : ${product.stock} unité(s)`
+    }).join('\\n')
+
+    try {
+      await sendMessage(message)
+      return res.status(200).json({ success: true, count: products.length })
+    } catch (error) {
+      console.error('Erreur rapport Telegram stock:', error?.message || error)
+      return res.status(502).json({ error: 'Impossible d’envoyer le rapport de stock' })
+    }
+  }
+
   if (type === 'daily_summary') {
     const start = Date.parse(String(req.body?.start || ''))
     const end = Date.parse(String(req.body?.end || ''))
@@ -271,7 +302,9 @@ async function handleAdminNotification(req, res, type) {
     const topProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0]
     const lowStock = (products || []).filter(product => product.stock !== null && Number(product.stock) > 0 && Number(product.stock) <= 3)
     const outOfStock = (products || []).filter(product => product.stock !== null && Number(product.stock) === 0)
-    const dateText = new Date(start).toLocaleDateString('fr-DZ', { weekday: 'long', day: 'numeric', month: 'long' })
+    const dateText = new Intl.DateTimeFormat('fr-DZ', {
+      weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Algiers',
+    }).format(new Date(start))
 
     const message = `📊 Résumé du jour — WAZYO\n📅 ${dateText}\n━━━━━━━━━━━━━━━━\n🛍️ Commandes : ${rows.length}\n💰 Chiffre d'affaires : ${fmt(revenue)}\n🆕 Nouvelles : ${countStatus('new')}\n✅ Confirmées : ${countStatus('confirmed')}\n🚚 Expédiées : ${countStatus('shipped')}\n📦 Livrées : ${countStatus('delivered')}\n❌ Annulées : ${countStatus('cancelled')}\n━━━━━━━━━━━━━━━━\n🏆 Top produit : ${topProduct ? `${topProduct[0]} (×${topProduct[1]})` : 'Aucune vente'}\n⚠️ Stock bas : ${lowStock.length ? lowStock.map(p => `${p.nom} (${p.stock})`).join(', ') : 'Aucun'}\n🚫 Épuisés : ${outOfStock.length ? outOfStock.map(p => p.nom).join(', ') : 'Aucun'}`
     try {
@@ -304,7 +337,7 @@ export default async function handler(req, res) {
   req.body = body
 
   if (body.type === 'order') return handleOrderNotification(req, res)
-  if (body.type === 'stock_alert' || body.type === 'daily_summary') {
+  if (body.type === 'stock_alert' || body.type === 'stock_alerts' || body.type === 'daily_summary') {
     return handleAdminNotification(req, res, body.type)
   }
   return res.status(400).json({ error: 'Type de notification inconnu' })
