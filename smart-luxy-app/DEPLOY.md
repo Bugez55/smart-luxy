@@ -23,7 +23,7 @@ Si Supabase contient déjà tes tables, applique `supabase/security_patch.sql`, 
 
 **Les tarifs restent modifiables dans l'administration.** Ne remplace pas cette table par des montants codés dans le frontend.
 
-Exécute cette migration avant de déployer le nouveau frontend et les API.
+Exécute cette migration avant de déployer le nouveau frontend et les API. Puis exécute `supabase/feature_compatibility_preflight.sql` : il vérifie en lecture seule les fonctions et colonnes des variantes et du programme influenceurs. Ces objets ne sont pas définis dans les SQL actuellement versionnés ; ils peuvent avoir été ajoutés manuellement en production. Ne les supprime ni ne les remplace avant d'avoir vérifié ce rapport.
 
 ## 3. Vercel
 Copie les noms de variables de `.env.example` dans les paramètres Vercel (le fichier est un modèle, il ne contient aucune clé). Les variables serveur sensibles doivent être configurées dans Vercel et **ne doivent pas être commitées**. `SUPABASE_SECRET_KEY` est nécessaire aux fonctions serveur CAPI, import et notifications.
