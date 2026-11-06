@@ -183,8 +183,7 @@ export default function Hero({
           </div>
         </div>
 
-        {!showCustomMedia && (
-          <div className="wz-hero-stage" aria-label="Aperçu de produits du catalogue WAZYO">
+        <div className="wz-hero-stage" aria-label="Aperçu de produits du catalogue WAZYO">
             <div className="wz-hero-stage-orbit wz-hero-stage-orbit--one" aria-hidden="true" />
             <div className="wz-hero-stage-orbit wz-hero-stage-orbit--two" aria-hidden="true" />
             <div className="wz-hero-stage-heading">
@@ -233,7 +232,6 @@ export default function Hero({
               <span>W<span>·</span>Z</span>
             </div>
           </div>
-        )}
       </div>
 
       <div className="wz-hero-bottom-rule" aria-hidden="true" />
