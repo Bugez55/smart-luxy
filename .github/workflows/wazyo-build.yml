@@ -3,6 +3,7 @@ name: WAZYO build
 on:
   push:
     branches:
+      - main
       - "fix/**"
     paths:
       - "smart-luxy-app/**"
@@ -12,6 +13,9 @@ on:
       - main
     paths:
       - "smart-luxy-app/**"
+
+permissions:
+  contents: read
 
 jobs:
   build:
