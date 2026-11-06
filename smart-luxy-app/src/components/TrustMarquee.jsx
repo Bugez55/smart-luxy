@@ -123,6 +123,37 @@ export default function TrustMarquee() {
             gap: 22px !important;
             padding: 11px 14px !important;
           }
+
+          .footer {
+            padding: 26px 14px 22px !important;
+            gap: 8px !important;
+          }
+
+          .footer > div:nth-of-type(2),
+          .footer > div:nth-of-type(3) {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-wrap: wrap !important;
+            gap: 10px 14px !important;
+            margin-top: 9px !important;
+          }
+
+          .footer > div:nth-of-type(2) > span,
+          .footer > div:nth-of-type(3) > span {
+            display: none !important;
+          }
+
+          .footer > div:nth-of-type(2) > a,
+          .footer > div:nth-of-type(3) > button {
+            font-size: 12px !important;
+            line-height: 1.45 !important;
+          }
+
+          .footer > p:last-child {
+            margin-top: 8px !important;
+          }
         }
       `}</style>
     </section>
