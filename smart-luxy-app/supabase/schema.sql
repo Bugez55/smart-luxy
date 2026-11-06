@@ -1421,3 +1421,32 @@ grant execute on function public.create_affiliate_link_admin(
 
 revoke all on function public.get_affiliate_financial_dashboard() from public, anon;
 grant execute on function public.get_affiliate_financial_dashboard() to authenticated;
+
+-- 8) Keep trigger-only SECURITY DEFINER helpers out of the PostgREST RPC surface.
+-- PostgreSQL triggers continue to invoke their bound functions; direct EXECUTE
+-- grants are not needed by storefront or admin clients.
+revoke all on function public.check_order_rate_limit() from public, anon, authenticated;
+revoke all on function public.check_order_total() from public, anon, authenticated;
+revoke all on function public.compute_order_total(jsonb, numeric) from public, anon, authenticated;
+revoke all on function public.enforce_order_status_and_restore_stock() from public, anon, authenticated;
+revoke all on function public.enforce_order_status_workflow() from public, anon, authenticated;
+revoke all on function public.guard_public_review_insert() from public, anon, authenticated;
+revoke all on function public.increment_product_order_count() from public, anon, authenticated;
+revoke all on function public.restore_color_stock_on_cancel() from public, anon, authenticated;
+revoke all on function public.restore_color_stock_on_delete() from public, anon, authenticated;
+revoke all on function public.restore_model_stock_on_cancel() from public, anon, authenticated;
+revoke all on function public.restore_model_stock_on_delete() from public, anon, authenticated;
+revoke all on function public.restore_stock_on_delete() from public, anon, authenticated;
+revoke all on function public.set_order_client_id() from public, anon, authenticated;
+revoke all on function public.snapshot_affiliate_financials() from public, anon, authenticated;
+revoke all on function public.rls_auto_enable() from public, anon, authenticated;
+
+-- Admin identity and legacy admin-only dashboard must not be exposed to guests.
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+revoke all on function public.get_affiliate_dashboard() from public, anon;
+grant execute on function public.get_affiliate_dashboard() to authenticated;
+
+-- Fixed, deterministic path for the shipment timestamp trigger.
+alter function public.touch_shipping_dispatch_updated_at()
+  set search_path = pg_catalog, public;
