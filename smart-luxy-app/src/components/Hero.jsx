@@ -368,7 +368,7 @@ export default function Hero({
           border-radius:17px;pointer-events:none;
         }
         .wz-hero-stage-orbit{
-          position:absolute;z-index:-1;border:1px solid rgba(213,183,112,.17);border-radius:50%;pointer-events:none;
+          position:absolute;z-index:0;border:1px solid rgba(213,183,112,.17);border-radius:50%;pointer-events:none;
           box-shadow:0 0 40px rgba(213,183,112,.04),inset 0 0 40px rgba(213,183,112,.025);
         }
         .wz-hero-stage-orbit--one{width:410px;height:410px;top:3%;right:-8%;}
@@ -427,14 +427,14 @@ export default function Hero({
           color:#e7cc91;font-size:12px;backdrop-filter:blur(8px);
         }
         .wz-hero-stage-foot{
-          display:flex;justify-content:space-between;align-items:center;margin-top:13px;padding:9px 3px 0;
+          position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;margin-top:13px;padding:9px 3px 0;
           border-top:1px solid rgba(213,183,112,.12);color:rgba(247,244,237,.40);
           font-size:8px;font-weight:850;letter-spacing:.16em;
         }
         .wz-hero-stage-foot span:last-child{color:#d5b770;font-size:10px;letter-spacing:.18em;}
         .wz-hero-stage-foot span:last-child span{color:rgba(213,183,112,.45);padding:0 3px;}
         .wz-hero-stage-empty{
-          min-height:350px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+          position:relative;z-index:1;min-height:350px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
           border:1px dashed rgba(213,183,112,.22);border-radius:15px;color:#f7f4ed;text-align:center;padding:20px;
         }
         .wz-hero-stage-empty span{color:#d5b770;font-size:12px;font-weight:900;letter-spacing:.28em;}
