@@ -116,8 +116,8 @@ export default function ProductGrid({
     <>
       <div className="wz-categories-wrap">
         <div className="wz-categories-heading">
-          <div className="wz-categories-label">EXPLOREZ PAR UNIVERS</div>
-          <div className="wz-categories-hint">Une sélection pensée pour vous</div>
+          <div className="wz-categories-label">NOS CATÉGORIES</div>
+          <div className="wz-categories-hint">Explorez les univers de la boutique</div>
         </div>
         <div className="cats wz-categories-scroll wz-category-cards" aria-label="Choisir une catégorie">
           {categories.map(cat => {
@@ -564,7 +564,7 @@ export default function ProductGrid({
         <div className="wz-products-head-main">
           <div className="wz-products-eyebrow">COLLECTION WAZYO</div>
           <h2>{activeCat === 'Tous' ? 'Notre sélection' : activeCat}</h2>
-          <p>{activeCat === 'Tous' ? 'Des produits utiles, choisis pour aller à l’essentiel.' : 'Découvrez les produits de cette catégorie.'}</p>
+          <p>{activeCat === 'Tous' ? 'Des découvertes et des nouveautés pour toutes vos envies.' : 'Retrouvez les articles de cet univers.'}</p>
         </div>
         <div className="wz-products-count">
           <span>{products.length}</span> produit{products.length > 1 ? 's' : ''}
@@ -639,6 +639,231 @@ export default function ProductGrid({
           .wz-products-head h2{font-size:25px;}
           .wz-products-head p{font-size:11px;margin-top:6px;max-width:290px;}
           .wz-products-count{font-size:9px;padding:7px 10px;}
+        }
+      `}</style>
+
+      <style>{`
+        /* WAZYO catalog refresh — real product media and dynamic categories. */
+        .wz-categories-wrap{
+          padding:8px clamp(14px,2.5vw,28px) 30px;
+        }
+        .wz-categories-heading{
+          margin-bottom:15px;
+          align-items:center;
+        }
+        .wz-categories-label{
+          color:#e0c27d;
+          font-size:10px;
+          letter-spacing:.22em;
+        }
+        .wz-categories-hint{
+          color:rgba(247,244,237,.52);
+          font-size:11px;
+        }
+        .wz-categories-scroll{gap:14px;}
+        .wz-category-card{
+          flex-basis:clamp(168px,17vw,220px);
+          height:140px;
+          border-radius:14px;
+          border-color:rgba(213,183,112,.22);
+          background:
+            radial-gradient(ellipse at 75% 20%,rgba(213,183,112,.18),transparent 55%),
+            linear-gradient(145deg,#171a21 0%,#0b0d12 100%);
+          box-shadow:0 10px 28px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.045);
+        }
+        .wz-category-card-image{
+          opacity:.72;
+          filter:saturate(.9) contrast(1.05);
+        }
+        .wz-category-card-shade{
+          background:
+            linear-gradient(180deg,rgba(5,7,12,.02) 0%,rgba(5,7,12,.22) 36%,rgba(5,7,12,.92) 100%),
+            linear-gradient(90deg,rgba(5,7,12,.12),transparent 85%);
+        }
+        .wz-category-card-kicker{
+          color:#e0c27d;
+          font-size:8px;
+          letter-spacing:.19em;
+        }
+        .wz-category-card-content strong{
+          font-size:16px;
+          letter-spacing:-.02em;
+        }
+        .wz-category-card-content small{
+          font-size:10px;
+          color:rgba(255,255,255,.72);
+        }
+        .wz-category-card-arrow{
+          border-color:rgba(213,183,112,.34);
+          background:rgba(7,8,12,.48);
+          color:#f0d79c;
+        }
+        .wz-category-card.is-active{
+          border-color:rgba(224,194,125,.92);
+          box-shadow:0 0 0 1px rgba(224,194,125,.20),0 14px 34px rgba(0,0,0,.34);
+        }
+
+        .wz-products-head{
+          max-width:1320px;
+          padding:10px clamp(16px,2.5vw,28px) 24px;
+          margin-top:4px;
+        }
+        .wz-products-eyebrow{
+          color:#d5b770;
+          font-size:10px;
+          letter-spacing:.20em;
+        }
+        .wz-products-head h2{
+          font-family:'Outfit',system-ui,sans-serif;
+          font-size:clamp(28px,3.4vw,40px);
+          letter-spacing:-.045em;
+          font-weight:800;
+        }
+        .wz-products-head p{
+          max-width:520px;
+          font-size:13px;
+          color:rgba(247,244,237,.58);
+        }
+        .wz-products-count{
+          border-color:rgba(213,183,112,.20);
+          background:rgba(213,183,112,.055);
+          color:rgba(247,244,237,.72);
+          font-size:11px;
+          padding:9px 13px;
+        }
+        .wz-products-count span{color:#e0c27d;}
+
+        .pgrid{
+          width:100%;
+          max-width:1320px;
+          grid-template-columns:repeat(auto-fill,minmax(min(100%,232px),1fr));
+          gap:17px;
+          padding:0 clamp(14px,2.2vw,26px) 58px;
+        }
+        .pcard{
+          border:1px solid rgba(213,183,112,.16)!important;
+          border-radius:17px!important;
+          background:linear-gradient(155deg,#171a22 0%,#0c0f15 100%)!important;
+          box-shadow:0 13px 34px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.035)!important;
+        }
+        .pcard-img{
+          height:clamp(230px,23vw,292px)!important;
+          background:
+            radial-gradient(ellipse at 50% 38%,rgba(213,183,112,.13),transparent 60%),
+            linear-gradient(145deg,#171b24 0%,#0b0e15 100%)!important;
+          border-bottom:1px solid rgba(213,183,112,.11);
+        }
+        .pcard-img::before{
+          inset:9px!important;
+          border:1px solid rgba(213,183,112,.12)!important;
+          border-radius:12px!important;
+        }
+        .pcard-img img{
+          object-fit:contain!important;
+          padding:clamp(10px,1.1vw,16px)!important;
+          filter:drop-shadow(0 16px 22px rgba(0,0,0,.32)) saturate(1.02);
+        }
+        .pcard-body{
+          padding:16px 16px 17px!important;
+          gap:10px!important;
+          background:linear-gradient(180deg,rgba(255,255,255,.012),transparent)!important;
+        }
+        .pcard-name{
+          color:#f7f4ed!important;
+          font-size:14px!important;
+          line-height:1.42!important;
+          min-height:2.8em;
+          font-weight:750!important;
+        }
+        .pcard-prices{gap:8px!important;}
+        .pcard-prix{
+          color:#e4c77f!important;
+          font-family:'Outfit',system-ui,sans-serif!important;
+          font-size:22px!important;
+          font-weight:800!important;
+          letter-spacing:-.035em;
+        }
+        .pcard-old{
+          color:rgba(247,244,237,.45)!important;
+          font-size:12px!important;
+        }
+        .pcard-actions{
+          gap:8px!important;
+          padding-top:3px;
+        }
+        .pcard-actions button{
+          min-height:42px!important;
+          border-radius:9px!important;
+          font-size:11px!important;
+          font-weight:800!important;
+        }
+        .pcard .btn-cart{
+          border-color:rgba(213,183,112,.30)!important;
+          background:rgba(213,183,112,.055)!important;
+          color:#e8d7ad!important;
+        }
+        .pcard .btn-buy{
+          background:linear-gradient(135deg,#ead49c 0%,#c6a45f 100%)!important;
+          color:#17130b!important;
+          border:1px solid #e2c582!important;
+          box-shadow:0 5px 14px rgba(0,0,0,.18);
+        }
+        .pcard-badge{
+          border-radius:7px!important;
+          font-size:9px!important;
+          letter-spacing:.06em!important;
+        }
+
+        @media(max-width:900px){
+          .pgrid{gap:14px!important;}
+          .pcard-img{height:clamp(210px,31vw,265px)!important;}
+        }
+        @media(max-width:640px){
+          .wz-categories-wrap{padding:2px 13px 20px;}
+          .wz-categories-heading{align-items:flex-start;margin-bottom:10px;}
+          .wz-categories-label{font-size:8px;}
+          .wz-categories-hint{font-size:9px;text-align:right;}
+          .wz-categories-scroll{gap:9px;}
+          .wz-category-card{flex-basis:148px;height:116px;padding:12px;}
+          .wz-category-card-content strong{font-size:13px;}
+          .wz-category-card-content small{font-size:9px;}
+          .wz-products-head{
+            padding:0 14px 16px;
+            align-items:flex-end;
+            gap:10px;
+          }
+          .wz-products-head h2{font-size:25px;}
+          .wz-products-head p{font-size:10px;max-width:250px;}
+          .wz-products-count{padding:7px 9px;font-size:9px;}
+          .pgrid{
+            grid-template-columns:repeat(2,minmax(0,1fr))!important;
+            gap:11px!important;
+            padding:0 12px 42px!important;
+          }
+          .pcard{border-radius:14px!important;}
+          .pcard-img{height:clamp(164px,43vw,218px)!important;}
+          .pcard-img::before{inset:7px!important;border-radius:10px!important;}
+          .pcard-img img{padding:7px!important;}
+          .pcard-body{padding:11px 10px 12px!important;gap:7px!important;}
+          .pcard-name{font-size:12px!important;min-height:2.75em;}
+          .pcard-prix{font-size:16px!important;}
+          .pcard-old{font-size:9px!important;}
+          .pcard-actions{gap:5px!important;}
+          .pcard-actions button{min-height:36px!important;padding:5px 2px!important;font-size:9px!important;}
+        }
+        @media(max-width:380px){
+          .wz-category-card{flex-basis:135px;height:108px;}
+          .wz-categories-hint{display:none;}
+          .pcard-img{height:clamp(150px,42vw,178px)!important;}
+          .pcard-body{padding:10px 8px!important;}
+          .pcard-actions button{font-size:8px!important;}
+        }
+        @media(prefers-reduced-motion:reduce){
+          .pcard,.pcard-img img,.wz-category-card,.wz-category-card-image{
+            transition:none!important;
+            animation:none!important;
+          }
+          .pcard:hover,.wz-category-card:hover{transform:none!important;}
         }
       `}</style>
 
