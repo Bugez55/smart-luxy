@@ -100,7 +100,7 @@ export default function ReviewSection({ productId }) {
           border: '1px solid rgba(255,255,255,.08)', borderRadius: 999,
           padding: '4px 8px',
         }}>
-          Avis vérifiés
+          Avis clients
         </span>
       </div>
 
