@@ -317,10 +317,37 @@ export default function ProductGrid({
         }
 
         :root[data-wazyo-preset="cinematic"] .pcard-img{
-          background:radial-gradient(ellipse at 50% 42%,rgba(213,183,112,.15),transparent 62%),linear-gradient(145deg,#111722,#090c12)!important;
+          height:clamp(250px,27vw,330px)!important;
+          background:
+            radial-gradient(ellipse at 50% 38%,rgba(220,194,133,.19),transparent 58%),
+            radial-gradient(ellipse at 50% 100%,rgba(91,111,143,.10),transparent 54%),
+            linear-gradient(145deg,#151b27 0%,#0b0e15 100%)!important;
+          border-bottom:1px solid rgba(213,183,112,.10);
         }
-
-        :root[data-wazyo-preset="cinematic"] .pcard-img::before{border-color:rgba(213,183,112,.12);}
+        :root[data-wazyo-preset="cinematic"] .pcard-img::before{
+          inset:10px;
+          border-color:rgba(213,183,112,.15);
+          border-radius:15px;
+          box-shadow:inset 0 0 34px rgba(213,183,112,.025);
+        }
+        :root[data-wazyo-preset="cinematic"] .pcard-img::after{
+          opacity:.38;
+          background:linear-gradient(180deg,transparent 58%,rgba(5,7,12,.28) 100%);
+        }
+        :root[data-wazyo-preset="cinematic"] .pcard-img img{
+          position:relative;
+          z-index:0;
+          width:100%;
+          height:100%;
+          padding:clamp(7px,1.2vw,13px);
+          object-fit:contain!important;
+          filter:drop-shadow(0 18px 22px rgba(0,0,0,.34)) saturate(1.04) contrast(1.025);
+          transition:transform .75s cubic-bezier(.2,.7,.3,1),filter .55s ease;
+        }
+        :root[data-wazyo-preset="cinematic"] .pcard:hover .pcard-img img{
+          transform:scale(1.045);
+          filter:drop-shadow(0 22px 28px rgba(0,0,0,.42)) saturate(1.10) contrast(1.035);
+        }
         :root[data-wazyo-preset="cinematic"] .pcard-body{background:transparent!important;}
         :root[data-wazyo-preset="cinematic"] .pcard-actions button{min-height:44px;}
 
@@ -330,6 +357,11 @@ export default function ProductGrid({
         }
 
         @media(max-width:640px){
+          :root[data-wazyo-preset="cinematic"] .pcard-img{
+            height:clamp(172px,47vw,226px)!important;
+          }
+          :root[data-wazyo-preset="cinematic"] .pcard-img img{padding:6px!important;}
+          :root[data-wazyo-preset="cinematic"] .pcard-img::before{inset:7px;border-radius:11px;}
           .pgrid{
             grid-template-columns:repeat(2,minmax(0,1fr));
             gap:12px!important;
@@ -358,6 +390,11 @@ export default function ProductGrid({
             letter-spacing:-.015em;
             white-space:nowrap;
           }
+        }
+
+        @media(max-width:380px){
+          :root[data-wazyo-preset="cinematic"] .pcard-img{height:clamp(164px,46vw,190px)!important;}
+          :root[data-wazyo-preset="cinematic"] .pcard-img img{padding:4px!important;}
         }
 
         @media(prefers-reduced-motion:reduce){
@@ -480,6 +517,7 @@ export default function ProductGrid({
 
 function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) {
   const [selectedImg, setSelectedImg] = useState('')
+  const [imageFailed, setImageFailed] = useState(false)
   const pointerStartX = useRef(null)
   const pointerStartY = useRef(null)
   const pointerId = useRef(null)
@@ -496,6 +534,10 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   const selectedIndex = Math.max(0, imgs.findIndex(img => img?.url === selectedImg))
   const currentIndex = imgs.length ? (selectedImg ? selectedIndex : 0) : 0
   const mainImg = selectedImg || imgs[0]?.url || p.img
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [mainImg])
 
   const productModels = (() => {
     try {
@@ -627,8 +669,16 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
           WebkitTouchCallout: 'none',
         }}
       >
-        {mainImg ? (
-          <img src={mainImg} alt={p.nom} loading="lazy" draggable={false} onDragStart={e => e.preventDefault()} />
+        {mainImg && !imageFailed ? (
+          <img
+            src={mainImg}
+            alt={p.nom}
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            onError={() => setImageFailed(true)}
+            onDragStart={e => e.preventDefault()}
+          />
         ) : (
           <span className="pcard-emoji">{p.emoji || '📦'}</span>
         )}
