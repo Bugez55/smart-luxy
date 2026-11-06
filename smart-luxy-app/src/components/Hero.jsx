@@ -120,22 +120,30 @@ export default function Hero({
         <div className={`wz-hero-content ${introReady ? 'is-loaded' : ''}`}>
           <div className="wz-hero-kicker">
             <span className="wz-hero-kicker-line" />
-            <span>Wazyo <i aria-hidden="true">·</i> Boutique en ligne</span>
+            <span>WAZYO <i aria-hidden="true">·</i> Des trouvailles pour toutes vos envies</span>
           </div>
 
           <h1 id="wz-hero-title" className="wz-hero-title">
-            L’essentiel,
+            De belles trouvailles,
             <br />
-            <span>mieux choisi.</span>
+            <span>à chaque envie.</span>
           </h1>
 
           <p className="wz-hero-subtitle">
-            Une sélection de produits utiles, présentés avec simplicité.
+            Des produits utiles, des nouveautés et de belles idées à découvrir. Une sélection qui évolue au fil de vos envies.
           </p>
+
+          <div className="wz-hero-highlights" aria-label="L’esprit WAZYO">
+            <span>Découvertes</span>
+            <i aria-hidden="true">✦</i>
+            <span>Nouveautés</span>
+            <i aria-hidden="true">✦</i>
+            <span>Bons plans</span>
+          </div>
 
           <div className="wz-hero-actions">
             <button type="button" onClick={handleExplore} className="wz-hero-primary">
-              <span>Explorer la collection</span>
+              <span>Découvrir la boutique</span>
               <span className="wz-hero-arrow" aria-hidden="true">↗</span>
             </button>
 
@@ -318,6 +326,161 @@ export default function Hero({
           :root[data-wazyo-preset="cinematic"] .wz-hero-title{font-size:clamp(42px,12.2vw,60px)!important;}
           :root[data-wazyo-preset="cinematic"] .wz-hero-subtitle{margin:17px auto 0!important;font-size:13px!important;line-height:1.62!important;}
           :root[data-wazyo-preset="cinematic"] .wz-hero-actions{margin-top:21px!important;}
+        }
+
+        /* WAZYO editorial refresh — generalist retail, not fashion-specific. */
+        .wz-hero{
+          height:min(780px,84svh);
+          min-height:590px;
+          background:#07080c;
+          border-bottom-color:rgba(213,183,112,.22);
+        }
+        .wz-hero-image,.wz-hero-video{
+          object-position:center right;
+          opacity:.72;
+          filter:saturate(.88) contrast(1.06) brightness(.92);
+        }
+        .wz-hero-image.is-loaded,.wz-hero-video.is-loaded{
+          opacity:.88;
+          filter:saturate(.94) contrast(1.04) brightness(.96);
+        }
+        .wz-hero.has-custom-media .wz-hero-image,
+        .wz-hero.has-custom-media .wz-hero-video{opacity:.96;}
+        .wz-hero.has-custom-media .wz-hero-image.is-loaded,
+        .wz-hero.has-custom-media .wz-hero-video.is-loaded{opacity:1;}
+        .wz-hero-overlay{
+          background:
+            linear-gradient(90deg,rgba(5,6,10,.97) 0%,rgba(5,6,10,.88) 30%,rgba(5,6,10,.58) 52%,rgba(5,6,10,.10) 100%),
+            linear-gradient(0deg,rgba(5,6,10,.50) 0%,transparent 45%,rgba(5,6,10,.12) 100%);
+        }
+        .wz-hero.has-custom-media .wz-hero-overlay{
+          background:
+            linear-gradient(90deg,rgba(5,6,10,.94) 0%,rgba(5,6,10,.80) 32%,rgba(5,6,10,.42) 57%,rgba(5,6,10,.06) 100%),
+            linear-gradient(0deg,rgba(5,6,10,.42) 0%,transparent 54%,rgba(5,6,10,.10) 100%);
+        }
+        .wz-hero-inner{
+          width:min(1320px,calc(100% - 72px));
+        }
+        .wz-hero-content{
+          width:min(690px,62%);
+          padding:70px 0 82px;
+        }
+        .wz-hero-kicker{
+          margin-bottom:20px;
+          color:#e2ca91;
+          font-size:10px;
+          letter-spacing:.19em;
+        }
+        .wz-hero-kicker-line{
+          width:42px;
+          background:linear-gradient(90deg,#f1d99e,#b88e4b);
+          box-shadow:0 0 20px rgba(216,187,120,.36);
+        }
+        .wz-hero-title{
+          max-width:720px;
+          font-family:'Outfit',Arial,sans-serif;
+          font-size:clamp(52px,6.5vw,86px);
+          line-height:.98;
+          font-weight:800;
+          letter-spacing:-.065em;
+        }
+        .wz-hero-title span{
+          color:#e0c27d;
+          font-style:normal;
+          font-weight:750;
+          text-shadow:0 0 34px rgba(216,187,120,.16);
+        }
+        .wz-hero-subtitle{
+          max-width:510px;
+          margin-top:22px;
+          color:rgba(255,255,255,.78);
+          font-size:15px;
+          line-height:1.75;
+        }
+        .wz-hero-highlights{
+          display:flex;
+          flex-wrap:wrap;
+          align-items:center;
+          gap:10px;
+          margin-top:18px;
+          color:rgba(255,255,255,.70);
+          font-size:10px;
+          font-weight:750;
+          letter-spacing:.10em;
+          text-transform:uppercase;
+        }
+        .wz-hero-highlights i{
+          color:#d5b770;
+          font-size:9px;
+          font-style:normal;
+        }
+        .wz-hero-actions{margin-top:27px;}
+        .wz-hero-primary{
+          min-height:54px;
+          padding:0 26px;
+          border-radius:10px;
+          font-size:11px;
+          letter-spacing:.075em;
+          text-transform:uppercase;
+        }
+        .wz-hero-primary:focus-visible,
+        .wz-hero-secondary:focus-visible{
+          outline:2px solid #f1dfb2;
+          outline-offset:4px;
+        }
+
+        @media(max-width:820px){
+          .wz-hero{
+            height:min(720px,82svh);
+            min-height:570px;
+          }
+          .wz-hero-inner{
+            width:calc(100% - 42px);
+          }
+          .wz-hero-content{
+            width:min(620px,88%);
+            padding:45px 0 66px;
+          }
+          .wz-hero-image,.wz-hero-video{object-position:64% center;}
+          .wz-hero-overlay{
+            background:
+              linear-gradient(180deg,rgba(5,6,10,.10) 0%,rgba(5,6,10,.34) 30%,rgba(5,6,10,.92) 100%),
+              linear-gradient(90deg,rgba(5,6,10,.28),rgba(5,6,10,.06));
+          }
+          .wz-hero.has-custom-media .wz-hero-overlay{
+            background:
+              linear-gradient(180deg,rgba(5,6,10,.12) 0%,rgba(5,6,10,.38) 30%,rgba(5,6,10,.94) 100%),
+              linear-gradient(90deg,rgba(5,6,10,.30),rgba(5,6,10,.07));
+          }
+        }
+        @media(max-width:520px){
+          .wz-hero{
+            height:min(690px,82svh);
+            min-height:550px;
+          }
+          .wz-hero-inner{width:calc(100% - 34px);}
+          .wz-hero-content{width:100%;padding:35px 0 52px;}
+          .wz-hero-kicker{font-size:8px;letter-spacing:.13em;margin-bottom:14px;}
+          .wz-hero-kicker-line{width:25px;}
+          .wz-hero-title{
+            font-size:clamp(41px,11.8vw,58px);
+            line-height:1;
+            letter-spacing:-.06em;
+          }
+          .wz-hero-subtitle{
+            max-width:360px;
+            margin-top:15px;
+            font-size:13px;
+            line-height:1.62;
+          }
+          .wz-hero-highlights{
+            gap:7px;
+            margin-top:13px;
+            font-size:8px;
+            letter-spacing:.06em;
+          }
+          .wz-hero-actions{margin-top:20px;}
+          .wz-hero-primary{width:100%;min-height:50px;border-radius:9px;}
         }
 
         @media(prefers-reduced-motion:reduce){
