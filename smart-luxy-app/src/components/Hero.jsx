@@ -1,65 +1,142 @@
-// ══════════════════════════════════════════════
-// HERO — Wazyo Premium
-// Visuel haut de gamme, responsive, sans dépendance externe
-// ══════════════════════════════════════════════
+
+ // ══════════════════════════════════════════════
+ // HERO — Wazyo Cinematic Premium
+ // Présentation uniquement : aucune logique de commande ou de panier.
+ // ══════════════════════════════════════════════
 import { useState, useEffect } from 'react'
 
-export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImage, heroMediaType = 'image', heroFallbackImage, heroCustomMedia = false }) {
-  const [loaded, setLoaded] = useState(false)
+export default function Hero({
+  onScrollToCollection,
+  onDiscoverProduct,
+  heroImage,
+  heroMediaType = 'image',
+  heroFallbackImage,
+  heroCustomMedia = false,
+}) {
+  const [introReady, setIntroReady] = useState(false)
+  const [mediaReady, setMediaReady] = useState(false)
   const [mediaFailed, setMediaFailed] = useState(false)
+  const [fallbackFailed, setFallbackFailed] = useState(false)
+  const [reduceMotion, setReduceMotion] = useState(false)
+
+  const primaryImage = heroImage || heroFallbackImage || ''
+  const fallbackImage =
+    heroFallbackImage && heroFallbackImage !== primaryImage
+      ? heroFallbackImage
+      : ''
 
   useEffect(() => {
-    setLoaded(false)
+    setIntroReady(false)
+    setMediaReady(false)
     setMediaFailed(false)
-    const id = requestAnimationFrame(() => setLoaded(true))
-    return () => cancelAnimationFrame(id)
-  }, [heroImage, heroMediaType])
+    setFallbackFailed(false)
 
-  const effectiveImage = mediaFailed ? (heroFallbackImage || '') : (heroImage || '')
-  const effectiveType = mediaFailed ? 'image' : heroMediaType
+    const frame = window.requestAnimationFrame(() => setIntroReady(true))
+    return () => window.cancelAnimationFrame(frame)
+  }, [heroImage, heroFallbackImage, heroMediaType])
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined
+
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReduceMotion(query.matches)
+    update()
+
+    if (query.addEventListener) {
+      query.addEventListener('change', update)
+      return () => query.removeEventListener('change', update)
+    }
+
+    query.addListener(update)
+    return () => query.removeListener(update)
+  }, [])
+
+  const useStaticVideoFallback = reduceMotion && heroMediaType === 'video'
+  const effectiveImage = useStaticVideoFallback
+    ? fallbackImage
+    : mediaFailed
+      ? (fallbackFailed ? '' : fallbackImage)
+      : primaryImage
+
+  const effectiveType =
+    !useStaticVideoFallback && !mediaFailed && heroMediaType === 'video'
+      ? 'video'
+      : 'image'
+
+  function handleMediaError() {
+    setMediaReady(false)
+
+    if (!mediaFailed && fallbackImage) {
+      setMediaFailed(true)
+      return
+    }
+
+    setFallbackFailed(true)
+  }
+
+  function handleExplore() {
+    if (typeof onScrollToCollection === 'function') {
+      onScrollToCollection()
+    }
+  }
+
+  function handleDiscover() {
+    if (typeof onDiscoverProduct === 'function') {
+      onDiscoverProduct()
+    }
+  }
+
+  const hasCustomMedia = heroCustomMedia && !mediaFailed && !useStaticVideoFallback
 
   return (
-    <section className={`wz-hero ${heroCustomMedia && !mediaFailed ? "has-custom-media" : ""}`}>
+    <section
+      className={`wz-hero ${hasCustomMedia ? 'has-custom-media' : ''}`}
+      aria-labelledby="wz-hero-title"
+    >
       <div className="wz-hero-media" aria-hidden="true">
         {effectiveImage ? (
           effectiveType === 'video' ? (
             <video
               src={effectiveImage}
-              poster={heroFallbackImage || undefined}
-              className={`wz-hero-video ${loaded ? 'is-loaded' : ''}`}
-              autoPlay
+              poster={fallbackImage || undefined}
+              className={`wz-hero-video ${mediaReady ? 'is-loaded' : ''}`}
+              autoPlay={!reduceMotion}
               muted
-              loop
+              loop={!reduceMotion}
               playsInline
-              preload="metadata"
-              aria-hidden="true"
-              onLoadedData={() => setLoaded(true)}
-              onError={() => setMediaFailed(true)}
+              preload={reduceMotion ? 'none' : 'metadata'}
+              tabIndex={-1}
+              onLoadedData={() => setMediaReady(true)}
+              onError={handleMediaError}
             />
           ) : (
             <img
               src={effectiveImage}
               alt=""
-              className={`wz-hero-image ${loaded ? 'is-loaded' : ''}`}
-              onLoad={() => setLoaded(true)}
-              onError={() => setMediaFailed(true)}
+              className={`wz-hero-image ${mediaReady ? 'is-loaded' : ''}`}
+              fetchPriority="high"
+              decoding="async"
+              onLoad={() => setMediaReady(true)}
+              onError={handleMediaError}
             />
           )
         ) : (
           <div className="wz-hero-fallback" />
         )}
+
         <div className="wz-hero-overlay" />
         <div className="wz-hero-glow" />
+        <div className="wz-hero-grain" />
       </div>
 
       <div className="wz-hero-inner">
-        <div className={`wz-hero-content ${loaded ? 'is-loaded' : ''}`}>
+        <div className={`wz-hero-content ${introReady ? 'is-loaded' : ''}`}>
           <div className="wz-hero-kicker">
             <span className="wz-hero-kicker-line" />
-            <span>Wazyo · Boutique en ligne</span>
+            <span>Wazyo <i aria-hidden="true">·</i> Boutique en ligne</span>
           </div>
 
-          <h1 className="wz-hero-title">
+          <h1 id="wz-hero-title" className="wz-hero-title">
             L’essentiel,
             <br />
             <span>mieux choisi.</span>
@@ -72,17 +149,17 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
           <div className="wz-hero-actions">
             <button
               type="button"
-              onClick={onScrollToCollection}
+              onClick={handleExplore}
               className="wz-hero-primary"
             >
-              Explorer la collection
-              <span aria-hidden="true">→</span>
+              <span>Explorer la collection</span>
+              <span className="wz-hero-arrow" aria-hidden="true">↗</span>
             </button>
 
             {onDiscoverProduct && (
               <button
                 type="button"
-                onClick={onDiscoverProduct}
+                onClick={handleDiscover}
                 className="wz-hero-secondary"
               >
                 Voir le produit phare
@@ -90,7 +167,7 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
             )}
           </div>
 
-          <div className="wz-hero-trust">
+          <div className="wz-hero-trust" aria-label="Informations de la boutique">
             <span><strong>69</strong> wilayas</span>
             <i aria-hidden="true" />
             <span>Paiement à la livraison</span>
@@ -99,7 +176,7 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
           </div>
 
           <div className="wz-hero-note">
-            <span className="wz-hero-note-dot" />
+            <span className="wz-hero-note-dot" aria-hidden="true" />
             <span>Une expérience pensée pour aller droit à l’essentiel.</span>
           </div>
         </div>
@@ -110,39 +187,50 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
         <span>Défiler</span>
       </div>
 
+      <div className="wz-hero-index" aria-hidden="true">
+        <span>W</span>
+        <i />
+        <span>01</span>
+      </div>
+
       <style>{`
         .wz-hero {
+          --wz-hero-gold: #d8bb78;
           position: relative;
-          min-height: min(820px, 92svh);
-          height: min(820px, 92svh);
-          overflow: hidden;
-          background: #070707;
           isolation: isolate;
-          border-bottom: 1px solid rgba(255,255,255,.05);
+          width: 100%;
+          height: min(860px, 90svh);
+          min-height: 620px;
+          overflow: hidden;
+          background: #080a0f;
+          border-bottom: 1px solid rgba(216,187,120,.12);
         }
 
         .wz-hero-media,
         .wz-hero-overlay,
-        .wz-hero-glow {
+        .wz-hero-glow,
+        .wz-hero-grain {
           position: absolute;
           inset: 0;
+          pointer-events: none;
         }
 
         .wz-hero-media {
           z-index: -3;
           overflow: hidden;
           background:
-            radial-gradient(circle at 72% 35%, rgba(212,181,106,.11), transparent 20%),
-            linear-gradient(135deg, #10100f 0%, #080808 58%, #060606 100%);
+            radial-gradient(ellipse at 74% 38%, rgba(216,187,120,.16), transparent 30%),
+            radial-gradient(ellipse at 24% 76%, rgba(255,255,255,.045), transparent 28%),
+            linear-gradient(135deg, #14130f 0%, #090a0e 58%, #06070a 100%);
         }
 
         .wz-hero-fallback {
           width: 100%;
           height: 100%;
           background:
-            radial-gradient(circle at 76% 42%, rgba(212,181,106,.14), transparent 20%),
-            radial-gradient(circle at 62% 68%, rgba(255,255,255,.035), transparent 24%),
-            linear-gradient(135deg, #11110f 0%, #090909 56%, #060606 100%);
+            radial-gradient(ellipse at 72% 40%, rgba(216,187,120,.18), transparent 27%),
+            radial-gradient(ellipse at 26% 72%, rgba(255,255,255,.05), transparent 30%),
+            linear-gradient(135deg, #15140f, #090a0e 62%, #06070a);
         }
 
         .wz-hero-image,
@@ -152,54 +240,78 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
           height: 100%;
           object-fit: cover;
           object-position: center;
-          opacity: .64;
-          transform: scale(1.035);
-          transition: opacity 1s ease, transform 1.7s cubic-bezier(.2,.65,.2,1);
-          filter: saturate(.78) contrast(1.06) brightness(.92);
+          opacity: .58;
+          transform: scale(1.045);
+          filter: saturate(.78) contrast(1.06) brightness(.88);
+          transition: opacity 1.1s ease, filter 1.1s ease;
+          animation: wzHeroKenBurns 30s ease-in-out infinite alternate;
+          will-change: transform;
         }
 
         .wz-hero-image.is-loaded,
         .wz-hero-video.is-loaded {
-          opacity: .76;
-          transform: scale(1);
+          opacity: .78;
+          filter: saturate(.88) contrast(1.04) brightness(.94);
         }
 
-        /* Le média choisi dans l’admin doit rester clairement visible.
-           On conserve un contraste suffisant derrière le texte. */
         .wz-hero.has-custom-media .wz-hero-image,
         .wz-hero.has-custom-media .wz-hero-video {
-          opacity: .94;
-          filter: saturate(.92) contrast(1.03) brightness(.98);
+          opacity: .90;
+          filter: saturate(.92) contrast(1.03) brightness(.96);
         }
 
         .wz-hero.has-custom-media .wz-hero-image.is-loaded,
         .wz-hero.has-custom-media .wz-hero-video.is-loaded {
-          opacity: .96;
-        }
-
-        .wz-hero.has-custom-media .wz-hero-overlay {
-          background:
-            linear-gradient(90deg, rgba(5,5,5,.78) 0%, rgba(5,5,5,.60) 28%, rgba(5,5,5,.22) 61%, rgba(5,5,5,.06) 100%),
-            linear-gradient(0deg, rgba(5,5,5,.54) 0%, rgba(5,5,5,.04) 48%, rgba(5,5,5,.12) 100%);
+          opacity: .94;
         }
 
         .wz-hero-overlay {
           z-index: -2;
           background:
-            linear-gradient(90deg, rgba(5,5,5,.985) 0%, rgba(5,5,5,.92) 28%, rgba(5,5,5,.57) 61%, rgba(5,5,5,.16) 100%),
-            linear-gradient(0deg, rgba(5,5,5,.82) 0%, rgba(5,5,5,.10) 48%, rgba(5,5,5,.22) 100%);
+            linear-gradient(90deg, rgba(5,6,10,.94) 0%, rgba(5,6,10,.82) 27%, rgba(5,6,10,.48) 57%, rgba(5,6,10,.20) 100%),
+            linear-gradient(0deg, #080a0f 0%, rgba(8,10,15,.10) 38%, rgba(8,10,15,.18) 100%);
+        }
+
+        .wz-hero.has-custom-media .wz-hero-overlay {
+          background:
+            linear-gradient(90deg, rgba(5,6,10,.78) 0%, rgba(5,6,10,.62) 28%, rgba(5,6,10,.24) 66%, rgba(5,6,10,.08) 100%),
+            linear-gradient(0deg, rgba(8,10,15,.70) 0%, rgba(8,10,15,.08) 52%, rgba(8,10,15,.18) 100%);
         }
 
         .wz-hero-glow {
           z-index: -1;
+          opacity: .58;
           background:
-            radial-gradient(circle at 16% 50%, rgba(212,181,106,.08), transparent 30%),
-            radial-gradient(circle at 80% 22%, rgba(255,255,255,.045), transparent 23%),
-            linear-gradient(120deg, transparent 42%, rgba(212,181,106,.03) 68%, transparent 100%);
-          pointer-events: none;
+            radial-gradient(ellipse at 72% 42%, rgba(216,187,120,.18), transparent 38%),
+            linear-gradient(115deg, transparent 36%, rgba(216,187,120,.035) 58%, transparent 78%);
+          animation: wzHeroGlow 12s ease-in-out infinite alternate;
         }
 
+        .wz-hero-grain {
+          z-index: 0;
+          opacity: .12;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.24'/%3E%3C/svg%3E");
+          mix-blend-mode: soft-light;
+        }
+
+        .wz-hero::before,
+        .wz-hero::after {
+          content: '';
+          position: absolute;
+          z-index: 1;
+          left: clamp(18px, 3.2vw, 48px);
+          right: clamp(18px, 3.2vw, 48px);
+          height: 1px;
+          pointer-events: none;
+          background: linear-gradient(90deg, transparent, rgba(216,187,120,.24), transparent);
+        }
+
+        .wz-hero::before { top: 0; opacity: .5; }
+        .wz-hero::after { bottom: 0; opacity: .7; }
+
         .wz-hero-inner {
+          position: relative;
+          z-index: 2;
           width: min(1280px, calc(100% - 56px));
           height: 100%;
           margin: 0 auto;
@@ -209,12 +321,12 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
         }
 
         .wz-hero-content {
+          position: relative;
           width: min(760px, 100%);
           padding: 74px 0 58px;
-          position: relative;
           opacity: 0;
-          transform: translateY(22px);
-          transition: opacity .75s ease, transform .75s cubic-bezier(.22,1,.36,1);
+          transform: translateY(18px);
+          transition: opacity .85s ease, transform .9s cubic-bezier(.2,.72,.2,1);
         }
 
         .wz-hero-content.is-loaded {
@@ -222,141 +334,183 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
           transform: translateY(0);
         }
 
+        .wz-hero-kicker,
+        .wz-hero-title,
+        .wz-hero-subtitle,
+        .wz-hero-actions,
+        .wz-hero-trust,
+        .wz-hero-note {
+          animation: wzHeroReveal .8s cubic-bezier(.2,.72,.2,1) both;
+          animation-play-state: paused;
+        }
+
+        .wz-hero-content.is-loaded .wz-hero-kicker,
+        .wz-hero-content.is-loaded .wz-hero-title,
+        .wz-hero-content.is-loaded .wz-hero-subtitle,
+        .wz-hero-content.is-loaded .wz-hero-actions,
+        .wz-hero-content.is-loaded .wz-hero-trust,
+        .wz-hero-content.is-loaded .wz-hero-note {
+          animation-play-state: running;
+        }
+
+        .wz-hero-content.is-loaded .wz-hero-kicker { animation-delay: .04s; }
+        .wz-hero-content.is-loaded .wz-hero-title { animation-delay: .12s; }
+        .wz-hero-content.is-loaded .wz-hero-subtitle { animation-delay: .22s; }
+        .wz-hero-content.is-loaded .wz-hero-actions { animation-delay: .30s; }
+        .wz-hero-content.is-loaded .wz-hero-trust { animation-delay: .38s; }
+        .wz-hero-content.is-loaded .wz-hero-note { animation-delay: .44s; }
+
         .wz-hero-kicker {
           display: flex;
           align-items: center;
           gap: 12px;
-          margin-bottom: 20px;
-          color: rgba(255,255,255,.62);
-          font-size: 11px;
+          margin-bottom: 22px;
+          color: rgba(255,255,255,.66);
+          font-size: 10px;
           line-height: 1;
-          font-weight: 700;
-          letter-spacing: .18em;
+          font-weight: 800;
+          letter-spacing: .23em;
           text-transform: uppercase;
         }
 
+        .wz-hero-kicker i {
+          color: var(--wz-hero-gold);
+          font-style: normal;
+          padding: 0 2px;
+        }
+
         .wz-hero-kicker-line {
-          width: 34px;
+          width: 38px;
           height: 1px;
-          background: #c9a84c;
-          box-shadow: 0 0 16px rgba(201,168,76,.28);
+          flex: 0 0 auto;
+          background: var(--wz-hero-gold);
+          box-shadow: 0 0 18px rgba(216,187,120,.42);
         }
 
         .wz-hero-title {
           margin: 0;
-          max-width: 760px;
+          max-width: 790px;
           color: #fff;
-          font-family: Georgia, 'Times New Roman', serif;
-          font-size: clamp(50px, 7.4vw, 96px);
-          line-height: .93;
+          font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+          font-size: clamp(54px, 7.6vw, 100px);
+          line-height: .94;
           font-weight: 600;
-          letter-spacing: -.052em;
+          letter-spacing: -.058em;
           text-wrap: balance;
+          text-shadow: 0 12px 42px rgba(0,0,0,.28);
         }
 
         .wz-hero-title span {
-          color: #d6b86f;
+          position: relative;
+          color: #dfc486;
           font-style: italic;
           font-weight: 500;
-          position: relative;
+          text-shadow: 0 0 38px rgba(216,187,120,.14);
         }
 
         .wz-hero-subtitle {
-          max-width: 510px;
-          margin: 26px 0 0;
-          color: rgba(255,255,255,.66);
+          max-width: 535px;
+          margin: 27px 0 0;
+          color: rgba(255,255,255,.73);
           font-size: 15px;
-          line-height: 1.78;
-          max-width: 540px;
+          line-height: 1.82;
+          font-weight: 400;
+          letter-spacing: .008em;
         }
 
         .wz-hero-actions {
           display: flex;
           flex-wrap: wrap;
-          gap: 10px;
-          margin-top: 28px;
+          align-items: center;
+          gap: 12px;
+          margin-top: 30px;
         }
 
         .wz-hero-primary,
         .wz-hero-secondary {
-          min-height: 50px;
-          padding: 0 21px;
-          border-radius: 12px;
+          min-height: 52px;
+          padding: 0 23px;
+          border-radius: 999px;
           cursor: pointer;
           font-family: inherit;
           font-size: 10px;
           font-weight: 800;
-          letter-spacing: .11em;
+          letter-spacing: .12em;
           text-transform: uppercase;
-          transition: transform .2s ease, background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
+          transition: transform .24s ease, background .24s ease, border-color .24s ease, color .24s ease, box-shadow .24s ease;
         }
 
         .wz-hero-primary {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 12px;
-          border: 1px solid #d6b86f;
-          background: linear-gradient(135deg, #d9bd79, #c3a057);
-          color: #11100c;
-          box-shadow: 0 14px 32px rgba(0,0,0,.24), 0 0 0 1px rgba(255,255,255,.08) inset;
+          gap: 18px;
+          border: 1px solid #e4ca8d;
+          background: linear-gradient(135deg, #ead49c 0%, #c6a45f 100%);
+          color: #15130e;
+          box-shadow: 0 12px 32px rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.13) inset;
         }
 
         .wz-hero-primary:hover {
-          background: linear-gradient(135deg, #e7cc8e, #cfb06a);
-          border-color: #e7cc8e;
+          background: linear-gradient(135deg, #f1dfb2 0%, #d8b978 100%);
+          border-color: #f1dfb2;
           transform: translateY(-2px);
-          box-shadow: 0 16px 34px rgba(0,0,0,.28);
+          box-shadow: 0 17px 38px rgba(0,0,0,.30), 0 0 28px rgba(216,187,120,.12);
+        }
+
+        .wz-hero-primary:active,
+        .wz-hero-secondary:active {
+          transform: translateY(0) scale(.985);
+        }
+
+        .wz-hero-primary:focus-visible,
+        .wz-hero-secondary:focus-visible {
+          outline: 2px solid #f1dfb2;
+          outline-offset: 4px;
+        }
+
+        .wz-hero-arrow {
+          display: inline-block;
+          font-size: 16px;
+          line-height: 1;
+          transition: transform .24s ease;
+        }
+
+        .wz-hero-primary:hover .wz-hero-arrow {
+          transform: translate(3px, -2px);
         }
 
         .wz-hero-secondary {
-          border: 1px solid rgba(255,255,255,.15);
-          background: rgba(255,255,255,.03);
-          color: #fff;
-          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255,255,255,.22);
+          background: rgba(255,255,255,.045);
+          color: rgba(255,255,255,.92);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
         }
 
         .wz-hero-secondary:hover {
-          border-color: rgba(212,181,106,.45);
-          background: rgba(212,181,106,.07);
+          border-color: rgba(216,187,120,.58);
+          background: rgba(216,187,120,.10);
+          color: #fff;
           transform: translateY(-2px);
-        }
-
-        .wz-hero-note {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 17px;
-          color: rgba(255,255,255,.34);
-          font-size: 10px;
-          line-height: 1.5;
-          letter-spacing: .03em;
-        }
-
-        .wz-hero-note-dot {
-          width: 6px;
-          height: 6px;
-          flex: 0 0 auto;
-          border-radius: 50%;
-          background: #d6b86f;
-          box-shadow: 0 0 12px rgba(212,181,106,.45);
         }
 
         .wz-hero-trust {
           display: flex;
           align-items: center;
           flex-wrap: wrap;
-          gap: 11px;
-          margin-top: 27px;
-          color: rgba(255,255,255,.42);
-          font-size: 10px;
-          letter-spacing: .05em;
+          gap: 12px;
+          margin-top: 29px;
+          color: rgba(255,255,255,.57);
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: .11em;
           text-transform: uppercase;
         }
 
         .wz-hero-trust strong {
-          color: rgba(255,255,255,.72);
-          font-weight: 800;
+          color: #e3cb91;
+          font-weight: 900;
         }
 
         .wz-hero-trust i {
@@ -364,120 +518,19 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
           width: 3px;
           height: 3px;
           border-radius: 50%;
-          background: rgba(201,168,76,.7);
+          background: rgba(216,187,120,.8);
+          box-shadow: 0 0 8px rgba(216,187,120,.35);
         }
 
-        .wz-hero-scroll {
-          position: absolute;
-          right: 28px;
-          bottom: 28px;
+        .wz-hero-note {
           display: flex;
           align-items: center;
-          gap: 10px;
-          color: rgba(255,255,255,.4);
-          font-size: 9px;
-          font-weight: 700;
-          letter-spacing: .18em;
-          text-transform: uppercase;
-          writing-mode: vertical-rl;
-        }
-
-        .wz-hero-scroll-line {
-          width: 1px;
-          height: 46px;
-          background: linear-gradient(to bottom, rgba(201,168,76,.75), rgba(255,255,255,.08));
-        }
-
-        @media (max-width: 820px) {
-          .wz-hero {
-            min-height: 760px;
-            height: min(820px, 100svh);
-          }
-
-          .wz-hero-inner {
-            width: min(100% - 34px, 620px);
-            align-items: flex-end;
-          }
-
-          .wz-hero-content {
-            padding: 0 0 58px;
-          }
-
-          .wz-hero-image {
-            object-position: 62% center;
-          }
-
-          .wz-hero-overlay {
-            background:
-              linear-gradient(180deg, rgba(5,5,5,.18) 0%, rgba(5,5,5,.52) 42%, rgba(5,5,5,.97) 88%),
-              linear-gradient(90deg, rgba(5,5,5,.56), rgba(5,5,5,.08));
-          }
-
-          .wz-hero-title {
-            font-size: clamp(42px, 13vw, 68px);
-          }
-
-          .wz-hero-subtitle {
-            font-size: 14px;
-            max-width: 430px;
-          }
-
-          .wz-hero-scroll {
-            display: none;
-          }
-        }
-
-        @media (max-width: 520px) {
-          .wz-hero {
-            min-height: 680px;
-            height: 90svh;
-          }
-
-          .wz-hero-inner {
-            width: calc(100% - 28px);
-          }
-
-          .wz-hero-content {
-            padding-bottom: 42px;
-          }
-
-          .wz-hero-kicker {
-            margin-bottom: 15px;
-            font-size: 9px;
-            letter-spacing: .14em;
-          }
-
-          .wz-hero-title {
-            font-size: clamp(38px, 14vw, 58px);
-            line-height: .97;
-          }
-
-          .wz-hero-subtitle {
-            margin-top: 18px;
-            font-size: 13px;
-            line-height: 1.62;
-          }
-
-          .wz-hero-actions {
-            margin-top: 24px;
-            gap: 9px;
-          }
-
-          .wz-hero-primary,
-          .wz-hero-secondary {
-            width: 100%;
-            min-height: 50px;
-          }
-
-          .wz-hero-note {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 17px;
-          color: rgba(255,255,255,.34);
+          gap: 9px;
+          margin-top: 18px;
+          color: rgba(255,255,255,.40);
           font-size: 10px;
-          line-height: 1.5;
-          letter-spacing: .03em;
+          line-height: 1.55;
+          letter-spacing: .025em;
         }
 
         .wz-hero-note-dot {
@@ -486,24 +539,235 @@ export default function Hero({ onScrollToCollection, onDiscoverProduct, heroImag
           flex: 0 0 auto;
           border-radius: 50%;
           background: #d6b86f;
-          box-shadow: 0 0 12px rgba(212,181,106,.45);
+          box-shadow: 0 0 12px rgba(212,181,106,.48);
         }
 
-        .wz-hero-trust {
-            gap: 7px;
-            margin-top: 18px;
-            font-size: 8px;
-            line-height: 1.4;
+        .wz-hero-scroll {
+          position: absolute;
+          z-index: 3;
+          right: clamp(20px, 3vw, 42px);
+          bottom: 32px;
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          color: rgba(255,255,255,.48);
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: .2em;
+          text-transform: uppercase;
+          writing-mode: vertical-rl;
+        }
+
+        .wz-hero-scroll-line {
+          display: block;
+          width: 1px;
+          height: 50px;
+          transform-origin: top;
+          background: linear-gradient(to bottom, rgba(216,187,120,.95), rgba(255,255,255,.12));
+          animation: wzHeroScroll 2.2s ease-in-out infinite;
+        }
+
+        .wz-hero-index {
+          position: absolute;
+          z-index: 3;
+          left: clamp(20px, 3vw, 42px);
+          bottom: 29px;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          color: rgba(255,255,255,.39);
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: .18em;
+        }
+
+        .wz-hero-index span:first-child { color: #d8bb78; }
+
+        .wz-hero-index i {
+          display: block;
+          width: 26px;
+          height: 1px;
+          background: rgba(216,187,120,.46);
+        }
+
+        @keyframes wzHeroReveal {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes wzHeroKenBurns {
+          from { transform: scale(1.045) translate3d(-.35%, 0, 0); }
+          to { transform: scale(1.105) translate3d(.45%, -.25%, 0); }
+        }
+
+        @keyframes wzHeroGlow {
+          from { opacity: .38; transform: scale(.96); }
+          to { opacity: .72; transform: scale(1.045); }
+        }
+
+        @keyframes wzHeroScroll {
+          0%, 100% { transform: scaleY(.72); opacity: .55; }
+          50% { transform: scaleY(1); opacity: 1; }
+        }
+
+        @media (max-width: 820px) {
+          .wz-hero {
+            height: min(820px, 92svh);
+            min-height: 650px;
           }
+
+          .wz-hero-inner {
+            width: min(100% - 36px, 650px);
+            align-items: flex-end;
+          }
+
+          .wz-hero-content {
+            padding: 0 0 74px;
+          }
+
+          .wz-hero-image,
+          .wz-hero-video {
+            object-position: 62% center;
+          }
+
+          .wz-hero-overlay {
+            background:
+              linear-gradient(180deg, rgba(5,6,10,.08) 0%, rgba(5,6,10,.30) 28%, rgba(5,6,10,.83) 66%, #080a0f 100%),
+              linear-gradient(90deg, rgba(5,6,10,.35), rgba(5,6,10,.04));
+          }
+
+          .wz-hero.has-custom-media .wz-hero-overlay {
+            background:
+              linear-gradient(180deg, rgba(5,6,10,.05) 0%, rgba(5,6,10,.34) 30%, rgba(5,6,10,.82) 68%, #080a0f 100%),
+              linear-gradient(90deg, rgba(5,6,10,.30), rgba(5,6,10,.03));
+          }
+
+          .wz-hero-title {
+            font-size: clamp(48px, 10vw, 76px);
+          }
+
+          .wz-hero-subtitle {
+            max-width: 500px;
+          }
+        }
+
+        @media (max-width: 520px) {
+          .wz-hero {
+            height: min(790px, 91svh);
+            min-height: 620px;
+          }
+
+          .wz-hero-inner {
+            width: calc(100% - 30px);
+          }
+
+          .wz-hero-content {
+            padding-bottom: 68px;
+          }
+
+          .wz-hero-kicker {
+            gap: 9px;
+            margin-bottom: 15px;
+            font-size: 8px;
+            letter-spacing: .17em;
+          }
+
+          .wz-hero-kicker-line { width: 27px; }
+
+          .wz-hero-title {
+            font-size: clamp(42px, 12.6vw, 62px);
+            line-height: .96;
+            letter-spacing: -.055em;
+          }
+
+          .wz-hero-subtitle {
+            max-width: 390px;
+            margin-top: 19px;
+            font-size: 13px;
+            line-height: 1.68;
+          }
+
+          .wz-hero-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 9px;
+            margin-top: 23px;
+          }
+
+          .wz-hero-primary,
+          .wz-hero-secondary {
+            width: 100%;
+            min-height: 49px;
+          }
+
+          .wz-hero-trust {
+            gap: 7px;
+            margin-top: 19px;
+            font-size: 7.5px;
+            letter-spacing: .07em;
+          }
+
+          .wz-hero-note {
+            margin-top: 13px;
+            font-size: 9px;
+          }
+
+          .wz-hero-scroll,
+          .wz-hero-index {
+            display: none;
+          }
+        }
+
+        @media (max-height: 700px) and (min-width: 821px) {
+          .wz-hero {
+            min-height: 580px;
+          }
+
+          .wz-hero-content {
+            padding-top: 48px;
+            padding-bottom: 48px;
+          }
+
+          .wz-hero-title {
+            font-size: clamp(48px, 6.3vw, 78px);
+          }
+
+          .wz-hero-subtitle { margin-top: 18px; }
+          .wz-hero-actions { margin-top: 22px; }
+          .wz-hero-trust { margin-top: 20px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .wz-hero-image,
           .wz-hero-video,
-          .wz-hero-content,
+          .wz-hero-glow,
+          .wz-hero-scroll-line,
+          .wz-hero-kicker,
+          .wz-hero-title,
+          .wz-hero-subtitle,
+          .wz-hero-actions,
+          .wz-hero-trust,
+          .wz-hero-note,
           .wz-hero-primary,
           .wz-hero-secondary {
+            animation: none !important;
             transition: none !important;
+          }
+
+          .wz-hero-content,
+          .wz-hero-content.is-loaded {
+            opacity: 1 !important;
+            transform: none !important;
+          }
+
+          .wz-hero-kicker,
+          .wz-hero-title,
+          .wz-hero-subtitle,
+          .wz-hero-actions,
+          .wz-hero-trust,
+          .wz-hero-note {
+            opacity: 1 !important;
+            transform: none !important;
           }
         }
       `}</style>
