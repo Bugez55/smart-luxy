@@ -249,8 +249,7 @@ async function handleAdminNotification(req, res, type) {
         .gte('created_at', new Date(start).toISOString())
         .lt('created_at', new Date(end).toISOString()),
       auth.client.from('products')
-        .select('id,nom,stock')
-        .eq('is_active', true),
+        .select('id,nom,stock'),
     ])
 
     if (ordersError || productsError) {
