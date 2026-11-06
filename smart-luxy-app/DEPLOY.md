@@ -64,6 +64,7 @@ Le bandeau à un seul bouton **OK** est conservé. Le Pixel Meta n'est activé q
 La validation complète `npm run build` doit être faite dans ton environnement CI/Vercel. Le présent audit a validé la syntaxe des fichiers API avec Node ; l'installation locale des dépendances n'a pas pu être terminée dans l'environnement d'audit.
 
 ## 8. Contrôles de maintenance
+- Les dépendances de build sont mises à jour sur Vite 6.4.5, @vitejs/plugin-react 5.1.1 et DOMPurify 3.4.17 ; le contrôle npm audit et le build Vite ont été exécutés avec succès sur le dernier commit vérifié.
 - Les politiques d'affiliation héritées sont désormais réservées au rôle `authenticated`. Le bloc SQL conditionnel les ajuste uniquement si ces tables et politiques optionnelles existent.
 - Le workflow GitHub exécute le build et `npm audit --audit-level=high` sur les PR vers `main` et les pushes sur `main`.
 - L'ancien fichier `src/vercel.json`, qui pointait vers un répertoire `Wazyo-app` absent, a été supprimé. La configuration Vercel du projet reste `smart-luxy-app/vercel.json`.
