@@ -50,65 +50,9 @@ $$;
 revoke all on function public.get_public_shipping_rates() from public;
 grant execute on function public.get_public_shipping_rates() to anon, authenticated;
 
--- 2) Meta CAPI: columns and a persistent, shared Lead rate limiter.
+-- 2) Meta CAPI: preserve the existing shared Lead rate limiter; add only the missing Purchase claim column.
 alter table public.orders
   add column if not exists purchase_event_claimed_at timestamptz;
-
-create table if not exists private.meta_capi_lead_rate_limits (
-  ip_hash text not null,
-  request_at timestamptz not null default now()
-);
-
-create index if not exists idx_meta_capi_lead_rate_limits_hash_time
-  on private.meta_capi_lead_rate_limits(ip_hash, request_at desc);
-
-revoke all on private.meta_capi_lead_rate_limits from public, anon, authenticated;
-
-create or replace function public.consume_meta_capi_lead_rate_limit(
-  p_ip_hash text,
-  p_limit integer,
-  p_window_seconds integer
-)
-returns boolean
-language plpgsql
-security definer
-set search_path = private, public, pg_temp
-as $$
-declare
-  v_count integer;
-begin
-  if p_ip_hash is null or length(p_ip_hash) < 16 or length(p_ip_hash) > 128 then
-    raise exception 'Invalid rate-limit key';
-  end if;
-
-  if p_limit is null or p_limit < 1 or p_limit > 1000
-     or p_window_seconds is null or p_window_seconds < 1 or p_window_seconds > 86400 then
-    raise exception 'Invalid rate-limit parameters';
-  end if;
-
-  perform pg_advisory_xact_lock(hashtext('wazyo-meta-lead:' || p_ip_hash));
-
-  delete from private.meta_capi_lead_rate_limits
-  where request_at < now() - interval '1 day';
-
-  select count(*) into v_count
-  from private.meta_capi_lead_rate_limits
-  where ip_hash = p_ip_hash
-    and request_at >= now() - make_interval(secs => p_window_seconds);
-
-  if v_count >= p_limit then
-    return false;
-  end if;
-
-  insert into private.meta_capi_lead_rate_limits(ip_hash)
-  values (p_ip_hash);
-
-  return true;
-end;
-$$;
-
-revoke all on function public.consume_meta_capi_lead_rate_limit(text, integer, integer) from public, anon, authenticated;
-grant execute on function public.consume_meta_capi_lead_rate_limit(text, integer, integer) to service_role;
 
 -- 3) Yalidine reconciliation: update the order only after the parcel is recorded.
 create or replace function public.reconcile_yalidine_order(
