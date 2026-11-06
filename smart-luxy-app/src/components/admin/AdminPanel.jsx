@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../supabase'
-import { alertStockBas, resumeQuotidien } from '../../utils/notify'
+import { alertStocksBas, resumeQuotidien } from '../../utils/notify'
 import { saveSettings, saveSetting, getSettings } from '../../utils/useSettings'
 import { openWA, fmt } from '../../utils/notify'
 import ProductForm from './ProductForm'
@@ -2389,13 +2389,12 @@ export default function AdminPanel({ onLogout, onToast }) {
                 onToast && onToast('✅ Tous les stocks sont OK !', 'default')
                 return
               }
-              const results = await Promise.all(bas.map(p => alertStockBas(p, p.stock)))
-              const sentCount = results.filter(Boolean).length
+              const sent = await alertStocksBas(bas.map(p => p.id))
               onToast && onToast(
-                sentCount === bas.length
-                  ? `⚠️ ${sentCount} alerte(s) stock envoyée(s) sur Telegram`
-                  : `⚠️ ${sentCount}/${bas.length} alerte(s) envoyée(s). Vérifie la configuration Telegram ou la session admin.`,
-                sentCount === bas.length ? 'default' : 'error'
+                sent
+                  ? `⚠️ Alerte groupée envoyée pour ${bas.length} produit(s) en stock bas.`
+                  : '❌ Les alertes de stock n’ont pas pu être envoyées.',
+                sent ? 'default' : 'error'
               )
             }}
             style={{
