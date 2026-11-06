@@ -1774,7 +1774,7 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--g3)', marginBottom:8 }}>
                 <span>🚚 Frais livraison</span>
-                <span style={{ color:fraisLiv===0?'#22c55e':undefined }}>{fraisLiv===null ? (shippingRatesLoaded ? (lang === 'ar' ? 'غير متاح' : 'Indisponible') : (lang === 'ar' ? 'جار التحميل…' : 'Chargement…')) : fraisLiv===0 ? lang==='ar' ? 'مجاناً' : 'Gratuit' : fmt(fraisLiv)}</span>
+                <span style={{ color:fraisLiv===0?'#22c55e':undefined }}>{fraisLiv===null ? (shippingRatesError ? (lang === 'ar' ? 'تعذر تحميل التعريفة' : 'Erreur de chargement') : shippingRatesLoaded ? (lang === 'ar' ? 'غير متاح' : 'Indisponible') : (lang === 'ar' ? 'جار التحميل…' : 'Chargement…')) : fraisLiv===0 ? lang==='ar' ? 'مجاناً' : 'Gratuit' : fmt(fraisLiv)}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', paddingTop:10, borderTop:'1px solid var(--g3)', fontSize:17, fontWeight:900, color:'var(--g3)' }}>
                 <span>💰 Total à payer</span>
