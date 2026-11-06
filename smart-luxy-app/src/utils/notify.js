@@ -6,7 +6,7 @@ import { supabase } from '../supabase'
 async function sendTelegram(payload, accessToken = null) {
   try {
     const headers = { 'Content-Type': 'application/json' }
-    if (accessToken) headers.Authorization = \`Bearer \${accessToken}\`
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`
 
     const res = await fetch('/api/telegram', {
       method: 'POST',
@@ -89,26 +89,26 @@ export function buildWAMessage(order) {
   const items = (order.items || []).map(i => {
     const color = String(i.color || i.couleur || '').trim()
     const model = String(i.model || i.modele || '').trim()
-    const variantTxt = model ? \` ⚙️ \${model}\` : (color ? \` 🎨 \${color}\` : '')
-    return \`• \${i.nom}\${variantTxt} ×\${i.qty} = \${(i.prix * i.qty).toLocaleString()} DA\`
-  }).join('\\n')
+    const variantTxt = model ? ` ⚙️ ${model}` : (color ? ` 🎨 ${color}` : '')
+    return `• ${i.nom}${variantTxt} ×${i.qty} = ${(i.prix * i.qty).toLocaleString()} DA`
+  }).join('\n')
   const livTxt = order.mode_livraison === 'bureau' ? 'Retrait bureau' : 'Livraison à domicile'
   return encodeURIComponent(
-    \`🛍️ Commande Wazyo\\n\` +
-    \`🆔 N° : \${order.id}\\n\\n\` +
-    \`👤 \${order.nom_client} — 📞 \${order.telephone}\\n\` +
-    \`📍 \${order.wilaya} / \${order.commune}\\n\` +
-    \`🚚 \${livTxt}\\n\\n\` +
-    \`🧾 Articles :\\n\${items}\\n\\n\` +
-    \`🚚 Livraison : \${order.frais_livraison ? order.frais_livraison.toLocaleString() + ' DA' : 'Gratuit'}\\n\` +
-    \`💰 TOTAL : \${order.total?.toLocaleString()} DA\`
+    `🛍️ Commande Wazyo\n` +
+    `🆔 N° : ${order.id}\n\n` +
+    `👤 ${order.nom_client} — 📞 ${order.telephone}\n` +
+    `📍 ${order.wilaya} / ${order.commune}\n` +
+    `🚚 ${livTxt}\n\n` +
+    `🧾 Articles :\n${items}\n\n` +
+    `🚚 Livraison : ${order.frais_livraison ? order.frais_livraison.toLocaleString() + ' DA' : 'Gratuit'}\n` +
+    `💰 TOTAL : ${order.total?.toLocaleString()} DA`
   )
 }
 
 // Ouvrir WA avec le numéro depuis config
 export function openWA(order) {
   const phone = CONFIG.whatsapp || import.meta.env.VITE_WA_NUMBER || '213556688810'
-  window.open(\`https://wa.me/\${phone}?text=\${buildWAMessage(order)}\`, '_blank')
+  window.open(`https://wa.me/${phone}?text=${buildWAMessage(order)}`, '_blank')
 }
 
 export function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
