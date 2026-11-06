@@ -214,6 +214,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
   const [freeShip, setFreeShip] = useState(null)
   const [shippingRates, setShippingRates] = useState({})
   const [shippingRatesLoaded, setShippingRatesLoaded] = useState(false)
+  const [shippingRatesError, setShippingRatesError] = useState(false)
 
   async function loadShippingRates() {
     const [{ data: rates, error: ratesError }, settings] = await Promise.all([
@@ -227,12 +228,14 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
     const value = Number(settings?.free_ship)
     setFreeShip(Number.isFinite(value) && value > 0 ? value : null)
     setShippingRatesLoaded(true)
+    setShippingRatesError(false)
   }
 
   useEffect(() => {
     const refreshRates = () => loadShippingRates().catch(error => {
       console.error('Chargement des tarifs de livraison impossible:', error)
       setShippingRatesLoaded(false)
+      setShippingRatesError(true)
     })
     refreshRates()
     const onFocus = () => refreshRates()
@@ -248,7 +251,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
   const wilayaNom = form.wilaya ? form.wilaya.replace(/^\d+ — /, '') : ''
   const prixLiv = wilayaNom && shippingRates[wilayaNom] ? shippingRates[wilayaNom][modeLiv] : null
   const fraisLivBase = prixLiv !== null && prixLiv !== undefined ? prixLiv : null
-  const fraisLiv = freeShip !== null && totalProduits >= freeShip ? 0 : fraisLivBase
+  const fraisLiv = shippingRatesLoaded && fraisLivBase !== null && freeShip !== null && totalProduits >= freeShip ? 0 : fraisLivBase
   const totalFinal = totalProduits + (fraisLiv || 0)
 
   const communes = wilayaNom ? getCommunesByWilaya(wilayaNom) : []
@@ -474,7 +477,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
                 {t.fraisLiv} {modeLiv === 'domicile' ? '🏠' : '📦'}
               </span>
               <span style={{ fontWeight: 800, color: fraisLiv === 0 ? '#4CAF50' : '#C9A84C', fontSize: 15 }}>
-                {fraisLiv === null ? (shippingRatesLoaded ? t.indisponible : 'Chargement…') : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
+                {fraisLiv === null ? (shippingRatesError ? (rtl ? 'تعذر تحميل التعريفة' : 'Erreur de chargement') : shippingRatesLoaded ? t.indisponible : 'Chargement…') : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
               </span>
             </div>
           )}
@@ -540,7 +543,7 @@ export default function OrderModal({ items, promo = null, onClose, onSubmit }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--g4)' }}>
               <span>{t.fraisLiv}</span>
               <span style={{ color: fraisLiv === 0 ? '#4CAF50' : '#aaa' }}>
-                {fraisLiv === null ? (shippingRatesLoaded ? t.indisponible : 'Chargement…') : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
+                {fraisLiv === null ? (shippingRatesError ? (rtl ? 'تعذر تحميل التعريفة' : 'Erreur de chargement') : shippingRatesLoaded ? t.indisponible : 'Chargement…') : fraisLiv === 0 ? t.gratuit : fmt(fraisLiv)}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #2a2a2a', fontSize: 17, fontWeight: 900, color:'var(--g3)' }}>
