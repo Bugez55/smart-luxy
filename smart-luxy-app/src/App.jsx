@@ -263,6 +263,181 @@ const STOREFRONT_THEME_CSS = `
 }
 
 
+/* WAZYO 2026 editorial layout — override older centered cinematic preset. */
+:root[data-wazyo-preset="cinematic"] .wz-hero{
+  height:min(690px,80svh)!important;
+  min-height:520px!important;
+  max-height:760px!important;
+  background:#080a0f!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-image,
+:root[data-wazyo-preset="cinematic"] .wz-hero-video{
+  opacity:.58!important;
+  filter:brightness(.88) saturate(.82) contrast(1.05)!important;
+  transform:scale(1.045)!important;
+  animation:wzCinemaKenBurns 28s ease-in-out infinite alternate!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-image.is-loaded,
+:root[data-wazyo-preset="cinematic"] .wz-hero-video.is-loaded{
+  opacity:.78!important;
+  filter:brightness(.94) saturate(.9) contrast(1.04)!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-overlay{
+  background:
+    linear-gradient(90deg,rgba(5,6,10,.96) 0%,rgba(5,6,10,.88) 29%,rgba(5,6,10,.52) 53%,rgba(5,6,10,.08) 100%),
+    linear-gradient(0deg,#080a0f 0%,rgba(8,10,15,.10) 44%,rgba(8,10,15,.14) 100%)!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero.has-custom-media .wz-hero-overlay{
+  background:
+    linear-gradient(90deg,rgba(5,6,10,.94) 0%,rgba(5,6,10,.82) 30%,rgba(5,6,10,.44) 56%,rgba(5,6,10,.06) 100%),
+    linear-gradient(0deg,rgba(8,10,15,.44) 0%,transparent 54%,rgba(8,10,15,.12) 100%)!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-inner{
+  justify-content:flex-start!important;
+  width:min(1320px,calc(100% - 72px))!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-content{
+  width:min(690px,60%)!important;
+  margin:0!important;
+  text-align:left!important;
+  padding:58px 0 72px!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-kicker,
+:root[data-wazyo-preset="cinematic"] .wz-hero-actions,
+:root[data-wazyo-preset="cinematic"] .wz-hero-highlights{
+  justify-content:flex-start!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-kicker{
+  color:#e2ca91!important;
+  letter-spacing:.19em!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-kicker-line{
+  background:#d5b770!important;
+  box-shadow:0 0 18px rgba(213,183,112,.40)!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-title{
+  max-width:740px!important;
+  font-size:clamp(48px,6.2vw,84px)!important;
+  line-height:.97!important;
+  letter-spacing:-.065em!important;
+  text-align:left!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-title span{
+  color:#e0c27d!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-subtitle{
+  margin:22px 0 0!important;
+  max-width:520px!important;
+  color:rgba(248,246,239,.78)!important;
+  font-size:15px!important;
+  line-height:1.72!important;
+  text-align:left!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-highlights{
+  color:rgba(247,244,237,.70)!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-highlights i{
+  color:#d5b770!important;
+}
+:root[data-wazyo-preset="cinematic"] .wz-hero-primary{
+  background:linear-gradient(135deg,#ead49c 0%,#c6a45f 100%)!important;
+  color:#15130e!important;
+  border:1px solid #e4ca8d!important;
+  border-radius:10px!important;
+  box-shadow:0 12px 32px rgba(0,0,0,.22)!important;
+}
+:root[data-wazyo-preset="cinematic"] .footer{
+  width:min(1320px,100%)!important;
+  max-width:1320px!important;
+  margin:0 auto!important;
+  padding:44px clamp(16px,3vw,32px) 32px!important;
+  gap:12px!important;
+  background:linear-gradient(180deg,#0b0e14 0%,#080a0f 100%)!important;
+  border-top:1px solid rgba(213,183,112,.22)!important;
+}
+:root[data-wazyo-preset="cinematic"] .footer::before{
+  width:min(420px,55vw)!important;
+  background:linear-gradient(90deg,transparent,#d5b770,transparent)!important;
+}
+:root[data-wazyo-preset="cinematic"] .footer .fbn{
+  color:#f7f4ed!important;
+  font-family:'Outfit',system-ui,sans-serif!important;
+  font-size:30px!important;
+  font-weight:850!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase!important;
+}
+:root[data-wazyo-preset="cinematic"] .footer .ftag{
+  color:rgba(247,244,237,.56)!important;
+  font-size:11px!important;
+  letter-spacing:.12em!important;
+}
+:root[data-wazyo-preset="cinematic"] .footer a,
+:root[data-wazyo-preset="cinematic"] .footer button{
+  color:#dfc783!important;
+}
+:root[data-wazyo-preset="cinematic"] .footer a:hover,
+:root[data-wazyo-preset="cinematic"] .footer button:hover{
+  color:#fff!important;
+}
+@media(max-width:820px){
+  :root[data-wazyo-preset="cinematic"] .wz-hero{
+    height:min(720px,82svh)!important;
+    min-height:560px!important;
+    max-height:760px!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-inner{
+    width:calc(100% - 42px)!important;
+    align-items:center!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-content{
+    width:min(620px,88%)!important;
+    padding:40px 0 64px!important;
+    text-align:left!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-image,
+  :root[data-wazyo-preset="cinematic"] .wz-hero-video{
+    object-position:66% center!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-overlay{
+    background:
+      linear-gradient(180deg,rgba(5,6,10,.12) 0%,rgba(5,6,10,.36) 34%,rgba(5,6,10,.92) 100%),
+      linear-gradient(90deg,rgba(5,6,10,.24),rgba(5,6,10,.06))!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-title{
+    font-size:clamp(46px,9vw,72px)!important;
+    text-align:left!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-subtitle{
+    margin:17px 0 0!important;
+    text-align:left!important;
+  }
+}
+@media(max-width:520px){
+  :root[data-wazyo-preset="cinematic"] .wz-hero{
+    height:min(690px,82svh)!important;
+    min-height:550px!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-inner{
+    width:calc(100% - 34px)!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-content{
+    width:100%!important;
+    padding:30px 0 50px!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-title{
+    font-size:clamp(41px,11.8vw,58px)!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .wz-hero-highlights{
+    flex-wrap:wrap!important;
+    gap:7px!important;
+    font-size:8px!important;
+  }
+  :root[data-wazyo-preset="cinematic"] .footer{
+    padding:30px 14px 24px!important;
+  }
+}
+ 
 /* Robust token-based fallback: works even on components without a theme-specific class. */
 :root[data-wazyo-preset="custom"] body,
 :root[data-wazyo-preset="custom"] .app {
