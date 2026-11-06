@@ -63,22 +63,29 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
           <div className="cart-items">
             {items.map(item => {
               const imgs = (() => { try { return typeof item.images === 'string' ? JSON.parse(item.images) : (item.images || []) } catch { return [] } })()
-              const mainImg = imgs[0]?.url || item.img
+              const mainImg = item.model_image || item.color_image || imgs[0]?.url || item.img
+              const lineKey = String(item.cartKey || item.id)
+              const variantLabel = item.model || item.modele
+                ? `Modèle : ${item.model || item.modele}`
+                : item.color || item.couleur
+                  ? `Couleur : ${item.color || item.couleur}`
+                  : ''
               return (
-                <div key={item.id} className="cart-item">
+                <div key={lineKey} className="cart-item">
                   <div className="cart-item-img">
                     {mainImg ? <img src={mainImg} alt={item.nom} /> : item.emoji || '📦'}
                   </div>
                   <div className="cart-item-info">
                     <div className="cart-item-name">{item.nom}</div>
+                    {variantLabel && <div style={{ fontSize:11, color:'var(--g4)', marginTop:2 }}>{variantLabel}</div>}
                     <div className="cart-item-price">{fmt(Number(item.prix) * item.qty)}</div>
                     <div className="cart-item-ctrl">
-                      <button onClick={() => onChangeQty(item.id, -1)}>−</button>
+                      <button onClick={() => onChangeQty(lineKey, -1)}>−</button>
                       <span>{item.qty}</span>
-                      <button onClick={() => onChangeQty(item.id, +1)}>+</button>
+                      <button onClick={() => onChangeQty(lineKey, +1)}>+</button>
                     </div>
                   </div>
-                  <button className="cart-del" onClick={() => onRemove(item.id)}>🗑</button>
+                  <button className="cart-del" onClick={() => onRemove(lineKey)}>🗑</button>
                 </div>
               )
             })}
