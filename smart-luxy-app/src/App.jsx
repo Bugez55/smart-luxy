@@ -574,19 +574,43 @@ export default function App() {
     return () => { cancelled = true }
   }, [loadProducts])
 
-  // ── Bouton retour physique du téléphone/navigateur — ferme la page produit ──
+  // ── Retour Android / navigateur : restaurer la vue qui était derrière le formulaire ──
   useEffect(() => {
     function handlePopState() {
+      const state = window.history.state || {}
       const hash = window.location.hash
-      if (!hash.startsWith('#produit-')) {
-        // L'utilisateur est revenu en arrière depuis la page produit → on la ferme
-        setOpenProduct(null)
-        setCheckoutProduct(null)
+
+      if (state.wazyoModal === 'product' || state.wazyoModal === 'checkout') {
+        const productId = String(state.wazyoProductId || '')
+        const product = products.find(item => String(item.id) === productId) || null
+        setOpenProduct(state.wazyoModal === 'product' ? product : null)
+        setCheckoutProduct(state.wazyoModal === 'checkout' ? product : null)
+        return
       }
+
+      if (hash.startsWith('#produit-')) {
+        const productId = decodeURIComponent(hash.slice('#produit-'.length))
+        const product = products.find(item => String(item.id) === productId) || null
+        setOpenProduct(product)
+        setCheckoutProduct(null)
+        return
+      }
+
+      if (hash.startsWith('#commande-')) {
+        const productId = decodeURIComponent(hash.slice('#commande-'.length))
+        const product = products.find(item => String(item.id) === productId) || null
+        setCheckoutProduct(product)
+        setOpenProduct(null)
+        return
+      }
+
+      setOpenProduct(null)
+      setCheckoutProduct(null)
     }
+
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
+  }, [products])
 
   // ── Appliquer le thème global sauvegardé ──
   useEffect(() => {
@@ -628,6 +652,72 @@ export default function App() {
     }
   }, [])
 
+  function pushModalHistory(modal, product) {
+    const productId = String(product?.id ?? '')
+    const currentState = window.history.state && typeof window.history.state === 'object'
+      ? window.history.state
+      : {}
+    const hashPrefix = modal === 'checkout' ? '#commande-' : '#produit-'
+    const nextUrl = `${window.location.pathname}${window.location.search}${hashPrefix}${encodeURIComponent(productId)}`
+    window.history.pushState({
+      ...currentState,
+      wazyoModal: modal,
+      wazyoProductId: productId,
+    }, '', nextUrl)
+  }
+
+  function openProductDetail(product) {
+    if (!product) return
+    pushModalHistory('product', product)
+    setCheckoutProduct(null)
+    setOpenProduct(product)
+    fbq('track', 'ViewContent', {
+      content_name: product.nom,
+      content_ids: [product.id],
+      content_type: 'product',
+      value: Number(product.prix || 0),
+      currency: 'DZD',
+    })
+  }
+
+  function openDirectCheckout(product) {
+    if (!product) return
+    pushModalHistory('checkout', product)
+    setOpenProduct(null)
+    setCheckoutProduct(product)
+  }
+
+  function closeHistoryModal(modal) {
+    const currentState = window.history.state || {}
+    if (currentState.wazyoModal === modal) {
+      window.history.back()
+      return
+    }
+
+    if (modal === 'product') setOpenProduct(null)
+    if (modal === 'checkout') setCheckoutProduct(null)
+
+    const hashPrefix = modal === 'checkout' ? '#commande-' : '#produit-'
+    if (window.location.hash.startsWith(hashPrefix)) {
+      const cleanState = { ...currentState }
+      delete cleanState.wazyoModal
+      delete cleanState.wazyoProductId
+      window.history.replaceState(
+        cleanState,
+        '',
+        `${window.location.pathname}${window.location.search}`
+      )
+    }
+  }
+
+  function closeProductDetail() {
+    closeHistoryModal('product')
+  }
+
+  function closeDirectCheckout() {
+    closeHistoryModal('checkout')
+  }
+
   function toast(msg, type = 'default') {
     const id = Date.now()
     setToasts(t => [...t, { id, msg, type }])
@@ -635,26 +725,46 @@ export default function App() {
   }
 
   function addToCart(product, qty = 1) {
+    if (!product?.id) return
+
+    const safeQty = Math.max(1, Math.floor(Number(qty) || 1))
+    const modelName = String(product.model || product.modele || '').trim().toLowerCase()
+    const colorName = String(product.color || product.couleur || '').trim().toLowerCase()
+    const hasVariant = Boolean(modelName || colorName)
+    const cartKey = hasVariant
+      ? `${String(product.id)}::${encodeURIComponent(JSON.stringify({ model: modelName, color: colorName }))}`
+      : String(product.id)
+
     setCart(prev => {
-      const ex = prev.find(i => i.id === product.id)
-      if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + qty } : i)
-      return [...prev, { ...product, qty }]
+      const existing = prev.find(item => String(item.cartKey || item.id) === cartKey)
+      if (existing) {
+        return prev.map(item => String(item.cartKey || item.id) === cartKey
+          ? { ...item, qty: Number(item.qty || 0) + safeQty }
+          : item
+        )
+      }
+      return [...prev, { ...product, cartKey, qty: safeQty }]
     })
-    toast(`✅ ${product.nom} ajouté au panier`)
-    window.fbq && fbq('track', 'AddToCart', {
+
+    const variantLabel = product.model || product.modele || product.color || product.couleur
+    toast(`✅ ${product.nom}${variantLabel ? ` — ${variantLabel}` : ''} ajouté au panier`)
+    fbq('track', 'AddToCart', {
       content_name: product.nom,
       content_ids: [product.id],
       content_type: 'product',
-      value: product.prix * qty,
+      value: Number(product.prix || 0) * safeQty,
       currency: 'DZD',
     })
   }
 
-  function removeFromCart(id) { setCart(prev => prev.filter(i => i.id !== id)) }
+  function removeFromCart(lineKey) {
+    setCart(prev => prev.filter(item => String(item.cartKey || item.id) !== String(lineKey)))
+  }
 
-  function changeQty(id, delta) {
-    setCart(prev => prev.map(i => i.id === id
-      ? { ...i, qty: Math.max(1, i.qty + delta) } : i
+  function changeQty(lineKey, delta) {
+    setCart(prev => prev.map(item => String(item.cartKey || item.id) === String(lineKey)
+      ? { ...item, qty: Math.max(1, Number(item.qty || 1) + delta) }
+      : item
     ))
   }
 
@@ -907,19 +1017,9 @@ export default function App() {
           activeCat={activeCat}
           onCatChange={setActiveCat}
           loading={loading}
-          onProductClick={(p) => {
-            setOpenProduct(p)
-            window.history.pushState({}, '', '#produit-' + p.id)
-            window.fbq && fbq('track', 'ViewContent', {
-              content_name: p.nom,
-              content_ids: [p.id],
-              content_type: 'product',
-              value: p.prix,
-              currency: 'DZD',
-            })
-          }}
+          onProductClick={openProductDetail}
           onAddToCart={addToCart}
-          onBuyNow={p => { setCheckoutProduct(p); setOpenProduct(null); window.scrollTo({ top:0, behavior:'auto' }) }}
+          onBuyNow={openDirectCheckout}
         />
       </main>
 
@@ -927,7 +1027,7 @@ export default function App() {
           GALERIE PRODUITS DÉFILANTE
       ════════════════════════════════════════ */}
       {!openProduct && !checkoutProduct && !cartOpen && !orderItems && !lastOrder && !trackingOpen && (
-        <ProductGallery products={products} onProductClick={setOpenProduct} />
+        <ProductGallery products={products} onProductClick={openProductDetail} />
       )}
 
       <footer className="footer">
@@ -1007,10 +1107,10 @@ export default function App() {
           product={checkoutProduct}
           affiliateOffer={affiliateOffer}
           allProducts={products}
-          onClose={() => setCheckoutProduct(null)}
+          onClose={closeDirectCheckout}
           onSubmitOrder={async (form) => {
             const ok = await submitOrder(form)
-            if (ok) setCheckoutProduct(null)
+            if (ok) closeDirectCheckout()
             return ok
           }}
           onPolitique={(tab) => setPolitiqueTab(tab)}
@@ -1018,22 +1118,17 @@ export default function App() {
       )}
 
       {/* Product detail */}
-      <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={() => {
-          setOpenProduct(null)
-          window.history.pushState({}, '', window.location.pathname)
-        }} />
+      <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={closeProductDetail} />
       {openProduct && (
         <ProductPage
           product={openProduct}
           affiliateOffer={affiliateOffer}
-          onClose={() => {
-            setOpenProduct(null)
-            window.history.pushState({}, '', window.location.pathname)
-          }}
-          onAddToCart={(qty) => {
-            addToCart(openProduct, qty)
-            setOpenProduct(null)
-            window.history.pushState({}, '', window.location.pathname)
+          cartItems={cart}
+          onClose={closeProductDetail}
+          onAddToCart={(itemOrQty, qty) => {
+            const item = itemOrQty && typeof itemOrQty === 'object' ? itemOrQty : openProduct
+            const quantity = itemOrQty && typeof itemOrQty === 'object' ? qty : itemOrQty
+            addToCart(item, quantity)
           }}
           allProducts={products}
           onBuyNow={(qty) => {
@@ -1043,10 +1138,7 @@ export default function App() {
           }}
           onSubmitOrder={async (form) => {
             const ok = await submitOrder(form)
-            if (ok) {
-              setOpenProduct(null)
-              window.history.pushState({}, '', window.location.pathname)
-            }
+            if (ok) closeProductDetail()
             return ok
           }}
           onPolitique={(tab) => setPolitiqueTab(tab)}
@@ -1062,7 +1154,7 @@ export default function App() {
         onClose={() => setCartOpen(false)}
         onRemove={removeFromCart}
         onChangeQty={changeQty}
-        onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart)
+        onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart.map(({ cartKey, ...item }) => item))
             window.fbq && fbq('track', 'InitiateCheckout', {
               value: cart.reduce((s,i) => s + i.prix * i.qty, 0),
               currency: 'DZD',
