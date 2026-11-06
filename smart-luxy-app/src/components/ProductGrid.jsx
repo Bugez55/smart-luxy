@@ -134,7 +134,7 @@ export default function ProductGrid({
 
   return (
     <>
-      <div className="wz-categories-wrap">
+      <div id="categories" className="wz-categories-wrap">
         <div className="wz-categories-heading">
           <div className="wz-categories-label">NOS CATÉGORIES</div>
           <div className="wz-categories-hint">Explorez les univers de la boutique</div>
