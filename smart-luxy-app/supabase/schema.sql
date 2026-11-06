@@ -1091,7 +1091,7 @@ grant execute on function public.create_order(text,text,text,text,text,text,json
 -- ─────────────────────────────────────────────────────────────
 -- STORAGE
 -- ─────────────────────────────────────────────────────────────
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+insert into storage.buckets as current_bucket (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'product-images',
   'product-images',
@@ -1315,7 +1315,7 @@ values (
 )
 on conflict (id) do update
 set public = true,
-    file_size_limit = 6291456,
+    file_size_limit = greatest(coalesce(current_bucket.file_size_limit, 0), excluded.file_size_limit),
     allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif','image/avif']::text[];
 
 
