@@ -254,6 +254,7 @@ export default function Header({ cartCount, onCartOpen, search = '', onSearch })
         <nav className="wz-header__nav" aria-label="Navigation principale">
           <a href="/" aria-current="page">Accueil</a>
           <a href="#collection">Boutique</a>
+          <a href="#categories">Catégories</a>
         </nav>
 
         <div className="wz-header__tools">
