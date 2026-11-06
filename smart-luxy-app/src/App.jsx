@@ -1197,10 +1197,11 @@ export default function App() {
       <main>
         {/* ── Hero plein écran ── */}
         <Hero
-          heroImage={heroSettings.url || products[0]?.img}
-          heroMediaType={heroSettings.url ? heroSettings.type : 'image'}
-          heroFallbackImage={products[0]?.img}
+          heroImage={heroSettings.url || ''}
+          heroMediaType={heroSettings.type || 'image'}
           heroCustomMedia={Boolean(heroSettings.url)}
+          heroProducts={products}
+          onDiscoverProduct={openProductDetail}
           onScrollToCollection={() => document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' })}
         />
 
