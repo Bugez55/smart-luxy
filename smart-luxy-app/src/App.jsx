@@ -1052,6 +1052,7 @@ export default function App() {
 
         <ProductGrid
           products={filtered}
+          categoryProducts={products}
           categories={categories}
           activeCat={activeCat}
           onCatChange={setActiveCat}
