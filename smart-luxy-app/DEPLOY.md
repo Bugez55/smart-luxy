@@ -60,3 +60,9 @@ Le bandeau à un seul bouton **OK** est conservé. Le Pixel Meta n'est activé q
 
 ## 7. Build
 La validation complète `npm run build` doit être faite dans ton environnement CI/Vercel. Le présent audit a validé la syntaxe des fichiers API avec Node ; l'installation locale des dépendances n'a pas pu être terminée dans l'environnement d'audit.
+
+## 8. Maintenance findings recorded in the source
+- The affiliate policies left by older production installations are now scoped to `authenticated`; the migration changes them only if those optional tables and policies exist.
+- The GitHub build workflow runs on pushes to `main` as well as feature branches and pull requests.
+- The obsolete nested `src/vercel.json` (which referenced a non-existent `Wazyo-app` directory) has been removed. The active Vercel config is `smart-luxy-app/vercel.json`.
+- A `package-lock.json` is still not present. The build uses `npm install`, so resolved versions are not pinned. Add and commit a lockfile before switching CI to `npm ci`.
