@@ -330,3 +330,35 @@ begin
   end if;
 end
 $$;
+
+
+-- 10) Public settings are allow-listed, never block-listed.
+-- New settings are private by default until deliberately added here.
+begin;
+alter policy "settings read public"
+  on public.settings
+  using (
+    key = any (array[
+      'baridimob_actif',
+      'baridimob_numero',
+      'ccp_actif',
+      'ccp_nom',
+      'ccp_numero',
+      'custom_themes',
+      'free_ship',
+      'hero_media_type',
+      'hero_media_url',
+      'maintenance',
+      'shop_address',
+      'shop_email',
+      'shop_name',
+      'shop_phone',
+      'theme_accent',
+      'theme_bg',
+      'theme_card',
+      'theme_preset',
+      'theme_text',
+      'theme_text_sub'
+    ]::text[])
+  );
+commit;
