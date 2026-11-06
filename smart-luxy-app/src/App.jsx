@@ -580,11 +580,27 @@ export default function App() {
       const state = window.history.state || {}
       const hash = window.location.hash
 
+      if (state.wazyoModal === 'cart') {
+        setCartOpen(true)
+        setOpenProduct(null)
+        setCheckoutProduct(null)
+        return
+      }
+
+      setCartOpen(false)
+
       if (state.wazyoModal === 'product' || state.wazyoModal === 'checkout') {
         const productId = String(state.wazyoProductId || '')
         const product = products.find(item => String(item.id) === productId) || null
         setOpenProduct(state.wazyoModal === 'product' ? product : null)
         setCheckoutProduct(state.wazyoModal === 'checkout' ? product : null)
+        return
+      }
+
+      if (hash.startsWith('#panier')) {
+        setCartOpen(true)
+        setOpenProduct(null)
+        setCheckoutProduct(null)
         return
       }
 
@@ -606,6 +622,7 @@ export default function App() {
 
       setOpenProduct(null)
       setCheckoutProduct(null)
+      setCartOpen(false)
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -687,6 +704,19 @@ export default function App() {
     setCheckoutProduct(product)
   }
 
+  function openCart() {
+    if (cartOpen) return
+    const currentState = window.history.state && typeof window.history.state === 'object'
+      ? window.history.state
+      : {}
+    window.history.pushState(
+      { ...currentState, wazyoModal: 'cart' },
+      '',
+      `${window.location.pathname}${window.location.search}#panier`
+    )
+    setCartOpen(true)
+  }
+
   function closeHistoryModal(modal) {
     const currentState = window.history.state || {}
     if (currentState.wazyoModal === modal) {
@@ -696,8 +726,13 @@ export default function App() {
 
     if (modal === 'product') setOpenProduct(null)
     if (modal === 'checkout') setCheckoutProduct(null)
+    if (modal === 'cart') setCartOpen(false)
 
-    const hashPrefix = modal === 'checkout' ? '#commande-' : '#produit-'
+    const hashPrefix = modal === 'checkout'
+      ? '#commande-'
+      : modal === 'cart'
+        ? '#panier'
+        : '#produit-'
     if (window.location.hash.startsWith(hashPrefix)) {
       const cleanState = { ...currentState }
       delete cleanState.wazyoModal
@@ -716,6 +751,10 @@ export default function App() {
 
   function closeDirectCheckout() {
     closeHistoryModal('checkout')
+  }
+
+  function closeCart() {
+    closeHistoryModal('cart')
   }
 
   function toast(msg, type = 'default') {
@@ -974,7 +1013,7 @@ export default function App() {
       <AnnouncementBar />
       <Header
         cartCount={cartCount}
-        onCartOpen={() => setCartOpen(true)}
+        onCartOpen={openCart}
         search={search}
         onSearch={setSearch}
       />
@@ -1146,15 +1185,15 @@ export default function App() {
       )}
 
       {/* Cart */}
-      <div className={`overlay ${cartOpen ? 'on' : ''}`} onClick={() => setCartOpen(false)} />
+      <div className={`overlay ${cartOpen ? 'on' : ''}`} onClick={closeCart} />
       <Cart
         open={cartOpen}
         items={cart}
         total={cartTotal}
-        onClose={() => setCartOpen(false)}
+        onClose={closeCart}
         onRemove={removeFromCart}
         onChangeQty={changeQty}
-        onOrder={(promo, totalFinal) => { setCartOpen(false); setPromoInfo(promo); setOrderItems(cart.map(({ cartKey, ...item }) => item))
+        onOrder={(promo, totalFinal) => { closeCart(); setPromoInfo(promo); setOrderItems(cart.map(({ cartKey, ...item }) => item))
             window.fbq && fbq('track', 'InitiateCheckout', {
               value: cart.reduce((s,i) => s + i.prix * i.qty, 0),
               currency: 'DZD',
