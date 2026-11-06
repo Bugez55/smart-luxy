@@ -253,10 +253,10 @@ async function handleAdminNotification(req, res, type) {
     if (error) return res.status(500).json({ error: 'Impossible de vérifier les stocks' })
     if (!products?.length) return res.status(200).json({ success: true, skipped: true })
 
-    const message = '⚠️ ÉTAT DES STOCKS — WAZYO\\n\\n' + products.map(product => {
+    const message = '⚠️ ÉTAT DES STOCKS — WAZYO\n\n' + products.map(product => {
       const emoji = Number(product.stock) === 0 ? '🚫' : '⚠️'
       return `${emoji} ${product.nom} : ${product.stock} unité(s)`
-    }).join('\\n')
+    }).join('\n')
 
     try {
       await sendMessage(message)
