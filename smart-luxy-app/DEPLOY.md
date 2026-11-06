@@ -30,7 +30,9 @@ La migration supprime également des règles RLS historiques trop permissives su
 
 La configuration du bucket `product-images` conserve les types MIME déjà autorisés (dont HEIC/vidéo) et toute limite de taille supérieure déjà configurée.
 
-Exécute cette migration avant de déployer le nouveau frontend et les API. Puis exécute `supabase/feature_compatibility_preflight.sql` : il vérifie en lecture seule les fonctions et colonnes des variantes et du programme influenceurs. Ces objets ne sont pas définis dans les SQL actuellement versionnés ; ils peuvent avoir été ajoutés manuellement en production. Ne les supprime ni ne les remplace avant d'avoir vérifié ce rapport.
+Exécute ces migrations avant de déployer le nouveau frontend et les API. Puis exécute `supabase/feature_compatibility_preflight.sql` : il vérifie en lecture seule les fonctions et colonnes des variantes et du programme influenceurs. Ces objets ne sont pas définis intégralement dans les SQL actuellement versionnés ; ils peuvent avoir été ajoutés manuellement en production. Ne les supprime ni ne les remplace avant d'avoir vérifié ce rapport.
+
+Si les tables du programme influenceurs sont déjà installées, applique ensuite `supabase/affiliate_public_rpc_hardening.sql`. Cette migration retire le pourcentage de commission interne des deux réponses RPC publiques ; le frontend n'utilise que le code, le produit et la remise. Ce fichier est optionnel et ne doit pas être exécuté sur une base qui ne possède pas ces tables.
 
 ## 3. Vercel
 Copie les noms de variables de `.env.example` dans les paramètres Vercel (le fichier est un modèle, il ne contient aucune clé). Les variables serveur sensibles doivent être configurées dans Vercel et **ne doivent pas être commitées**. `SUPABASE_SECRET_KEY` est nécessaire aux fonctions serveur CAPI, import et notifications.
@@ -61,8 +63,8 @@ Le bandeau à un seul bouton **OK** est conservé. Le Pixel Meta n'est activé q
 ## 7. Build
 La validation complète `npm run build` doit être faite dans ton environnement CI/Vercel. Le présent audit a validé la syntaxe des fichiers API avec Node ; l'installation locale des dépendances n'a pas pu être terminée dans l'environnement d'audit.
 
-## 8. Maintenance findings recorded in the source
-- The affiliate policies left by older production installations are now scoped to `authenticated`; the migration changes them only if those optional tables and policies exist.
-- The GitHub build workflow runs on pushes to `main` as well as feature branches and pull requests.
-- The obsolete nested `src/vercel.json` (which referenced a non-existent `Wazyo-app` directory) has been removed. The active Vercel config is `smart-luxy-app/vercel.json`.
-- A `package-lock.json` is still not present. The build uses `npm install`, so resolved versions are not pinned. Add and commit a lockfile before switching CI to `npm ci`.
+## 8. Contrôles de maintenance
+- Les politiques d'affiliation héritées sont désormais réservées au rôle `authenticated`. Le bloc SQL conditionnel les ajuste uniquement si ces tables et politiques optionnelles existent.
+- Le workflow GitHub exécute le build et `npm audit --audit-level=high` sur les PR vers `main` et les pushes sur `main`.
+- L'ancien fichier `src/vercel.json`, qui pointait vers un répertoire `Wazyo-app` absent, a été supprimé. La configuration Vercel du projet reste `smart-luxy-app/vercel.json`.
+- Aucun `package-lock.json` n'est encore présent. `npm install` peut donc résoudre des versions différentes d'un build à l'autre ; il faudra ajouter le lockfile généré et le committer avant de remplacer `npm install` par `npm ci`.
