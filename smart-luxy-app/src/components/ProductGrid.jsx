@@ -507,6 +507,28 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   })()
 
   const isModelProduct = p.show_models === true && productModels.length > 0
+  const productColors = (() => {
+    try {
+      const raw = typeof p.colors === 'string' ? JSON.parse(p.colors) : (p.colors || [])
+      return Array.isArray(raw) ? raw.filter(color => color && String(color.name || '').trim()) : []
+    } catch {
+      return []
+    }
+  })()
+  const isColorProduct = p.show_colors === true && productColors.length > 0
+  const hasSelectableVariants = isModelProduct || isColorProduct
+  const selectableVariants = [
+    ...(isModelProduct ? productModels : []),
+    ...(isColorProduct ? productColors : []),
+  ]
+  const parentStockAvailable = p.stock === null || p.stock === undefined ||
+    !Number.isFinite(Number(p.stock)) || Number(p.stock) > 0
+  const hasAvailableVariant = selectableVariants.some(variant => {
+    const stock = variant.stock !== '' && variant.stock !== null && variant.stock !== undefined
+      ? Number(variant.stock)
+      : null
+    return stock === null || !Number.isFinite(stock) ? parentStockAvailable : stock > 0
+  })
   const modelPrices = isModelProduct ? productModels.map(m =>
     m.price !== '' && m.price !== null && m.price !== undefined && Number.isFinite(Number(m.price))
       ? Math.max(0, Number(m.price))
@@ -514,11 +536,13 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
   ) : []
 
   const cardPrice = isModelProduct ? Math.min(...modelPrices) : Number(p.prix || 0)
-  const hasDiscount = !isModelProduct && Number(p.prix_old) > Number(p.prix)
+  const hasDiscount = !hasSelectableVariants && Number(p.prix_old) > Number(p.prix)
   const discount = hasDiscount ? Math.round(100 - (Number(p.prix) / Number(p.prix_old)) * 100) : 0
   const saving = hasDiscount ? Math.max(0, Number(p.prix_old) - Number(p.prix)) : 0
-  const outOfStock = p.stock !== null && p.stock !== undefined && p.stock <= 0
-  const lowStock = p.stock !== null && p.stock !== undefined && p.stock > 0 && p.stock <= 5
+  const outOfStock = hasSelectableVariants
+    ? !hasAvailableVariant
+    : p.stock !== null && p.stock !== undefined && Number(p.stock) <= 0
+  const lowStock = !hasSelectableVariants && p.stock !== null && p.stock !== undefined && Number(p.stock) > 0 && Number(p.stock) <= 5
   const cardBg = p.card_color || 'var(--card)'
 
   function goToImage(nextIndex) {
@@ -760,17 +784,18 @@ function ProductCard({ product: p, reviewData, onOpen, onAddToCart, onBuyNow }) 
           <button
             className="btn-cart"
             disabled={outOfStock}
-            aria-label={`Ajouter ${p.nom} au panier`}
+            aria-label={hasSelectableVariants ? `Choisir une variante pour ${p.nom}` : `Ajouter ${p.nom} au panier`}
             onClick={e => {
               e.stopPropagation()
-              onAddToCart(p)
+              if (hasSelectableVariants) onOpen(p)
+              else onAddToCart(p)
             }}
             style={{
               opacity: outOfStock ? 0.42 : 1,
               cursor: outOfStock ? 'not-allowed' : 'pointer',
             }}
           >
-            Ajouter
+            {hasSelectableVariants ? 'Choisir' : 'Ajouter'}
           </button>
 
           <button
