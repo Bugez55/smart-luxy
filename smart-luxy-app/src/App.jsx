@@ -1562,7 +1562,7 @@ export default function App() {
             <span className="wz-footer-label">RESTONS EN CONTACT</span>
             <a href={`tel:+${CONFIG.telephone}`}>
               <span aria-hidden="true">☎</span>
-              <span>+​{CONFIG.telephone}</span>
+              <span>+{CONFIG.telephone}</span>
             </a>
             <a href={`mailto:${CONFIG.email}`}>
               <span aria-hidden="true">✉</span>
