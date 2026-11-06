@@ -264,6 +264,7 @@ const STOREFRONT_THEME_CSS = `
 
 
 /* WAZYO 2026 editorial layout — override older centered cinematic preset. */
+.wz-collection-anchor{height:1px;scroll-margin-top:92px;}
 :root[data-wazyo-preset="cinematic"] .wz-hero{
   height:min(690px,80svh)!important;
   min-height:520px!important;
@@ -1205,25 +1206,8 @@ export default function App() {
 
         <TrustMarquee />
 
-        {/* ── Recherche + badges (juste au-dessus des produits) ── */}
-        <section id="collection" className="hero" style={{ minHeight:'auto', padding:'48px 20px 24px' }}>
-          <div className="hero-badges">
-            <div className="hero-badge">🚚 Livraison <span>69 wilayas</span></div>
-            <div className="hero-badge">💳 Paiement <span>à la livraison</span></div>
-            <div className="hero-badge">✅ Qualité <span>garantie</span></div>
-          </div>
-
-          <div className="search-big">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input
-              placeholder="Rechercher un produit..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-        </section>
+        {/* Le champ de recherche est désormais dans l'en-tête. Cet ancrage garde le scroll vers le catalogue. */}
+        <div id="collection" className="wz-collection-anchor" aria-hidden="true" />
 
         <ProductGrid
           products={filtered}
