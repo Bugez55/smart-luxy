@@ -6,6 +6,24 @@ function fmt(n) {
   return Number(n || 0).toLocaleString('fr-DZ') + ' DA'
 }
 
+function getCategoryCover(product) {
+  if (!product) return ''
+  try {
+    const raw = typeof product.images === 'string'
+      ? JSON.parse(product.images)
+      : (product.images || [])
+    if (Array.isArray(raw)) {
+      const firstImage = raw.find(image =>
+        (typeof image === 'string' && image.trim()) ||
+        (image && typeof image.url === 'string' && image.url.trim())
+      )
+      if (typeof firstImage === 'string') return firstImage
+      if (firstImage?.url) return firstImage.url
+    }
+  } catch {}
+  return product.img || ''
+}
+
 function SkeletonCard() {
   return (
     <div className="pcard" style={{ pointerEvents: 'none' }}>
@@ -55,6 +73,7 @@ function Stars({ avg, count }) {
 
 export default function ProductGrid({
   products,
+  categoryProducts = products,
   categories,
   activeCat,
   onCatChange,
@@ -96,18 +115,47 @@ export default function ProductGrid({
   return (
     <>
       <div className="wz-categories-wrap">
-        <div className="wz-categories-label">CATÉGORIES</div>
-        <div className="cats wz-categories-scroll">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              className={`cat-btn ${activeCat === cat ? 'active' : ''}`}
-              onClick={() => onCatChange(cat)}
-              aria-pressed={activeCat === cat}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="wz-categories-heading">
+          <div className="wz-categories-label">EXPLOREZ PAR UNIVERS</div>
+          <div className="wz-categories-hint">Une sélection pensée pour vous</div>
+        </div>
+        <div className="cats wz-categories-scroll wz-category-cards" aria-label="Choisir une catégorie">
+          {categories.map(cat => {
+            const matchingProducts = cat === 'Tous'
+              ? categoryProducts
+              : categoryProducts.filter(product => product.categorie === cat)
+            const coverProduct = matchingProducts.find(product => getCategoryCover(product))
+            const cover = getCategoryCover(coverProduct)
+            const isActive = activeCat === cat
+
+            return (
+              <button
+                key={cat}
+                type="button"
+                className={`wz-category-card ${isActive ? 'is-active' : ''}`}
+                onClick={() => onCatChange(cat)}
+                aria-pressed={isActive}
+              >
+                {cover && (
+                  <img
+                    className="wz-category-card-image"
+                    src={cover}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    onError={event => { event.currentTarget.style.display = 'none' }}
+                  />
+                )}
+                <span className="wz-category-card-shade" aria-hidden="true" />
+                <span className="wz-category-card-content">
+                  <span className="wz-category-card-kicker">{cat === 'Tous' ? 'TOUTE LA BOUTIQUE' : 'COLLECTION'}</span>
+                  <strong>{cat === 'Tous' ? 'Tout découvrir' : cat}</strong>
+                  <small>{matchingProducts.length} produit{matchingProducts.length > 1 ? 's' : ''}</small>
+                </span>
+                <span className="wz-category-card-arrow" aria-hidden="true">↗</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -115,48 +163,154 @@ export default function ProductGrid({
         .wz-categories-wrap{
           width:100%;
           box-sizing:border-box;
-          padding:0 20px 20px;
+          padding:2px 20px 24px;
+        }
+        .wz-categories-heading{
+          max-width:1320px;
+          margin:0 auto 12px;
+          display:flex;
+          align-items:baseline;
+          justify-content:space-between;
+          gap:14px;
         }
         .wz-categories-label{
-          max-width:1180px;
-          margin:0 auto 8px;
-          color:var(--g4);
+          margin:0;
+          color:var(--br3);
           font-size:9px;
           font-weight:900;
-          letter-spacing:.16em;
+          letter-spacing:.20em;
           text-transform:uppercase;
         }
+        .wz-categories-hint{
+          color:rgba(255,255,255,.36);
+          font-size:10px;
+          letter-spacing:.025em;
+        }
         .wz-categories-scroll{
-          max-width:1180px;
+          max-width:1320px;
           margin:0 auto;
           display:flex;
-          gap:8px;
+          gap:12px;
           overflow-x:auto;
           overflow-y:hidden;
-          padding:2px 2px 6px;
+          padding:2px 2px 9px;
           scrollbar-width:none;
           -webkit-overflow-scrolling:touch;
           overscroll-behavior-x:contain;
-          scroll-snap-type:x proximity;
+          scroll-snap-type:x mandatory;
         }
         .wz-categories-scroll::-webkit-scrollbar{display:none;}
-        .wz-categories-scroll .cat-btn{
-          flex:0 0 auto;
+        .wz-category-card{
+          position:relative;
+          isolation:isolate;
+          flex:0 0 clamp(158px,17vw,214px);
+          height:128px;
+          overflow:hidden;
+          display:flex;
+          align-items:flex-end;
+          padding:15px 15px 14px;
+          text-align:left;
+          color:#fff;
+          background:radial-gradient(ellipse at 72% 26%,rgba(213,183,112,.22),transparent 55%),linear-gradient(140deg,#20232c,#0b0e14 78%);
+          border:1px solid rgba(213,183,112,.17);
+          border-radius:17px;
+          box-shadow:0 9px 26px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.05);
+          cursor:pointer;
           scroll-snap-align:start;
+          transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease;
+        }
+        .wz-category-card-image{
+          position:absolute;
+          z-index:-2;
+          inset:0;
+          width:100%;
+          height:100%;
+          object-fit:cover;
+          object-position:center;
+          opacity:.63;
+          filter:saturate(.82) contrast(1.04);
+          transform:scale(1.015);
+          transition:transform .65s cubic-bezier(.2,.7,.3,1),opacity .35s ease;
+        }
+        .wz-category-card-shade{
+          position:absolute;
+          z-index:-1;
+          inset:0;
+          background:linear-gradient(180deg,rgba(5,7,12,.04) 0%,rgba(5,7,12,.30) 38%,rgba(5,7,12,.94) 100%),linear-gradient(90deg,rgba(5,7,12,.20),transparent 80%);
+        }
+        .wz-category-card-content{
+          min-width:0;
+          display:flex;
+          flex-direction:column;
+          align-items:flex-start;
+          gap:4px;
+        }
+        .wz-category-card-kicker{
+          color:#e2ca8e;
+          font-size:7px;
+          line-height:1.2;
+          font-weight:900;
+          letter-spacing:.18em;
+        }
+        .wz-category-card-content strong{
+          max-width:100%;
+          overflow:hidden;
+          color:#fff;
+          font-size:15px;
+          line-height:1.15;
+          font-weight:750;
+          letter-spacing:-.025em;
+          text-overflow:ellipsis;
           white-space:nowrap;
-          min-height:38px;
+        }
+        .wz-category-card-content small{
+          color:rgba(255,255,255,.66);
+          font-size:9px;
+          line-height:1.2;
+          font-weight:600;
+        }
+        .wz-category-card-arrow{
+          position:absolute;
+          top:10px;
+          right:11px;
+          width:25px;
+          height:25px;
+          display:grid;
+          place-items:center;
+          border:1px solid rgba(255,255,255,.24);
+          border-radius:50%;
+          background:rgba(5,7,12,.26);
+          color:#f1d99e;
+          font-size:13px;
+          opacity:.88;
+          backdrop-filter:blur(8px);
+        }
+        .wz-category-card.is-active{
+          border-color:rgba(230,201,137,.82);
+          box-shadow:0 0 0 1px rgba(230,201,137,.22),0 15px 32px rgba(0,0,0,.34),0 0 24px rgba(213,183,112,.10);
+        }
+        .wz-category-card.is-active .wz-category-card-image{opacity:.78;}
+        .wz-category-card:focus-visible{outline:2px solid #f1d99e;outline-offset:3px;}
+        @media(hover:hover) and (pointer:fine){
+          .wz-category-card:hover{transform:translateY(-3px);border-color:rgba(230,201,137,.54);box-shadow:0 16px 32px rgba(0,0,0,.32);}
+          .wz-category-card:hover .wz-category-card-image{transform:scale(1.075);opacity:.83;}
         }
         @media(max-width:640px){
-          .wz-categories-wrap{padding:0 14px 16px;}
-          .wz-categories-label{font-size:8px;margin-bottom:7px;}
-          .wz-categories-scroll{gap:7px;padding-bottom:5px;}
-          .wz-categories-scroll .cat-btn{
-            min-height:36px;
-            padding-left:13px!important;
-            padding-right:13px!important;
-            font-size:11px!important;
-          }
+          .wz-categories-wrap{padding:0 14px 18px;}
+          .wz-categories-heading{margin-bottom:10px;}
+          .wz-categories-label{font-size:8px;}
+          .wz-categories-hint{font-size:9px;}
+          .wz-categories-scroll{gap:9px;padding-bottom:7px;}
+          .wz-category-card{flex-basis:148px;height:112px;padding:12px 12px 11px;border-radius:14px;}
+          .wz-category-card-content strong{font-size:13px;}
+          .wz-category-card-content small{font-size:8px;}
+          .wz-category-card-arrow{width:22px;height:22px;top:8px;right:9px;}
         }
+        @media(max-width:380px){
+          .wz-category-card{flex-basis:136px;height:104px;}
+          .wz-categories-hint{display:none;}
+        }
+        @media(prefers-reduced-motion:reduce){.wz-category-card,.wz-category-card-image{transition:none!important;}}
       `}</style>
 
       <style>{`
