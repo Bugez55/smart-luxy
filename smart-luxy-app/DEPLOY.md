@@ -13,10 +13,20 @@ insert into public.admin_users(user_id) values ('UUID_DU_USER_AUTH');
 > Ne mets jamais un mot de passe admin dans `VITE_*`, dans le code React ou dans `localStorage`.
 
 ## 2. Base déjà en production
-Si Supabase contient déjà tes tables, tu peux appliquer uniquement `supabase/security_patch.sql` au lieu de réexécuter tout le schéma.
+Si Supabase contient déjà tes tables, applique `supabase/security_patch.sql`, puis `supabase/functional_fixes_2026.sql` dans le SQL Editor. Cette seconde migration est réexécutable et :
+- conserve les tarifs de livraison déjà saisis dans `shipping_rates` ;
+- autorise leur lecture publique uniquement via `get_public_shipping_rates()` ;
+- ajoute les colonnes et fonctions attendues par Meta CAPI ;
+- ajoute la réconciliation de commande après création d'un colis Yalidine ;
+- ajoute les colonnes de réservation des notifications Telegram ;
+- aligne la limite et les types MIME du bucket `product-images` sur l'import d'images.
+
+**Les tarifs restent modifiables dans l'administration.** Ne remplace pas cette table par des montants codés dans le frontend.
+
+Exécute cette migration avant de déployer le nouveau frontend et les API.
 
 ## 3. Vercel
-Ajoute les variables présentes dans `.env.example`. Les variables serveur sensibles doivent être configurées dans Vercel et **ne doivent pas être commitées**.
+Copie les noms de variables de `.env.example` dans les paramètres Vercel (le fichier est un modèle, il ne contient aucune clé). Les variables serveur sensibles doivent être configurées dans Vercel et **ne doivent pas être commitées**. `SUPABASE_SECRET_KEY` est nécessaire aux fonctions serveur CAPI, import et notifications.
 
 Variables particulièrement sensibles : `FB_CAPI_ACCESS_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `YALIDINE_API_ID`, `YALIDINE_API_TOKEN`.
 
@@ -36,6 +46,9 @@ Le bandeau à un seul bouton **OK** est conservé. Le Pixel Meta n'est activé q
 - tester l'expédition Yalidine avec les secrets Vercel ;
 - vérifier qu'une double action admin ne crée qu'une seule tentative Yalidine ;
 - tester Meta Lead/Purchase ;
+- vérifier que les tarifs changés dans l'admin apparaissent sur une fiche produit et dans le formulaire de commande ;
+- tester l'import AliExpress avec plusieurs images, dont une image volumineuse et une image refusée ;
+- vérifier la notification Telegram d'une commande et l'absence de doublon ;
 - vérifier qu'un utilisateur Auth non présent dans `admin_users` n'accède pas aux données admin.
 
 ## 7. Build
