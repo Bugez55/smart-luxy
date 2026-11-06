@@ -29,7 +29,7 @@ const LIVRAISON = {
   'Bordj Badji Mokhtar':{bureau:1500,domicile:1900},'Ouled Djellal':{bureau:600,domicile:1100},
 }
 
-export default function ProductPage({ product: p, allProducts, affiliateOffer = null, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
+export default function ProductPage({ product: p, allProducts, cartItems = [], affiliateOffer = null, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
   const [openFaq, setOpenFaq] = useState(null)
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('ar')
@@ -383,19 +383,22 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
 
   // Quantité déjà ajoutée pour chaque modèle : affichée comme un badge
   // persistant sur sa carte, même après disparition de la mini-notification.
+  function getModelSourceItems() {
+    return checkoutOnly
+      ? modelOrderItems
+      : (cartItems || []).filter(item => String(item.id) === String(p.id))
+  }
+
   function getModelAddedQty(modelName) {
     const key = normalizeModelName(modelName)
-    return modelOrderItems.reduce((sum, item) =>
+    return getModelSourceItems().reduce((sum, item) =>
       sum + (normalizeModelName(item.model || item.modele) === key ? Number(item.qty) || 0 : 0), 0
     )
   }
 
   function currentModelAlreadyQty() {
     if (!hasModels || !selectedModel) return 0
-    const key = normalizeModelName(selectedModel)
-    return modelOrderItems.reduce((sum, item) =>
-      sum + (normalizeModelName(item.model || item.modele) === key ? Number(item.qty) || 0 : 0), 0
-    )
+    return getModelAddedQty(selectedModel)
   }
 
   function handleAddCurrentModelToOrder() {
@@ -426,20 +429,24 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
       model_image: String(activeModel.image || ''),
     }
 
-    setModelOrderItems(prev => {
-      const index = prev.findIndex(item => normalizeModelName(item.model || item.modele) === normalizeModelName(modelName))
-      if (index >= 0) {
-        return prev.map((item, i) => i === index ? { ...item, qty: Number(item.qty || 0) + wantedQty } : item)
-      }
-      return [...prev, variantItem]
-    })
-    const selectedBefore = modelOrderItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+    if (checkoutOnly || typeof onAddToCart !== 'function') {
+      setModelOrderItems(prev => {
+        const index = prev.findIndex(item => normalizeModelName(item.model || item.modele) === normalizeModelName(modelName))
+        if (index >= 0) {
+          return prev.map((item, i) => i === index ? { ...item, qty: Number(item.qty || 0) + wantedQty } : item)
+        }
+        return [...prev, variantItem]
+      })
+    } else {
+      onAddToCart(variantItem, wantedQty)
+    }
+
     showVariantAddedNotice({
       kind: 'model',
       name: modelName,
       addedQty: wantedQty,
       variantTotal: alreadyQty + wantedQty,
-      totalItems: selectedBefore + wantedQty,
+      totalItems: alreadyQty + wantedQty,
     })
 
     setSelectedModel(null)
@@ -456,19 +463,22 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
   }
 
   // Même principe pour les couleurs : le nombre reste visible dans sa pastille.
+  function getColorSourceItems() {
+    return checkoutOnly
+      ? colorOrderItems
+      : (cartItems || []).filter(item => String(item.id) === String(p.id))
+  }
+
   function getColorAddedQty(colorName) {
     const key = normalizeColorName(colorName)
-    return colorOrderItems.reduce((sum, item) =>
+    return getColorSourceItems().reduce((sum, item) =>
       sum + (normalizeColorName(item.color || item.couleur) === key ? Number(item.qty) || 0 : 0), 0
     )
   }
 
   function currentColorAlreadyQty() {
     if (!hasColors || !selectedColor) return 0
-    const key = normalizeColorName(selectedColor)
-    return colorOrderItems.reduce((sum, item) => {
-      return sum + (normalizeColorName(item.color || item.couleur) === key ? Number(item.qty) || 0 : 0)
-    }, 0)
+    return getColorAddedQty(selectedColor)
   }
 
   function handleAddCurrentSelectionToCart() {
@@ -498,38 +508,41 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
     const colorName = String(activeColor?.name || selectedColor).trim()
     const colorKey = normalizeColorName(colorName)
 
-    setColorOrderItems(prev => {
-      const existingIndex = prev.findIndex(
-        item => normalizeColorName(item.color || item.couleur) === colorKey
-      )
+    const variantItem = {
+      ...p,
+      qty: wantedQty,
+      prix: prixUnit,
+      color: colorName,
+      couleur: colorName,
+      color_image: String(activeColor?.image || ''),
+    }
 
-      if (existingIndex >= 0) {
-        return prev.map((item, index) =>
-          index === existingIndex
-            ? { ...item, qty: Number(item.qty) + wantedQty }
-            : item
+    if (checkoutOnly || typeof onAddToCart !== 'function') {
+      setColorOrderItems(prev => {
+        const existingIndex = prev.findIndex(
+          item => normalizeColorName(item.color || item.couleur) === colorKey
         )
-      }
 
-      return [
-        ...prev,
-        {
-          ...p,
-          qty: wantedQty,
-          prix: prixUnit,
-          color: colorName,
-          couleur: colorName,
-        },
-      ]
-    })
+        if (existingIndex >= 0) {
+          return prev.map((item, index) =>
+            index === existingIndex
+              ? { ...item, qty: Number(item.qty) + wantedQty }
+              : item
+          )
+        }
 
-    const selectedBefore = colorOrderItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+        return [...prev, variantItem]
+      })
+    } else {
+      onAddToCart(variantItem, wantedQty)
+    }
+
     showVariantAddedNotice({
       kind: 'color',
       name: colorName,
       addedQty: wantedQty,
       variantTotal: alreadyQty + wantedQty,
-      totalItems: selectedBefore + wantedQty,
+      totalItems: alreadyQty + wantedQty,
     })
 
     // Prépare immédiatement la prochaine couleur.
@@ -1036,7 +1049,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
                   <button type="button" disabled={remainingModelStock !== null && qty >= remainingModelStock} onClick={() => setQty(q => remainingModelStock !== null ? Math.min(remainingModelStock, q+1) : q+1)} style={{ width:42, height:42, borderRadius:10, border:'1px solid rgba(96,165,250,.25)', background:'rgba(96,165,250,.10)', color:remainingModelStock !== null && qty>=remainingModelStock?'#555':'#93c5fd', fontSize:22, cursor:remainingModelStock !== null && qty>=remainingModelStock?'not-allowed':'pointer' }}>+</button>
                 </div>
                 {remainingModelStock !== null && <div style={{ textAlign:'center', fontSize:9, color:'var(--g4)', marginTop:5 }}>{remainingModelStock} disponible(s) restant(s) à ajouter</div>}
-                <button type="button" disabled={selectedModelOutOfStock || selectedModelMaxReached || (remainingModelStock !== null && qty>remainingModelStock)} onClick={handleAddCurrentModelToOrder} style={{ width:'100%', marginTop:9, padding:'13px 12px', background:selectedModelOutOfStock || selectedModelMaxReached ? '#222' : 'linear-gradient(135deg,#60a5fa,#93c5fd)', border:'none', borderRadius:12, color:selectedModelOutOfStock || selectedModelMaxReached ? '#666' : '#07101d', fontSize:13, fontWeight:900, cursor:selectedModelOutOfStock || selectedModelMaxReached ? 'not-allowed' : 'pointer' }}>🛒 Ajouter {activeModel.name} ×{qty} à la commande</button>
+                <button type="button" disabled={selectedModelOutOfStock || selectedModelMaxReached || (remainingModelStock !== null && qty>remainingModelStock)} onClick={handleAddCurrentModelToOrder} style={{ width:'100%', marginTop:9, padding:'13px 12px', background:selectedModelOutOfStock || selectedModelMaxReached ? '#222' : 'linear-gradient(135deg,#60a5fa,#93c5fd)', border:'none', borderRadius:12, color:selectedModelOutOfStock || selectedModelMaxReached ? '#666' : '#07101d', fontSize:13, fontWeight:900, cursor:selectedModelOutOfStock || selectedModelMaxReached ? 'not-allowed' : 'pointer' }}>🛒 Ajouter {activeModel.name} ×{qty} {checkoutOnly ? 'à la commande' : 'au panier'}</button>
               </div>
             )}
           </div>
@@ -1084,9 +1097,7 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
                     onClick={() => {
                       if (soldOut) return
                       setSelectedColor(name)
-                      const alreadyAdded = colorOrderItems.reduce((sum, item) =>
-                        sum + (normalizeColorName(item.color || item.couleur) === normalizeColorName(name) ? Number(item.qty) || 0 : 0), 0
-                      )
+                      const alreadyAdded = getColorAddedQty(name)
                       const remaining = hasFiniteStock ? Math.max(0, stock - alreadyAdded) : null
                       setQty(q => Math.max(1, remaining !== null ? Math.min(q, remaining || 1) : q))
                     }}
@@ -1202,12 +1213,12 @@ export default function ProductPage({ product: p, allProducts, affiliateOffer = 
                     boxShadow:(selectedColor !== null && !selectedColorOutOfStock) ? '0 6px 18px rgba(201,168,76,.18)' : 'none',
                   }}
                 >
-                  🛒 {selectedColor ? `Ajouter ${activeColor?.name || selectedColor} ×${currentQty} à la commande` : 'Choisis une couleur puis ajoute-la'}
+                  🛒 {selectedColor ? `Ajouter ${activeColor?.name || selectedColor} ×${currentQty} au panier` : 'Choisis une couleur puis ajoute-la'}
                 </button>
 
                 {selectedColor && !selectedColorOutOfStock && (
                   <div style={{ marginTop:6, fontSize:10, color:'var(--g4)', textAlign:'center', lineHeight:1.4 }}>
-                    {colorOrderItems.length > 0
+                    {getColorAddedQty(selectedColor) > 0
                       ? 'Tu peux ensuite choisir une autre couleur.'
                       : 'Après l’ajout, tu peux choisir une autre couleur avec une quantité différente.'}
                   </div>
