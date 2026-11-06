@@ -1096,13 +1096,19 @@ values (
   'product-images',
   'product-images',
   true,
-  2097152,
-  array['image/jpeg','image/png','image/webp','image/gif']::text[]
+  6291456,
+  array['image/jpeg','image/png','image/webp','image/gif','image/avif']::text[]
 )
 on conflict (id) do update
 set public = true,
-    file_size_limit = 2097152,
-    allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif']::text[];
+    file_size_limit = greatest(coalesce(current_bucket.file_size_limit, 0), excluded.file_size_limit),
+    allowed_mime_types = (
+      select array_agg(distinct allowed.mime_type order by allowed.mime_type)
+      from unnest(
+        coalesce(current_bucket.allowed_mime_types, array[]::text[])
+        || excluded.allowed_mime_types
+      ) as allowed(mime_type)
+    );
 
 drop policy if exists "public read product images" on storage.objects;
 drop policy if exists "public review image upload" on storage.objects;
@@ -1135,7 +1141,6 @@ from (values
 where not exists (select 1 from public.products);
 
 -- Functional additions used by the storefront and server APIs.
--- The same idempotent patch is also provided separately for existing projects.
 -- WAZYO — Functional fixes (2026-11)
 -- Apply after schema.sql + security_patch.sql on existing projects.
 -- Idempotent: safe to rerun. Does not modify existing shipping-rate values.
@@ -1163,6 +1168,27 @@ as $$
   from public.shipping_rates r
   order by r.wilaya;
 $$;
+
+revoke all on function public.get_public_shipping_rates() from public;
+grant execute on function public.get_public_shipping_rates() to anon, authenticated;
+
+-- 1b) Public rates: invoker rights, constrained to the three public tariff columns.
+-- The production table already has SELECT grants and a public-read RLS policy.
+create or replace function public.get_public_shipping_rates()
+returns table (
+  wilaya text,
+  bureau numeric(12,2),
+  domicile numeric(12,2)
+)
+language sql
+stable
+security invoker
+set search_path = pg_catalog, public
+as $
+  select r.wilaya, r.bureau, r.domicile
+  from public.shipping_rates r
+  order by r.wilaya;
+$;
 
 revoke all on function public.get_public_shipping_rates() from public;
 grant execute on function public.get_public_shipping_rates() to anon, authenticated;
@@ -1305,7 +1331,7 @@ alter table public.orders
   add column if not exists telegram_notified_at timestamptz;
 
 -- 5) Match the importer limits and formats accepted by Storage.
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+insert into storage.buckets as current_bucket (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'product-images',
   'product-images',
@@ -1316,7 +1342,13 @@ values (
 on conflict (id) do update
 set public = true,
     file_size_limit = greatest(coalesce(current_bucket.file_size_limit, 0), excluded.file_size_limit),
-    allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif','image/avif']::text[];
+    allowed_mime_types = (
+      select array_agg(distinct allowed.mime_type order by allowed.mime_type)
+      from unnest(
+        coalesce(current_bucket.allowed_mime_types, array[]::text[])
+        || excluded.allowed_mime_types
+      ) as allowed(mime_type)
+    );
 
 
 -- 6) Rate-limit public tracking lookups without exposing customer contact details.
@@ -1332,8 +1364,8 @@ create or replace function public.get_order_tracking(p_order_id text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, private, pg_temp
-as $$
+set search_path = public, private, extensions, pg_temp
+as $
 declare
   o public.orders;
   v_headers jsonb;
@@ -1408,3 +1440,40 @@ revoke all on function public.get_order_tracking(text) from public;
 grant execute on function public.get_order_tracking(text) to anon, authenticated;
 
 commit;
+
+
+-- 7) Remove legacy permissive policies that bypass the admin allowlist.
+-- The matching admin-only policies remain in place and continue to protect the panel.
+drop policy if exists "admin products all" on public.products;
+drop policy if exists "admin orders all" on public.orders;
+drop policy if exists "admin client_notes" on public.client_notes;
+
+-- Only active banners are public. Management remains restricted to is_admin().
+drop policy if exists "banner admin" on public.banner_messages;
+drop policy if exists "banner read" on public.banner_messages;
+
+-- Public settings reads stay available through the key-filtered policy
+-- "settings read public"; public writes and unfiltered reads are removed.
+drop policy if exists "settings update" on public.settings;
+drop policy if exists "settings upsert" on public.settings;
+drop policy if exists "settings write" on public.settings;
+drop policy if exists "public read settings" on public.settings;
+
+-- Product image reads remain public; uploads/updates/deletes require is_admin().
+drop policy if exists "admin upload images" on storage.objects;
+drop policy if exists "admin update images" on storage.objects;
+drop policy if exists "admin delete images" on storage.objects;
+
+-- Retire the old plaintext-password verifier. The storefront now uses Supabase Auth.
+revoke all on function public.verify_admin_password(text) from public, anon, authenticated;
+
+-- These RPCs are admin-panel operations; their bodies also enforce is_admin().
+revoke all on function public.create_affiliate_link_admin(
+  bigint, bigint, text, numeric, numeric, timestamptz, timestamptz
+) from public, anon;
+grant execute on function public.create_affiliate_link_admin(
+  bigint, bigint, text, numeric, numeric, timestamptz, timestamptz
+) to authenticated;
+
+revoke all on function public.get_affiliate_financial_dashboard() from public, anon;
+grant execute on function public.get_affiliate_financial_dashboard() to authenticated;
