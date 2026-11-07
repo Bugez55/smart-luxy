@@ -8,9 +8,11 @@ import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { requireAdmin } from './_auth.js'
 import { applyCors } from './_cors.js'
+import { getVerifiedImageExtension } from './_image-validation.js'
 
 const MAX_RESPONSE_BYTES = 6 * 1024 * 1024
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024
+const MAX_PASTED_HTML_BYTES = 2 * 1024 * 1024
 const STORAGE_BUCKET = 'product-images'
 
 
@@ -339,35 +341,9 @@ function getSupabaseAdmin() {
   )
 }
 
-function getImageExtension(contentType, imageUrl) {
-  const type = (contentType || '').toLowerCase()
-
-  if (type.includes('png')) return 'png'
-  if (type.includes('webp')) return 'webp'
-  if (type.includes('gif')) return 'gif'
-  if (type.includes('avif')) return 'avif'
-  if (type.includes('jpeg') || type.includes('jpg')) {
-    return 'jpg'
-  }
-
-  try {
-    const pathname = new URL(imageUrl).pathname
-    const match = pathname.match(
-      /\.(jpg|jpeg|png|webp|gif|avif)$/i
-    )
-
-    if (match) {
-      return match[1].toLowerCase() === 'jpeg'
-        ? 'jpg'
-        : match[1].toLowerCase()
-    }
-  } catch {
-    // ignore
-  }
-
-  return 'jpg'
+function getImageExtension(buffer, contentType) {
+  return getVerifiedImageExtension(buffer, contentType)
 }
-
 
 async function fetchImageSafely(rawUrl) {
   const { response, finalUrl } = await fetchSafeUrl(rawUrl, {
@@ -451,10 +427,7 @@ async function downloadAndStoreImage(
     MAX_IMAGE_BYTES
   )
 
-  const extension = getImageExtension(
-    contentType,
-    finalUrl
-  )
+  const extension = getImageExtension(buffer, contentType)
 
   const hash = crypto
     .createHash('sha256')
@@ -565,6 +538,10 @@ export default async function handler(req, res) {
     pastedHtml &&
     typeof pastedHtml === 'string'
   ) {
+    if (Buffer.byteLength(pastedHtml, 'utf8') > MAX_PASTED_HTML_BYTES) {
+      return res.status(413).json({ error: 'Le code HTML collé dépasse la limite autorisée de 2 Mio.' })
+    }
+
     if (pastedHtml.length < 200) {
       return res.status(400).json({
         error:
