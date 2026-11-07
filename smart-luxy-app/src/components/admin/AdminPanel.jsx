@@ -2386,7 +2386,7 @@ export default function AdminPanel({ onLogout, onToast }) {
           Wazyo — Admin
         </div>
         <div className="adm-tabs">
-          {[['dashboard','🏠 Dashboard'],['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stats','📊 Stats'],['promos','🎟️ Promos'],['affiliate','🤝 Influenceurs'],['hero','🎬 Hero accueil'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
+          {[['dashboard','🏠 Dashboard'],['orders','📋 Commandes'],['clients','👥 Clients'],['products','📦 Produits'],['stock','📦 Stock'],['stats','📊 Stats'],['promos','🎟️ Promos'],['affiliate','🤝 Influenceurs'],['hero','🎬 Hero accueil'],['banner','📢 Bannière'],['images','🗜️ Images'],['livraison','🚚 Livraison'],['theme','🎨 Thème'],['settings','⚙️ Paramètres']].map(([k,l]) => (
             <button key={k} className={`adm-tab ${tab===k?'active':''}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -2848,6 +2848,88 @@ export default function AdminPanel({ onLogout, onToast }) {
             )}
           </div>
         )}
+
+        {/* ── STOCK TAB ── */}
+        {tab === 'stock' && (() => {
+          const asArray = value => {
+            if (Array.isArray(value)) return value
+            if (typeof value === 'string') { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : [] } catch { return [] } }
+            return []
+          }
+          const rows = products.flatMap(p => {
+            const models = asArray(p.models)
+            const colors = asArray(p.colors)
+            const hasModels = !!p.show_models && models.length > 0
+            const hasColors = colors.length > 0
+            if (hasModels) return models.map(m => ({
+              key: `model-${p.id}-${m.name}`, product: p.nom, variant: m.name || 'Modèle',
+              stock: m.stock, type: 'Modèle'
+            }))
+            if (hasColors) return colors.map(col => ({
+              key: `color-${p.id}-${col.name}`, product: p.nom, variant: col.name || 'Couleur',
+              stock: col.stock, type: 'Couleur'
+            }))
+            return [{ key: `product-${p.id}`, product: p.nom, variant: 'Stock général', stock: p.stock, type: 'Produit' }]
+          })
+          const validRows = rows.filter(r => r.stock !== null && r.stock !== undefined && r.stock !== '')
+          const totalUnits = validRows.reduce((sum, r) => sum + Math.max(0, Number(r.stock) || 0), 0)
+          const lowRows = validRows.filter(r => Number(r.stock) > 0 && Number(r.stock) <= 5).length
+          const outRows = validRows.filter(r => Number(r.stock) <= 0).length
+          const [stockSearch, setStockSearch] = useState('')
+          const [stockFilter, setStockFilter] = useState('all')
+          const visibleRows = validRows.filter(r => {
+            const matchesSearch = !stockSearch || `${r.product} ${r.variant}`.toLowerCase().includes(stockSearch.trim().toLowerCase())
+            const n = Number(r.stock)
+            const matchesFilter = stockFilter === 'all' || (stockFilter === 'low' && n > 0 && n <= 5) || (stockFilter === 'out' && n <= 0)
+            return matchesSearch && matchesFilter
+          })
+          return (
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap',marginBottom:16}}>
+                <div>
+                  <h3 style={{color:'white',fontSize:16,fontWeight:900,margin:'0 0 5px'}}>📦 État du stock</h3>
+                  <p style={{color:'rgba(255,255,255,.45)',fontSize:12,margin:0}}>Consultation uniquement — les quantités affichées proviennent des fiches produits.</p>
+                </div>
+                <button className="act-btn" onClick={loadProducts}>↻ Actualiser</button>
+              </div>
+              <div className="adm-stats" style={{marginBottom:16}}>
+                <div className="stat-card"><div className="label">Références suivies</div><div className="value">{validRows.length}</div></div>
+                <div className="stat-card"><div className="label">Unités en stock</div><div className="value">{totalUnits.toLocaleString('fr-DZ')}</div></div>
+                <div className="stat-card"><div className="label">Stocks faibles (≤ 5)</div><div className="value" style={{color:'#fbbf24'}}>{lowRows}</div></div>
+                <div className="stat-card"><div className="label">Ruptures</div><div className="value" style={{color:'#fca5a5'}}>{outRows}</div></div>
+              </div>
+              <div className="adm-toolbar" style={{marginBottom:14}}>
+                <input className="adm-search" placeholder="Rechercher un produit ou une variante…" value={stockSearch} onChange={e=>setStockSearch(e.target.value)} />
+                {[
+                  ['all','Tous'],['low','Stock faible'],['out','Rupture']
+                ].map(([key,label]) => <button key={key} className={`filter-btn ${stockFilter===key?'active':''}`} onClick={()=>setStockFilter(key)}>{label}</button>)}
+              </div>
+              {loading ? <div className="spinner">Chargement…</div> : visibleRows.length === 0 ? (
+                <div style={{padding:28,textAlign:'center',color:'rgba(255,255,255,.45)'}}>Aucun stock correspondant à cette recherche.</div>
+              ) : (
+                <div style={{overflowX:'auto',border:'1px solid rgba(255,255,255,.08)',borderRadius:12}}>
+                  <table style={{width:'100%',borderCollapse:'collapse',minWidth:560}}>
+                    <thead><tr style={{background:'rgba(255,255,255,.04)',textAlign:'left'}}>
+                      {['Produit','Variante','Type','Quantité'].map(label=><th key={label} style={{padding:'11px 12px',fontSize:11,color:'rgba(255,255,255,.5)',whiteSpace:'nowrap'}}>{label}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {visibleRows.map(row=>{
+                        const n=Number(row.stock)
+                        const color=n<=0?'#fca5a5':n<=5?'#fbbf24':'#86efac'
+                        return <tr key={row.key} style={{borderTop:'1px solid rgba(255,255,255,.06)'}}>
+                          <td style={{padding:'12px',fontSize:12,color:'white',fontWeight:700}}>{row.product}</td>
+                          <td style={{padding:'12px',fontSize:12,color:'rgba(255,255,255,.72)'}}>{row.variant}</td>
+                          <td style={{padding:'12px',fontSize:11,color:'rgba(255,255,255,.45)'}}>{row.type}</td>
+                          <td style={{padding:'12px',fontSize:13,color,fontWeight:900}}>{n.toLocaleString('fr-DZ')}</td>
+                        </tr>
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* ── STATS TAB ── */}
         {tab === 'stats' && (
