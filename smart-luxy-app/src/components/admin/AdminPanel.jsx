@@ -15,6 +15,8 @@ const STATUTS = [
   { key: 'shipped',   label: '🚚 Expédiées' },
   { key: 'delivered', label: '📦 Livrées' },
   { key: 'cancelled', label: '❌ Annulées' },
+  { key: 'returned',  label: '↩️ Retours' },
+
 ]
 
 const STATUT_COLORS = {
@@ -23,15 +25,18 @@ const STATUT_COLORS = {
   shipped:   { bg: 'rgba(167,139,250,.15)', color: '#c4b5fd', label: '🚚 Expédiée' },
   delivered: { bg: 'rgba(201,168,76,.15)',  color: '#C9A84C', label: '📦 Livrée' },
   cancelled: { bg: 'rgba(252,165,165,.15)', color: '#fca5a5', label: '❌ Annulée' },
+  returned:  { bg: 'rgba(249,115,22,.15)', color: '#fdba74', label: '↩️ Retournée' },
+
 }
 
 // Transitions autorisées : le même workflow est aussi contrôlé côté Supabase.
 const ORDER_STATUS_TRANSITIONS = {
   new:       ['confirmed', 'cancelled'],
   confirmed: ['shipped', 'cancelled'],
-  shipped:   ['delivered', 'cancelled'],
-  delivered: [],
+  shipped:   ['delivered', 'cancelled', 'returned'],
+  delivered: ['returned'],
   cancelled: [],
+  returned:  [],
 }
 
 function canTransitionOrderStatus(from, to) {
@@ -1924,6 +1929,7 @@ export default function AdminPanel({ onLogout, onToast }) {
   const canBulkShip = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'shipped'))
   const canBulkDeliver = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'delivered'))
   const canBulkCancel = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'cancelled'))
+  const canBulkReturn = selectedOrderRows.length > 0 && selectedOrderRows.every(o => canTransitionOrderStatus(o.statut, 'returned'))
 
   // ── Actions groupées ──
   function toggleSelect(id) {
@@ -1955,7 +1961,8 @@ export default function AdminPanel({ onLogout, onToast }) {
       return
     }
 
-    if (!window.confirm(`Passer ${selectedOrders.size} commande${selectedOrders.size > 1 ? 's' : ''} à « ${STATUT_COLORS[statut]?.label || statut} » ?`)) return
+    const returnWarning = statut === 'returned' ? '\\n\\nLe stock des produits, modèles et couleurs sera réintégré automatiquement. Cette action ne pourra pas être annulée.' : ''
+    if (!window.confirm(`Passer ${selectedOrders.size} commande${selectedOrders.size > 1 ? 's' : ''} à « ${STATUT_COLORS[statut]?.label || statut} » ?${returnWarning}`)) return
     setBulkLoading(true)
 
     const { data: updatedRows, error } = await supabase.from('orders')
@@ -1993,6 +2000,7 @@ export default function AdminPanel({ onLogout, onToast }) {
       shipped: 'expédiées',
       delivered: 'livrées',
       cancelled: 'annulées',
+      returned: 'marquées comme retournées (stock réintégré)',
     }[statut] || 'mises à jour'
 
     onToast && onToast(`✅ ${updatedIds.size} commande${updatedIds.size > 1 ? 's' : ''} ${successLabel}`, 'default')
@@ -2109,6 +2117,8 @@ export default function AdminPanel({ onLogout, onToast }) {
       return
     }
 
+    if (statut === 'returned' && !window.confirm('Confirmer le retour de ce colis ?\\n\\nLe stock des articles, modèles et couleurs sera automatiquement réintégré. Cette action est définitive.')) return
+
     // Demande explicite à Supabase + retour de la ligne modifiée.
     // On n'affiche le nouveau statut localement que si la base l'a réellement accepté.
     const { data, error } = await supabase
@@ -2150,6 +2160,7 @@ export default function AdminPanel({ onLogout, onToast }) {
       shipped: 'expédiée',
       delivered: 'livrée',
       cancelled: 'annulée',
+      returned: 'retournée — stock réintégré',
     }[statut] || 'mise à jour'
 
     onToast && onToast(`✅ Commande ${successLabel}`, 'default')
@@ -2176,7 +2187,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     total: orders.length,
     new: orders.filter(o => o.statut === 'new').length,
     confirmed: orders.filter(o => o.statut === 'confirmed').length,
-    ca: orders.filter(o => o.statut !== 'cancelled').reduce((s, o) => s + Number(o.total || 0), 0),
+    ca: orders.filter(o => !['cancelled','returned'].includes(o.statut)).reduce((s, o) => s + Number(o.total || 0), 0),
   }
 
   // Stats avancées
@@ -2200,7 +2211,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-i)
     const key = localDateKey(d)
     const label = d.toLocaleDateString('fr-DZ',{weekday:'short'})
-    const ca = orders.filter(o => o.created_at && localDateKey(o.created_at)===key && o.statut!=='cancelled')
+    const ca = orders.filter(o => o.created_at && localDateKey(o.created_at)===key && !['cancelled','returned'].includes(o.statut))
                       .reduce((s,o)=>s+Number(o.total||0),0)
     return { key, label, ca }
   }).reverse()
@@ -2632,6 +2643,13 @@ export default function AdminPanel({ onLogout, onToast }) {
                       color: '#fca5a5', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
                     }}>❌ Annuler tout</button>
                   )}
+                  {canBulkReturn && (
+                    <button onClick={() => bulkSetStatus('returned')} disabled={bulkLoading} style={{
+                      background:'rgba(249,115,22,.12)', border:'1px solid rgba(249,115,22,.28)',
+                      borderRadius:8, padding:'5px 12px', color:'#fdba74', fontSize:11,
+                      fontWeight:800, cursor:'pointer', whiteSpace:'nowrap',
+                    }}>↩️ Déclarer les retours</button>
+                  )}
 
                   <button onClick={printSelected} style={{
                     background: 'rgba(201,168,76,.12)', border: '1px solid rgba(201,168,76,.25)',
@@ -2770,6 +2788,9 @@ export default function AdminPanel({ onLogout, onToast }) {
                         {canTransitionOrderStatus(o.statut, 'cancelled') && (
                           <button className="act-btn" onClick={() => setStatus(o.id,'cancelled')}>❌ Annuler</button>
                         )}
+                        {canTransitionOrderStatus(o.statut, 'returned') && (
+                          <button className="act-btn" style={{background:'rgba(249,115,22,.12)',border:'1px solid rgba(249,115,22,.28)',color:'#fdba74'}} onClick={() => setStatus(o.id,'returned')}>↩️ Déclarer un retour</button>
+                        )}
                         <button className="act-btn danger" onClick={() => delOrder(o.id)}>🗑️ Supprimer</button>
                       </div>
                     </div>
@@ -2835,7 +2856,7 @@ export default function AdminPanel({ onLogout, onToast }) {
             <p style={{ color:'rgba(255,255,255,.4)', fontSize:12, marginBottom:18 }}>Vue synthétique des ventes calculée à partir des commandes chargées.</p>
             <div className="adm-stats">
               <div className="stat-card"><div className="label">CA 7 derniers jours</div><div className="value gold">{fmt(last7.reduce((sum,d) => sum+d.ca,0))}</div></div>
-              <div className="stat-card"><div className="label">Panier moyen</div><div className="value">{fmt(orders.filter(o => o.statut !== 'cancelled').length ? stats.ca / orders.filter(o => o.statut !== 'cancelled').length : 0)}</div></div>
+              <div className="stat-card"><div className="label">Panier moyen</div><div className="value">{fmt(orders.filter(o => !['cancelled','returned'].includes(o.statut)).length ? stats.ca / orders.filter(o => !['cancelled','returned'].includes(o.statut)).length : 0)}</div></div>
               <div className="stat-card"><div className="label">📦 Livrées</div><div className="value" style={{color:'#C9A84C'}}>{orders.filter(o => o.statut === 'delivered').length}</div></div>
               <div className="stat-card"><div className="label">❌ Annulées</div><div className="value" style={{color:'#fca5a5'}}>{orders.filter(o => o.statut === 'cancelled').length}</div></div>
             </div>
