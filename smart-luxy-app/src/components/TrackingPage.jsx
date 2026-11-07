@@ -14,6 +14,7 @@ const STATUS_IDX = { new: 0, confirmed: 1, shipped: 2, delivered: 3 }
 
 export default function TrackingPage({ onClose }) {
   const [input, setInput] = useState('')
+  const [phone, setPhone] = useState('')
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -21,8 +22,16 @@ export default function TrackingPage({ onClose }) {
 
   async function search() {
     const q = input.trim().replace(/^#+/, '').toUpperCase()
+    const normalizedPhone = phone.replace(/[^0-9]/g, '')
     const normalizedId = q.startsWith('SL-') ? q : `SL-${q}`
-    if (!q) return
+    if (!q || !normalizedPhone) {
+      setError('Saisissez le numéro de commande et le téléphone utilisé lors de la commande.')
+      return
+    }
+    if (normalizedPhone.length < 9 || normalizedPhone.length > 15) {
+      setError('Vérifiez le numéro de téléphone saisi.')
+      return
+    }
     setLoading(true); setError(''); setOrder(null)
     if (!/^SL-[A-Z0-9]+$/.test(normalizedId)) {
       setLoading(false)
@@ -32,6 +41,7 @@ export default function TrackingPage({ onClose }) {
 
     const { data, error: rpcError } = await supabase.rpc('get_order_tracking', {
       p_order_id: normalizedId,
+      p_phone: normalizedPhone,
     })
     setLoading(false)
     if (rpcError) {
@@ -91,20 +101,36 @@ export default function TrackingPage({ onClose }) {
         <div style={{ flex:1, overflowY:'auto', padding:20 }}>
           {/* Champ de recherche */}
           <p style={{ fontSize:13, color:'var(--g3)', marginBottom:12 }}>
-            Entrez votre numéro de commande (ex: SL-ABC123)
+            Entrez votre numéro de commande et le téléphone utilisé lors de l’achat.
           </p>
-          <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+          <div style={{ display:'grid', gap:9, marginBottom:20 }}>
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && search()}
-              placeholder="SL-XXXXXX"
+              placeholder="Numéro de commande : SL-XXXXXXXXXX"
+              autoComplete="off"
               style={{
-                flex:1, background:'var(--card2)',
+                width:'100%', boxSizing:'border-box', background:'var(--card2)',
                 border:'1px solid rgba(128,128,128,.3)',
                 borderRadius:10, padding:'11px 14px',
                 color:'var(--g3)', fontSize:15, outline:'none',
-                fontFamily:'monospace', letterSpacing:'.05em',
+                fontFamily:'monospace', letterSpacing:'.03em',
+              }}
+            />
+            <input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && search()}
+              placeholder="Téléphone utilisé lors de la commande"
+              style={{
+                width:'100%', boxSizing:'border-box', background:'var(--card2)',
+                border:'1px solid rgba(128,128,128,.3)',
+                borderRadius:10, padding:'11px 14px',
+                color:'var(--g3)', fontSize:15, outline:'none',
               }}
             />
             <button
@@ -112,12 +138,12 @@ export default function TrackingPage({ onClose }) {
               disabled={loading}
               style={{
                 background:'linear-gradient(135deg,#C9A84C,#a8832e)',
-                border:'none', borderRadius:10, padding:'11px 20px',
+                border:'none', borderRadius:10, padding:'12px 20px',
                 color:'var(--bk)', fontSize:14, fontWeight:900, cursor:'pointer',
-                minWidth:80,
+                width:'100%', opacity:loading ? .7 : 1,
               }}
             >
-              {loading ? '…' : '🔍 Chercher'}
+              {loading ? 'Vérification…' : '🔍 Vérifier ma commande'}
             </button>
           </div>
 
