@@ -308,3 +308,88 @@ grant execute on function public.get_affiliate_dashboard() to authenticated;
 -- Fixed, deterministic path for the shipment timestamp trigger.
 alter function public.touch_shipping_dispatch_updated_at()
   set search_path = pg_catalog, public;
+
+
+-- 9) Legacy affiliate RLS policies must target authenticated admins only.
+-- Older production databases created these tables/policies outside schema.sql.
+-- Keep this compatibility block conditional so clean installs without the
+-- optional affiliate module do not fail.
+do $$
+begin
+  if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'influencers' and policyname = 'influencers_admin_all') then
+    execute 'alter policy influencers_admin_all on public.influencers to authenticated';
+  end if;
+  if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'affiliate_links' and policyname = 'affiliate_links_admin_all') then
+    execute 'alter policy affiliate_links_admin_all on public.affiliate_links to authenticated';
+  end if;
+  if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'affiliate_clicks' and policyname = 'affiliate_clicks_admin_all') then
+    execute 'alter policy affiliate_clicks_admin_all on public.affiliate_clicks to authenticated';
+  end if;
+  if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'affiliate_order_attributions' and policyname = 'affiliate_order_attributions_admin_all') then
+    execute 'alter policy affiliate_order_attributions_admin_all on public.affiliate_order_attributions to authenticated';
+  end if;
+end
+$$;
+
+
+-- 10) Public settings are allow-listed, never block-listed.
+-- New settings are private by default until deliberately added here.
+begin;
+alter policy "settings read public"
+  on public.settings
+  using (
+    key = any (array[
+      'baridimob_actif',
+      'baridimob_numero',
+      'ccp_actif',
+      'ccp_nom',
+      'ccp_numero',
+      'custom_themes',
+      'free_ship',
+      'hero_media_type',
+      'hero_media_url',
+      'maintenance',
+      'shop_address',
+      'shop_email',
+      'shop_name',
+      'shop_phone',
+      'theme_accent',
+      'theme_bg',
+      'theme_card',
+      'theme_preset',
+      'theme_text',
+      'theme_text_sub'
+    ]::text[])
+  );
+commit;
+
+-- WAZYO security hardening: keep influencer commission terms internal.
+-- Public order RPCs still return the discount applied to the customer, but
+-- no longer disclose the private commission rate or commission amount.
+-- Idempotent: already-hardened functions are left unchanged.
+
+do $migration$
+declare
+  v_function record;
+  v_definition text;
+  v_old_fragment text := ',''affiliate_commission_percent'',v_link.commission_percent,''affiliate_commission_amount'',v_commission';
+begin
+  for v_function in
+    select p.oid, p.proname
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in (
+        'create_order_with_affiliate',
+        'create_order_with_colors_affiliate'
+      )
+  loop
+    v_definition := pg_get_functiondef(v_function.oid);
+
+    if position(v_old_fragment in v_definition) > 0 then
+      v_definition := replace(v_definition, v_old_fragment, '');
+      execute v_definition;
+    end if;
+  end loop;
+end;
+$migration$;
