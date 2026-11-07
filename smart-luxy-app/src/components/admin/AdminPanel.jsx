@@ -1862,6 +1862,8 @@ export default function AdminPanel({ onLogout, onToast }) {
   const [selectedOrders, setSelectedOrders] = useState(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
   const [editProd, setEditProd] = useState(null)
+  const [stockSearch, setStockSearch] = useState('')
+  const [stockFilter, setStockFilter] = useState('all')
 
   const loadOrders = useCallback(async () => {
     const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
@@ -2875,8 +2877,6 @@ export default function AdminPanel({ onLogout, onToast }) {
           const totalUnits = validRows.reduce((sum, r) => sum + Math.max(0, Number(r.stock) || 0), 0)
           const lowRows = validRows.filter(r => Number(r.stock) > 0 && Number(r.stock) <= 5).length
           const outRows = validRows.filter(r => Number(r.stock) <= 0).length
-          const [stockSearch, setStockSearch] = useState('')
-          const [stockFilter, setStockFilter] = useState('all')
           const visibleRows = validRows.filter(r => {
             const matchesSearch = !stockSearch || `${r.product} ${r.variant}`.toLowerCase().includes(stockSearch.trim().toLowerCase())
             const n = Number(r.stock)
