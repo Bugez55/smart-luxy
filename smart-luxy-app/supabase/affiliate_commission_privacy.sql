@@ -27,4 +27,29 @@ begin
     end if;
   end loop;
 end;
+
+-- The models checkout RPC is a third public order endpoint. It stores the
+-- commission internally in affiliate_order_attributions, but must not return
+-- the commission rate or amount to an anonymous storefront caller.
+do $model_privacy$
+declare
+  v_definition text;
+  v_old_fields text := $model_fields$,
+    'affiliate_commission_percent',CASE WHEN p_affiliate_code IS NOT NULL AND length(trim(p_affiliate_code))>0 THEN v_link.commission_percent ELSE NULL END,
+    'affiliate_commission_amount',CASE WHEN p_affiliate_code IS NOT NULL AND length(trim(p_affiliate_code))>0 THEN v_commission ELSE NULL END$model_fields$;
+begin
+  select pg_get_functiondef(p.oid)
+    into v_definition
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public'
+    and p.proname = 'create_order_with_models';
+
+  if v_definition is not null and position(v_old_fields in v_definition) > 0 then
+    v_definition := replace(v_definition, v_old_fields, '');
+    execute v_definition;
+  end if;
+end;
+$model_privacy$;
+
 $migration$;
