@@ -2923,15 +2923,15 @@ export default function AdminPanel({ onLogout, onToast }) {
             const hasColors = colors.length > 0
             if (hasModels) return models.map(m => ({
               key: `model-${p.id}-${m.name}`, productId: p.id, product: p.nom, variant: m.name || 'Modèle',
-              variantType: 'model', variantName: String(m.name || ''), stock: m.stock, type: 'Modèle'
+              variantType: 'model', variantName: String(m.name || ''), stock: m.stock ?? 0, type: 'Modèle'
             }))
             if (hasColors) return colors.map(col => ({
               key: `color-${p.id}-${col.name}`, productId: p.id, product: p.nom, variant: col.name || 'Couleur',
-              variantType: 'color', variantName: String(col.name || ''), stock: col.stock, type: 'Couleur'
+              variantType: 'color', variantName: String(col.name || ''), stock: col.stock ?? 0, type: 'Couleur'
             }))
-            return [{ key: `product-${p.id}`, productId: p.id, product: p.nom, variant: 'Stock général', variantType: 'product', variantName: null, stock: p.stock, type: 'Produit' }]
+            return [{ key: `product-${p.id}`, productId: p.id, product: p.nom, variant: 'Stock général', variantType: 'product', variantName: null, stock: p.stock ?? 0, type: 'Produit' }]
           })
-          const validRows = rows.filter(r => r.stock !== null && r.stock !== undefined && r.stock !== '')
+          const validRows = rows
           const totalUnits = validRows.reduce((sum, r) => sum + Math.max(0, Number(r.stock) || 0), 0)
           const lowRows = validRows.filter(r => Number(r.stock) > 0 && Number(r.stock) <= 5).length
           const outRows = validRows.filter(r => Number(r.stock) <= 0).length
