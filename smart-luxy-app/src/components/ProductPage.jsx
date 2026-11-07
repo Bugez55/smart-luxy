@@ -164,17 +164,25 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
     ? Math.max(0, Math.round(Number(currentPrix || 0) * (100 - affiliateDiscountPercent) / 100))
     : currentPrix
 
-  const outOfStock = hasModels && selectedModel !== null
-    ? selectedModelOutOfStock
-    : hasColors && selectedColor !== null
-      ? selectedColorOutOfStock
+  // Le stock affiché au client doit toujours correspondre à la variante choisie.
+  // Tant qu'aucun modèle/couleur n'est sélectionné, on ne montre pas le stock global
+  // qui pourrait être différent du stock de chaque variante.
+  const stockToDisplay = hasModels
+    ? (selectedModel !== null ? modelStock : null)
+    : hasColors
+      ? (selectedColor !== null ? colorStock : null)
+      : (p.stock !== null && p.stock !== undefined && Number.isFinite(Number(p.stock)) ? Number(p.stock) : null)
+  const outOfStock = hasModels
+    ? (selectedModel !== null && selectedModelOutOfStock)
+    : hasColors
+      ? (selectedColor !== null && selectedColorOutOfStock)
       : p.stock !== null && p.stock !== undefined && Number(p.stock) <= 0
   const effectiveStock = hasModels && selectedModel !== null && modelStock !== null && Number.isFinite(modelStock)
     ? modelStock
     : hasColors && selectedColor !== null && colorStock !== null && Number.isFinite(colorStock)
       ? colorStock
       : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : null)
-  const lowStock = effectiveStock !== null && Number.isFinite(effectiveStock) && effectiveStock > 0 && effectiveStock <= 5
+  const lowStock = stockToDisplay !== null && Number.isFinite(stockToDisplay) && stockToDisplay > 0 && stockToDisplay <= 5
   const isPromo = p.badge?.includes('Promo') || p.prix_old
   const disc = p.prix_old && p.prix_old > p.prix ? Math.round(100-(p.prix/p.prix_old)*100) : 0
 
@@ -832,7 +840,7 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
             </div>
           </>}
           {outOfStock && <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fca5a5' }}>ÉPUISÉ</div>}
-          {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:32, left:10, background:'rgba(239,68,68,.92)', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'3px 8px', borderRadius:6 }}>🔥 Plus que {p.stock}</div>}
+          {lowStock && !outOfStock && <div style={{ position:'absolute', bottom:32, left:10, background:'rgba(239,68,68,.92)', color:'var(--g3)', fontSize:11, fontWeight:800, padding:'3px 8px', borderRadius:6 }}>🔥 Plus que {stockToDisplay} {stockToDisplay > 1 ? 'unités' : 'unité'}</div>}
           {imgs.length > 1 && <div style={{ position:'absolute', top:10, right:10, background:'rgba(0,0,0,.55)', color:'var(--g3)', fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20, zIndex:3 }}>{imgIdx+1}/{imgs.length}</div>}
         </div>
       ) : (
@@ -1256,12 +1264,18 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
           )
         })()}
 
-        {/* Disponibilité réelle */}
+        {/* Disponibilité réelle : stock global ou stock exact de la variante choisie */}
         {!outOfStock && (
-          <div style={{ display:'inline-flex', alignItems:'center', gap:7, marginBottom:10, padding:'6px 10px', borderRadius:999, background:'rgba(34,197,94,.08)', border:'1px solid rgba(34,197,94,.2)' }}>
-            <span style={{ width:7, height:7, borderRadius:'50%', background:'#22c55e', boxShadow:'0 0 0 4px rgba(34,197,94,.08)', flexShrink:0 }} />
-            <span style={{ fontSize:11, color:'#86efac', fontWeight:800 }}>
-              {p.stock !== null && p.stock !== undefined ? `Disponible — ${p.stock} en stock` : 'Disponible maintenant'}
+          <div style={{ display:'inline-flex', alignItems:'center', gap:7, marginBottom:10, padding:'6px 10px', borderRadius:999, background:lowStock ? 'rgba(239,68,68,.08)' : 'rgba(34,197,94,.08)', border:`1px solid ${lowStock ? 'rgba(239,68,68,.25)' : 'rgba(34,197,94,.2)'}` }}>
+            <span style={{ width:7, height:7, borderRadius:'50%', background:lowStock ? '#f87171' : '#22c55e', boxShadow:lowStock ? '0 0 0 4px rgba(239,68,68,.08)' : '0 0 0 4px rgba(34,197,94,.08)', flexShrink:0 }} />
+            <span style={{ fontSize:11, color:lowStock ? '#fca5a5' : '#86efac', fontWeight:800 }}>
+              {hasModels && selectedModel === null
+                ? 'Choisissez un modèle pour voir le stock disponible'
+                : hasColors && selectedColor === null
+                  ? 'Choisissez une couleur pour voir le stock disponible'
+                  : stockToDisplay !== null
+                    ? `Disponible — ${stockToDisplay} ${stockToDisplay > 1 ? 'unités' : 'unité'} en stock`
+                    : 'Disponible maintenant'}
             </span>
           </div>
         )}
