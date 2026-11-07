@@ -51,7 +51,7 @@ export default function CookieConsent() {
 
   return (
     <section
-      role="dialog"
+      role="region"
       aria-label="Préférences des cookies"
       aria-describedby="wazyo-cookie-description"
       style={{
@@ -82,7 +82,7 @@ export default function CookieConsent() {
             style={{ fontSize: 12, lineHeight: 1.55, margin: 0, color: 'var(--g4, #b5b5b5)' }}
           >
             Le panier utilise un stockage local nécessaire au fonctionnement de la boutique.
-            Le Pixel Meta, qui mesure les campagnes publicitaires, ne sera chargé que si vous l'acceptez.
+            Le Pixel Meta dans votre navigateur, qui mesure les campagnes publicitaires, ne sera chargé que si vous l'acceptez.
           </p>
         </div>
       </div>
