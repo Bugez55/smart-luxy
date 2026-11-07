@@ -976,7 +976,7 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
 
         {/* ⚙️ Modèles du produit — stock/prix indépendants par modèle */}
         {hasModels && (
-          <div style={{ marginBottom:14, padding:'12px 14px', background:'rgba(255,255,255,.025)', border:'1px solid rgba(96,165,250,.22)', borderRadius:14 }}>
+          <div className="pp-model-selector" style={{ marginBottom:14, padding:'12px 14px', background:'rgba(255,255,255,.025)', border:'1px solid rgba(96,165,250,.22)', borderRadius:14 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10, flexWrap:'wrap' }}>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <span style={{ fontSize:17 }}>⚙️</span>
@@ -1056,7 +1056,7 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
 
         {/* 🎨 Couleurs du produit — optionnelles et configurables depuis l'admin */}
         {hasColors && (
-          <div style={{ marginBottom:14, padding:'12px 14px', background:'rgba(255,255,255,.025)', border:'1px solid rgba(201,168,76,.18)', borderRadius:14 }}>
+          <div className="pp-color-selector" style={{ marginBottom:14, padding:'12px 14px', background:'rgba(255,255,255,.025)', border:'1px solid rgba(201,168,76,.18)', borderRadius:14 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10, flexWrap:'wrap' }}>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <span style={{ fontSize:15 }}>🎨</span>
@@ -2370,6 +2370,13 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
         ═══════════════════════════════════════════════ */
         .pp-root.checkout-only .pp-page > *:not(.pp-order-card){display:none!important}
         .pp-root.checkout-only .pp-page{width:min(760px,100%);border:none;background:transparent;padding-bottom:24px}
+        /* Le checkout direct doit conserver le choix des variantes. */
+        .pp-root.checkout-only .pp-page > .pp-info{display:block!important}
+        .pp-root.checkout-only .pp-info > *{display:none!important}
+        .pp-root.checkout-only .pp-info > .pp-title{display:block!important}
+        .pp-root.checkout-only .pp-info > .pp-price-row{display:flex!important}
+        .pp-root.checkout-only .pp-info > .pp-model-selector,
+        .pp-root.checkout-only .pp-info > .pp-color-selector{display:block!important}
         .pp-root.checkout-only .pp-order-card{margin:0 auto 24px!important;border-radius:0 0 20px 20px;box-shadow:0 18px 55px rgba(0,0,0,.14)}
         .pp-root.checkout-only .pp-order-card > div:first-child{padding-top:18px;padding-bottom:18px}
         .pp-root.checkout-only .pp-order-card .pp-order-steps{margin-top:2px}
