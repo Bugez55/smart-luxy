@@ -1183,7 +1183,7 @@ export default function App() {
               padding:0,
             }}
           >
-            Préférences cookies
+            Informations de confidentialité
           </button>
         </div>
         <p style={{ color:'var(--g3)', fontSize:11, marginTop:12 }}>
