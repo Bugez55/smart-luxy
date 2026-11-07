@@ -63,9 +63,14 @@ Le bandeau à un seul bouton **OK** est conservé. Le Pixel Meta n'est activé q
 ## 7. Build
 La validation complète `npm run build` doit être faite dans ton environnement CI/Vercel. Le présent audit a validé la syntaxe des fichiers API avec Node ; l'installation locale des dépendances n'a pas pu être terminée dans l'environnement d'audit.
 
-## 8. Contrôles de maintenance
+## 8. Protection SSRF et clics affiliés
+- L'import produit utilise désormais `api/_safe-fetch.js` : résolution DNS IPv4 contrôlée, connexion épinglée sur l'adresse vérifiée, rejet des plages privées/réservées et des IPv6 littérales, redirections revérifiées, timeout de 15 secondes et taille maximale.
+- La migration `supabase/affiliate_click_rate_limit.sql` limite l'enregistrement des clics à 60 par IP et 12 par identifiant visiteur sur 10 minutes. En cas de limite atteinte, la résolution de la remise continue ; seul le comptage analytique est ignoré.
+- `npm test` exécute les tests Node du filtre SSRF. Cela ne remplace pas un test E2E de l'import avec AliExpress et Supabase Storage.
+
+## 9. Contrôles de maintenance
 - Les dépendances de build sont mises à jour sur Vite 6.4.5, @vitejs/plugin-react 5.1.1 et DOMPurify 3.4.17 ; le contrôle npm audit et le build Vite ont été exécutés avec succès sur le dernier commit vérifié.
 - Les politiques d'affiliation héritées sont désormais réservées au rôle `authenticated`. Le bloc SQL conditionnel les ajuste uniquement si ces tables et politiques optionnelles existent.
 - Le workflow GitHub exécute le build et `npm audit --audit-level=high` sur les PR vers `main` et les pushes sur `main`.
 - L'ancien fichier `src/vercel.json`, qui pointait vers un répertoire `Wazyo-app` absent, a été supprimé. La configuration Vercel du projet reste `smart-luxy-app/vercel.json`.
-- Aucun `package-lock.json` n'est encore présent. `npm install` peut donc résoudre des versions différentes d'un build à l'autre ; il faudra ajouter le lockfile généré et le committer avant de remplacer `npm install` par `npm ci`.
+- Le lockfile généré par CI est encore un artefact temporaire, pas un fichier commité. Les versions ne sont donc pas encore verrouillées dans Git ; le dépôt devra recevoir le `package-lock.json` avant de remplacer `npm install` par `npm ci`.
