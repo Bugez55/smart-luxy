@@ -2008,10 +2008,10 @@ export default function AdminPanel({ onLogout, onToast }) {
 
     const protectedCount = ordersToDelete.filter(o => ['shipped', 'delivered'].includes(o.statut)).length
     const warning = protectedCount > 0
-      ? `\\n\\nAttention : ${protectedCount} commande(s) expédiée(s) ou livrée(s) seront également supprimées définitivement de l’historique.`
+      ? `\n\nAttention : ${protectedCount} commande(s) expédiée(s) ou livrée(s) seront également supprimées définitivement de l’historique.`
       : ''
 
-    if (!window.confirm(`Supprimer définitivement ${ordersToDelete.length} commande(s) ?${warning}\\n\\nCette action est irréversible.`)) return
+    if (!window.confirm(`Supprimer définitivement ${ordersToDelete.length} commande(s) ?${warning}\n\nCette action est irréversible.`)) return
     setBulkLoading(true)
     const { error } = await supabase.from('orders').delete().in('id', Array.from(selectedOrders))
     if (error) {
@@ -2163,9 +2163,9 @@ export default function AdminPanel({ onLogout, onToast }) {
     }
     const isCompletedOrder = ['shipped', 'delivered'].includes(order.statut)
     const warning = isCompletedOrder
-      ? '\\n\\nAttention : cette commande est expédiée ou livrée. Elle sera supprimée définitivement de l’historique.'
+      ? '\n\nAttention : cette commande est expédiée ou livrée. Elle sera supprimée définitivement de l’historique.'
       : ''
-    if (!confirm(`Supprimer définitivement cette commande ?${warning}\\n\\nCette action est irréversible.`)) return
+    if (!confirm(`Supprimer définitivement cette commande ?${warning}\n\nCette action est irréversible.`)) return
     const { error } = await supabase.from('orders').delete().eq('id', id)
     if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setOrders(prev => prev.filter(o => o.id !== id))
