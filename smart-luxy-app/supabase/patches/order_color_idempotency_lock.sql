@@ -47,7 +47,15 @@ begin
     || substring(v_definition from v_position);
   execute v_definition;
 
-  raise notice 'Color-order idempotency lock added successfully.';
+  select pg_get_functiondef(v_function) into v_definition;
+  if position('wazyo-order-idem:' in v_definition) = 0
+     or position('wazyo-order-idem:' in v_definition)
+        > strpos(v_definition, v_anchor) then
+    raise exception
+      'Post-update verification failed. The transaction will be rolled back.';
+  end if;
+
+  raise notice 'Color-order idempotency lock added and verified successfully.';
 end;
 $patch$;
 
