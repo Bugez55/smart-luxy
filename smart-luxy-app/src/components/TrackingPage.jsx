@@ -8,9 +8,10 @@ const STEPS = [
   { key: 'confirmed', icon: '✅', label: 'Confirmée',      desc: 'Nous avons confirmé votre commande' },
   { key: 'shipped',   icon: '🚚', label: 'Expédiée',       desc: 'Votre colis a été remis au transporteur' },
   { key: 'delivered', icon: '🎉', label: 'Livrée',         desc: 'Commande reçue avec succès' },
+  { key: 'returned',  icon: '↩️', label: 'Retournée',      desc: 'Le colis est revenu à la boutique. Les articles ont été réintégrés au stock.' },
 ]
 
-const STATUS_IDX = { new: 0, confirmed: 1, shipped: 2, delivered: 3 }
+const STATUS_IDX = { new: 0, confirmed: 1, shipped: 2, delivered: 3, returned: 4 }
 
 export default function TrackingPage({ onClose }) {
   const [input, setInput] = useState('')
