@@ -33,7 +33,9 @@ begin
 
   -- Canonicalize Algerian local (0XXXXXXXXX) and international (213XXXXXXXXX)
   -- forms so the customer may enter the same number with or without its prefix.
-  if left(v_phone_digits, 3) = '213' and length(v_phone_digits) = 12 then
+  if left(v_phone_digits, 5) = '00213' and length(v_phone_digits) = 14 then
+    v_phone_digits := substring(v_phone_digits from 6);
+  elsif left(v_phone_digits, 3) = '213' and length(v_phone_digits) = 12 then
     v_phone_digits := substring(v_phone_digits from 4);
   elsif left(v_phone_digits, 1) = '0' and length(v_phone_digits) = 10 then
     v_phone_digits := substring(v_phone_digits from 2);
@@ -104,7 +106,9 @@ begin
   end if;
 
   v_order_phone_digits := regexp_replace(coalesce(o.telephone, ''), '\D', '', 'g');
-  if left(v_order_phone_digits, 3) = '213' and length(v_order_phone_digits) = 12 then
+  if left(v_order_phone_digits, 5) = '00213' and length(v_order_phone_digits) = 14 then
+    v_order_phone_digits := substring(v_order_phone_digits from 6);
+  elsif left(v_order_phone_digits, 3) = '213' and length(v_order_phone_digits) = 12 then
     v_order_phone_digits := substring(v_order_phone_digits from 4);
   elsif left(v_order_phone_digits, 1) = '0' and length(v_order_phone_digits) = 10 then
     v_order_phone_digits := substring(v_order_phone_digits from 2);
