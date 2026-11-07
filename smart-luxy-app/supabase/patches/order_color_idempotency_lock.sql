@@ -42,7 +42,9 @@ begin
       'The expected duplicate-check section was not found. No function was changed.';
   end if;
 
-  v_definition := overlay(v_definition placing v_lock from v_position);
+  v_definition := substring(v_definition from 1 for v_position - 1)
+    || v_lock
+    || substring(v_definition from v_position);
   execute v_definition;
 
   raise notice 'Color-order idempotency lock added successfully.';
