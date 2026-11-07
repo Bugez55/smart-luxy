@@ -4,8 +4,8 @@ export default function CookieConsent() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    const openPreferences = () => setVisible(true)
-    window.addEventListener('wazyo:cookie-preferences', openPreferences)
+    const openNotice = () => setVisible(true)
+    window.addEventListener('wazyo:cookie-preferences', openNotice)
 
     let timer = null
     let choice = null
@@ -15,6 +15,7 @@ export default function CookieConsent() {
       choice = null
     }
 
+    // Un ancien choix explicite reste respecté.
     if (choice === 'accepted') {
       window.loadFacebookPixel?.()
     } else if (!choice) {
@@ -23,36 +24,26 @@ export default function CookieConsent() {
 
     return () => {
       if (timer) window.clearTimeout(timer)
-      window.removeEventListener('wazyo:cookie-preferences', openPreferences)
+      window.removeEventListener('wazyo:cookie-preferences', openNotice)
     }
   }, [])
 
-  function saveChoice(choice) {
+  function acknowledge() {
     try {
-      window.localStorage.setItem('sl_cookie_consent', choice)
-      return true
-    } catch {
-      return false
+      // OK ferme le message informatif ; il ne vaut pas accord publicitaire.
+      window.localStorage.setItem('sl_cookie_consent', 'acknowledged')
+    } catch (error) {
+      console.warn('Préférence locale non enregistrée:', error)
     }
-  }
-
-  function accept() {
-    const saved = saveChoice('accepted')
-    if (saved) window.loadFacebookPixel?.()
-    setVisible(false)
-  }
-
-  function reject() {
-    saveChoice('rejected')
     setVisible(false)
   }
 
   if (!visible) return null
 
   return (
-    <section
+    <aside
       role="region"
-      aria-label="Préférences des cookies"
+      aria-label="Information de confidentialité"
       aria-describedby="wazyo-cookie-description"
       style={{
         position: 'fixed',
@@ -60,74 +51,50 @@ export default function CookieConsent() {
         left: 14,
         right: 14,
         zIndex: 9998,
-        maxWidth: 440,
+        maxWidth: 420,
         margin: '0 auto',
         background: 'var(--card, #141414)',
-        border: '1px solid rgba(201,168,76,.24)',
+        border: '1px solid rgba(201,168,76,.2)',
         borderRadius: 14,
-        padding: '14px 16px',
-        boxShadow: '0 8px 28px rgba(0,0,0,.4)',
+        padding: '12px 14px',
+        boxShadow: '0 8px 28px rgba(0,0,0,.35)',
         animation: 'ccFadeIn .3s ease',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
         color: 'var(--g3, #e0e0e0)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <span aria-hidden="true" style={{ fontSize: 20, flexShrink: 0 }}>🍪</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, margin: '0 0 5px' }}>
-            Vos préférences de confidentialité
-          </p>
-          <p
-            id="wazyo-cookie-description"
-            style={{ fontSize: 12, lineHeight: 1.55, margin: 0, color: 'var(--g4, #b5b5b5)' }}
-          >
-            Le panier utilise un stockage local nécessaire au fonctionnement de la boutique.
-            Le Pixel Meta dans votre navigateur, qui mesure les campagnes publicitaires, ne sera chargé que si vous l'acceptez.
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          onClick={reject}
-          style={{
-            background: 'transparent',
-            border: '1px solid rgba(255,255,255,.22)',
-            borderRadius: 8,
-            padding: '8px 13px',
-            color: 'var(--g3, #e0e0e0)',
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
-          Refuser
-        </button>
-        <button
-          type="button"
-          onClick={accept}
-          style={{
-            background: 'linear-gradient(135deg,#C9A84C,#E9C46A)',
-            border: '1px solid #C9A84C',
-            borderRadius: 8,
-            padding: '8px 15px',
-            color: '#000',
-            fontSize: 12,
-            fontWeight: 800,
-            cursor: 'pointer',
-          }}
-        >
-          Accepter
-        </button>
-      </div>
-
+      <span aria-hidden="true" style={{ fontSize: 19, flexShrink: 0 }}>✨</span>
+      <p
+        id="wazyo-cookie-description"
+        style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.5, margin: 0 }}
+      >
+        WAZYO utilise des données techniques nécessaires au bon fonctionnement de la boutique et du panier.
+      </p>
+      <button
+        type="button"
+        onClick={acknowledge}
+        style={{
+          background: 'linear-gradient(135deg,#C9A84C,#E9C46A)',
+          border: 'none',
+          borderRadius: 8,
+          padding: '8px 16px',
+          color: '#000',
+          fontSize: 12,
+          fontWeight: 800,
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}
+      >
+        OK
+      </button>
       <style>{`
         @keyframes ccFadeIn {
           from { transform: translateY(12px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
         }
       `}</style>
-    </section>
+    </aside>
   )
 }
