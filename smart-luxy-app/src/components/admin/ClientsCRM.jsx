@@ -59,7 +59,7 @@ export default function ClientsCRM({ orders, onToast }) {
       const c = map[tel]
       c.commandes.push(o)
       c.nbCommandes++
-      if (o.statut === 'delivered' || o.statut === 'confirmed') {
+      if (o.statut === 'delivered') {
         c.totalDepense += Number(o.total) || 0
         c.nbLivrees++
       }
@@ -125,7 +125,7 @@ export default function ClientsCRM({ orders, onToast }) {
     }
   }
 
-  const vipCount = clients.filter(c => c.nbCommandes >= 3 || c.totalDepense >= 10000).length
+  const vipCount = clients.filter(c => c.nbLivrees >= 3 || c.totalDepense >= 10000).length
   const inactifs = clients.filter(c => daysAgo(c.derniereCommande) > 30).length
 
   const sec = { background:'#1a1a1a', border:'1px solid rgba(255,255,255,.07)', borderRadius:14, padding:16, marginBottom:12 }
@@ -196,7 +196,7 @@ export default function ClientsCRM({ orders, onToast }) {
         const isOpen = expanded === c.telephone
         const clientTag = notes[c.telephone]?.tag
         const tagInfo = TAGS.find(t => t.key === clientTag)
-        const isVip = c.nbCommandes >= 3 || c.totalDepense >= 10000
+        const isVip = c.nbLivrees >= 3 || c.totalDepense >= 10000
         const inactive = daysAgo(c.derniereCommande) > 30
 
         return (
