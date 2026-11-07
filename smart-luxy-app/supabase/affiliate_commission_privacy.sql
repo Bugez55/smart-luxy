@@ -34,9 +34,7 @@ end;
 do $model_privacy$
 declare
   v_definition text;
-  v_old_fields text := $model_fields$,
-    'affiliate_commission_percent',CASE WHEN p_affiliate_code IS NOT NULL AND length(trim(p_affiliate_code))>0 THEN v_link.commission_percent ELSE NULL END,
-    'affiliate_commission_amount',CASE WHEN p_affiliate_code IS NOT NULL AND length(trim(p_affiliate_code))>0 THEN v_commission ELSE NULL END$model_fields$;
+  v_hardened_definition text;
 begin
   select pg_get_functiondef(p.oid)
     into v_definition
@@ -45,9 +43,18 @@ begin
   where n.nspname = 'public'
     and p.proname = 'create_order_with_models';
 
-  if v_definition is not null and position(v_old_fields in v_definition) > 0 then
-    v_definition := replace(v_definition, v_old_fields, '');
-    execute v_definition;
+  if v_definition is not null then
+    -- Match the two adjacent JSON response fields independent of LF/CRLF.
+    v_hardened_definition := regexp_replace(
+      v_definition,
+      E',\\r?\\n[[:space:]]*''affiliate_commission_percent''[^\\r\\n]*,\\r?\\n[[:space:]]*''affiliate_commission_amount''[^\\r\\n]*',
+      '',
+      'g'
+    );
+
+    if v_hardened_definition <> v_definition then
+      execute v_hardened_definition;
+    end if;
   end if;
 end;
 $model_privacy$;
