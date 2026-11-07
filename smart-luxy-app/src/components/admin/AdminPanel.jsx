@@ -3290,6 +3290,7 @@ export default function AdminPanel({ onLogout, onToast }) {
       {editProd !== null && (
         <ProductForm
           product={editProd || null}
+          products={products}
           onClose={() => setEditProd(null)}
           onSave={saveProd}
         />
