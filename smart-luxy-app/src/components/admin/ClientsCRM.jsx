@@ -91,21 +91,38 @@ export default function ClientsCRM({ orders, onToast }) {
   }, [clients, search, filterTag, sortBy, notes])
 
   async function saveNote(tel) {
+    if (saving) return
     setSaving(true)
     const existing = notes[tel] || {}
     const payload = { telephone: tel, note: noteDraft, tag: existing.tag || null, updated_at: new Date().toISOString() }
-    await supabase.from('client_notes').upsert(payload)
-    setNotes(n => ({ ...n, [tel]: payload }))
-    setSaving(false)
-    onToast && onToast('✅ Note enregistrée', 'default')
+
+    try {
+      const { error } = await supabase.from('client_notes').upsert(payload)
+      if (error) throw error
+      setNotes(n => ({ ...n, [tel]: payload }))
+      onToast && onToast('✅ Note enregistrée', 'default')
+    } catch (error) {
+      console.error('CRM saveNote:', error)
+      onToast && onToast("❌ Impossible d'enregistrer la note. Réessaie.", 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function setTag(tel, tagKey) {
     const existing = notes[tel] || {}
     const newTag = existing.tag === tagKey ? null : tagKey
     const payload = { telephone: tel, note: existing.note || '', tag: newTag, updated_at: new Date().toISOString() }
-    await supabase.from('client_notes').upsert(payload)
-    setNotes(n => ({ ...n, [tel]: payload }))
+
+    try {
+      const { error } = await supabase.from('client_notes').upsert(payload)
+      if (error) throw error
+      setNotes(n => ({ ...n, [tel]: payload }))
+      onToast && onToast(newTag ? '✅ Étiquette enregistrée' : '✅ Étiquette retirée', 'default')
+    } catch (error) {
+      console.error('CRM setTag:', error)
+      onToast && onToast("❌ Impossible d'enregistrer l'étiquette. Réessaie.", 'error')
+    }
   }
 
   const vipCount = clients.filter(c => c.nbCommandes >= 3 || c.totalDepense >= 10000).length
