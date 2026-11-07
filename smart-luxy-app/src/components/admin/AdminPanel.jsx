@@ -38,6 +38,10 @@ function canTransitionOrderStatus(from, to) {
   return from === to || Boolean(ORDER_STATUS_TRANSITIONS[from]?.includes(to))
 }
 
+function isOrderDeletionProtected(order) {
+  return ['shipped', 'delivered'].includes(order?.statut)
+}
+
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -2003,7 +2007,18 @@ export default function AdminPanel({ onLogout, onToast }) {
 
   async function bulkDelete() {
     if (selectedOrders.size === 0) return
-    if (!window.confirm(`Supprimer ${selectedOrders.size} commandes définitivement ?`)) return
+
+    const ordersToDelete = orders.filter(o => selectedOrders.has(o.id))
+    const protectedOrders = ordersToDelete.filter(isOrderDeletionProtected)
+    if (protectedOrders.length > 0) {
+      onToast && onToast(
+        `⛔ Suppression bloquée : ${protectedOrders.length} commande(s) expédiée(s) ou livrée(s) doivent rester dans l’historique. Désélectionne-les pour supprimer les autres.`,
+        'error'
+      )
+      return
+    }
+
+    if (!window.confirm(`Supprimer définitivement ${ordersToDelete.length} commande(s) ?`)) return
     setBulkLoading(true)
     const { error } = await supabase.from('orders').delete().in('id', Array.from(selectedOrders))
     if (error) {
@@ -2148,7 +2163,16 @@ export default function AdminPanel({ onLogout, onToast }) {
   }
 
   async function delOrder(id) {
-    if (!confirm('Supprimer cette commande ?')) return
+    const order = orders.find(o => o.id === id)
+    if (!order) {
+      onToast && onToast('❌ Commande introuvable', 'error')
+      return
+    }
+    if (isOrderDeletionProtected(order)) {
+      onToast && onToast('⛔ Suppression impossible : une commande expédiée ou livrée doit rester dans l’historique.', 'error')
+      return
+    }
+    if (!confirm('Supprimer définitivement cette commande ?')) return
     const { error } = await supabase.from('orders').delete().eq('id', id)
     if (error) { onToast && onToast('❌ ' + error.message, 'error'); return }
     setOrders(prev => prev.filter(o => o.id !== id))
