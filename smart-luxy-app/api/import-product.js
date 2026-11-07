@@ -24,43 +24,6 @@ async function safeFetchHtml(rawUrl, options = {}) {
   return response
 }
 
-async function safeFetchHtml(rawUrl, options = {}) {
-  let currentUrl = await assertSafeUrl(rawUrl)
-
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const response = await fetch(currentUrl, {
-      ...options,
-      redirect: 'manual',
-    })
-
-    if ([301, 302, 303, 307, 308].includes(response.status)) {
-      const location = response.headers.get('location')
-
-      if (!location) {
-        throw new Error('Redirection invalide')
-      }
-
-      currentUrl = await assertSafeUrl(
-        new URL(location, currentUrl).href
-      )
-
-      continue
-    }
-
-    const contentLength = Number(
-      response.headers.get('content-length') || 0
-    )
-
-    if (contentLength > MAX_RESPONSE_BYTES) {
-      throw new Error('Page trop volumineuse')
-    }
-
-    return response
-  }
-
-  throw new Error('Trop de redirections')
-}
-
 function getAllMeta(html, prop) {
   const results = []
 
