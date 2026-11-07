@@ -35,7 +35,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '6. Cookies et traceurs',
-            text: `Le site utilise des données locales nécessaires au fonctionnement de la boutique, notamment pour le panier et certaines préférences. Après avoir appuyé sur « OK » dans le bandeau cookies, l'outil Meta peut être activé afin de mesurer l'efficacité des campagnes publicitaires. Sans cette action, le Pixel Meta n'est pas chargé.`
+            text: `Le site utilise des données locales nécessaires au fonctionnement de la boutique, notamment pour le panier et certaines préférences. L'outil Meta (Pixel) sert à mesurer l'efficacité des campagnes publicitaires. Il n'est chargé qu'après votre choix explicite « Accepter » dans le bandeau de préférences. Vous pouvez refuser ce suivi sans empêcher l'utilisation du panier ou la passation d'une commande.`
           },
           {
             title: '7. Modifications',
@@ -76,7 +76,7 @@ export default function PolitiquesPage({ defaultTab = 'confidentialite', onClose
           },
           {
             title: '٦. ملفات الارتباط وأدوات التتبع',
-            text: `يستخدم الموقع بيانات محلية ضرورية لعمل المتجر، مثل السلة وبعض التفضيلات. بعد الضغط على «موافق / OK» في إشعار ملفات الارتباط، يمكن تفعيل أداة Meta لقياس فعالية الحملات الإعلانية. قبل ذلك لا يتم تحميل Pixel Meta.`
+            text: `يستخدم الموقع بيانات محلية ضرورية لعمل المتجر، مثل السلة وبعض التفضيلات. تُستخدم أداة Meta (Pixel) لقياس فعالية الحملات الإعلانية، ولا يتم تحميلها إلا بعد اختيار «قبول» صراحةً في إشعار التفضيلات. يمكنك رفض هذا التتبع دون أن يؤثر ذلك على استخدام سلة التسوق أو تقديم الطلب.`
           },
           {
             title: '٧. التعديلات',
