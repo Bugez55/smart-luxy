@@ -53,6 +53,15 @@ begin
       'g'
     );
 
+    -- The idempotent-order response has a commission amount field without
+    -- the adjacent percent field, so remove that public JSON key separately.
+    v_hardened_definition := regexp_replace(
+      v_hardened_definition,
+      E',\\r?\\n[[:space:]]*''affiliate_commission_amount''[^\\r\\n]*',
+      '',
+      'g'
+    );
+
     if v_hardened_definition <> v_definition then
       execute v_hardened_definition;
     end if;
