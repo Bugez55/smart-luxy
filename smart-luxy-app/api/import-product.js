@@ -3,150 +3,27 @@
 // + fallback "coller le code source" quand le fetch serveur est bloqué
 // + téléchargement des images AliExpress vers Supabase Storage
 
-import dns from 'dns/promises'
-import net from 'net'
+import { assertSafeUrl, fetchSafeUrl } from './_safe-fetch.js'
 import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { requireAdmin } from './_auth.js'
 import { applyCors } from './_cors.js'
+import { getVerifiedImageExtension } from './_image-validation.js'
 
 const MAX_RESPONSE_BYTES = 6 * 1024 * 1024
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024
+const MAX_PASTED_HTML_BYTES = 2 * 1024 * 1024
 const STORAGE_BUCKET = 'product-images'
 
-function isPrivateIpv4(ip) {
-  const parts = ip.split('.').map(Number)
-
-  if (
-    parts.length !== 4 ||
-    parts.some(n => !Number.isInteger(n))
-  ) {
-    return true
-  }
-
-  const [a, b] = parts
-
-  return (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    (a === 100 && b >= 64 && b <= 127) ||
-    (a === 198 && b >= 18 && b <= 19) ||
-    ((a === 198 && b === 51) && parts[2] === 100) ||
-    (a === 203 && b === 0 && parts[2] === 113) ||
-    a >= 224
-  )
-}
-
-function isPrivateIpv6(ip) {
-  const value = ip.toLowerCase()
-
-  return (
-    value === '::1' ||
-    value.startsWith('fc') ||
-    value.startsWith('fd') ||
-    value.startsWith('fe8') ||
-    value.startsWith('fe9') ||
-    value.startsWith('fea') ||
-    value.startsWith('feb')
-  )
-}
-
-async function assertSafeUrl(rawUrl) {
-  let u
-
-  try {
-    u = new URL(rawUrl)
-  } catch {
-    throw new Error('URL invalide')
-  }
-
-  if (!['http:', 'https:'].includes(u.protocol)) {
-    throw new Error('Protocole non autorisé')
-  }
-
-  if (u.username || u.password) {
-    throw new Error('URL avec identifiants non autorisée')
-  }
-
-  const hostname = u.hostname
-    .replace(/^\[|\]$/g, '')
-    .toLowerCase()
-
-  if (
-    hostname === 'localhost' ||
-    hostname.endsWith('.localhost') ||
-    hostname === 'local' ||
-    hostname.endsWith('.local') ||
-    hostname === 'metadata.google.internal' ||
-    hostname === '169.254.169.254'
-  ) {
-    throw new Error('Destination non autorisée')
-  }
-
-  if (net.isIP(hostname)) {
-    if (
-      (net.isIP(hostname) === 4 && isPrivateIpv4(hostname)) ||
-      (net.isIP(hostname) === 6 && isPrivateIpv6(hostname))
-    ) {
-      throw new Error('Destination réseau privée non autorisée')
-    }
-
-    return u.href
-  }
-
-  const resolved = await dns.lookup(hostname)
-
-  if (
-    (net.isIP(resolved.address) === 4 &&
-      isPrivateIpv4(resolved.address)) ||
-    (net.isIP(resolved.address) === 6 &&
-      isPrivateIpv6(resolved.address))
-  ) {
-    throw new Error('Destination réseau privée non autorisée')
-  }
-
-  return u.href
-}
 
 async function safeFetchHtml(rawUrl, options = {}) {
-  let currentUrl = await assertSafeUrl(rawUrl)
+  const { response } = await fetchSafeUrl(rawUrl, {
+    ...options,
+    maxBytes: MAX_RESPONSE_BYTES,
+    errorMessage: 'Page trop volumineuse',
+  })
 
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const response = await fetch(currentUrl, {
-      ...options,
-      redirect: 'manual',
-    })
-
-    if ([301, 302, 303, 307, 308].includes(response.status)) {
-      const location = response.headers.get('location')
-
-      if (!location) {
-        throw new Error('Redirection invalide')
-      }
-
-      currentUrl = await assertSafeUrl(
-        new URL(location, currentUrl).href
-      )
-
-      continue
-    }
-
-    const contentLength = Number(
-      response.headers.get('content-length') || 0
-    )
-
-    if (contentLength > MAX_RESPONSE_BYTES) {
-      throw new Error('Page trop volumineuse')
-    }
-
-    return response
-  }
-
-  throw new Error('Trop de redirections')
+  return response
 }
 
 function getAllMeta(html, prop) {
@@ -464,87 +341,41 @@ function getSupabaseAdmin() {
   )
 }
 
-function getImageExtension(contentType, imageUrl) {
-  const type = (contentType || '').toLowerCase()
-
-  if (type.includes('png')) return 'png'
-  if (type.includes('webp')) return 'webp'
-  if (type.includes('gif')) return 'gif'
-  if (type.includes('avif')) return 'avif'
-  if (type.includes('jpeg') || type.includes('jpg')) {
-    return 'jpg'
-  }
-
-  try {
-    const pathname = new URL(imageUrl).pathname
-    const match = pathname.match(
-      /\.(jpg|jpeg|png|webp|gif|avif)$/i
-    )
-
-    if (match) {
-      return match[1].toLowerCase() === 'jpeg'
-        ? 'jpg'
-        : match[1].toLowerCase()
-    }
-  } catch {
-    // ignore
-  }
-
-  return 'jpg'
+function getImageExtension(buffer, contentType) {
+  return getVerifiedImageExtension(buffer, contentType)
 }
 
 async function fetchImageSafely(rawUrl) {
-  let currentUrl = await assertSafeUrl(rawUrl)
+  const { response, finalUrl } = await fetchSafeUrl(rawUrl, {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0 Safari/537.36',
+      'Accept':
+        'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      'Accept-Language':
+        'fr-FR,fr;q=0.9,en;q=0.8',
+    },
+    maxBytes: MAX_IMAGE_BYTES,
+    errorMessage: 'Image trop volumineuse',
+  })
 
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const response = await fetch(currentUrl, {
-      redirect: 'manual',
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0 Safari/537.36',
-        'Accept':
-          'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-        'Accept-Language':
-          'fr-FR,fr;q=0.9,en;q=0.8',
-      },
-    })
-
-    if ([301, 302, 303, 307, 308].includes(response.status)) {
-      const location = response.headers.get('location')
-      if (!location) throw new Error('Redirection image invalide')
-      currentUrl = await assertSafeUrl(
-        new URL(location, currentUrl).href
-      )
-      continue
-    }
-
-    if (!response.ok) {
-      throw new Error(`Image inaccessible (${response.status})`)
-    }
-
-    const contentType = response.headers.get('content-type') || ''
-    const normalizedContentType = contentType.split(';')[0].trim().toLowerCase()
-    const allowedImageTypes = new Set([
-      'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
-    ])
-    if (!allowedImageTypes.has(normalizedContentType)) {
-      throw new Error(
-        `Format d'image non autorisé (${normalizedContentType || 'type inconnu'})`
-      )
-    }
-
-    const contentLength = Number(
-      response.headers.get('content-length') || 0
-    )
-
-    if (contentLength > MAX_IMAGE_BYTES) {
-      throw new Error('Image trop volumineuse')
-    }
-
-    return { response, contentType, finalUrl: currentUrl }
+  if (!response.ok) {
+    throw new Error(`Image inaccessible (${response.status})`)
   }
 
-  throw new Error('Trop de redirections image')
+  const contentType = response.headers.get('content-type') || ''
+  const normalizedContentType = contentType.split(';')[0].trim().toLowerCase()
+  const allowedImageTypes = new Set([
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+  ])
+
+  if (!allowedImageTypes.has(normalizedContentType)) {
+    throw new Error(
+      `Format d'image non autorisé (${normalizedContentType || 'type inconnu'})`
+    )
+  }
+
+  return { response, contentType, finalUrl }
 }
 
 async function readResponseBuffer(response, maxBytes, errorMessage = 'Réponse trop volumineuse') {
@@ -596,10 +427,7 @@ async function downloadAndStoreImage(
     MAX_IMAGE_BYTES
   )
 
-  const extension = getImageExtension(
-    contentType,
-    finalUrl
-  )
+  const extension = getImageExtension(buffer, contentType)
 
   const hash = crypto
     .createHash('sha256')
@@ -710,6 +538,10 @@ export default async function handler(req, res) {
     pastedHtml &&
     typeof pastedHtml === 'string'
   ) {
+    if (Buffer.byteLength(pastedHtml, 'utf8') > MAX_PASTED_HTML_BYTES) {
+      return res.status(413).json({ error: 'Le code HTML collé dépasse la limite autorisée de 2 Mio.' })
+    }
+
     if (pastedHtml.length < 200) {
       return res.status(400).json({
         error:
