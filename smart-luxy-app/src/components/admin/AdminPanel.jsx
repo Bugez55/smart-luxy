@@ -1864,6 +1864,13 @@ export default function AdminPanel({ onLogout, onToast }) {
   const [editProd, setEditProd] = useState(null)
   const [stockSearch, setStockSearch] = useState('')
   const [stockFilter, setStockFilter] = useState('all')
+  const [stockActionRow, setStockActionRow] = useState(null)
+  const [stockOperation, setStockOperation] = useState('add')
+  const [stockQuantity, setStockQuantity] = useState('')
+  const [stockReason, setStockReason] = useState('')
+  const [stockSaving, setStockSaving] = useState(false)
+  const [stockHistory, setStockHistory] = useState([])
+  const [stockHistoryLoading, setStockHistoryLoading] = useState(false)
 
   const loadOrders = useCallback(async () => {
     const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
@@ -1887,6 +1894,56 @@ export default function AdminPanel({ onLogout, onToast }) {
     setLoading(false)
   }, [])
 
+  const loadStockHistory = useCallback(async () => {
+    setStockHistoryLoading(true)
+    const { data, error } = await supabase
+      .from('stock_movements')
+      .select('id, product_name, variant_type, variant_name, movement_type, quantity, stock_before, stock_after, reason, created_at')
+      .order('created_at', { ascending: false })
+      .limit(40)
+    setStockHistoryLoading(false)
+    if (error) {
+      console.error('loadStockHistory error:', error)
+      onToast && onToast('❌ Impossible de charger l’historique du stock : ' + error.message, 'error')
+      return
+    }
+    setStockHistory(data || [])
+  }, [])
+
+  async function submitStockMovement() {
+    if (!stockActionRow || stockSaving) return
+    const rawQuantity = Number(stockQuantity)
+    if (!Number.isInteger(rawQuantity) || rawQuantity < (stockOperation === 'set' ? 0 : 1)) {
+      onToast && onToast(stockOperation === 'set' ? '❌ Saisis une quantité entière égale ou supérieure à zéro' : '❌ Saisis une quantité entière supérieure à zéro', 'error')
+      return
+    }
+    const reason = stockReason.trim()
+    if (reason.length < 3) {
+      onToast && onToast('❌ Indique un motif (au moins 3 caractères)', 'error')
+      return
+    }
+    setStockSaving(true)
+    const { data, error } = await supabase.rpc('admin_adjust_product_stock', {
+      p_product_id: stockActionRow.productId,
+      p_variant_type: stockActionRow.variantType,
+      p_variant_name: stockActionRow.variantName,
+      p_operation: stockOperation,
+      p_quantity: rawQuantity,
+      p_reason: reason,
+    })
+    setStockSaving(false)
+    if (error) {
+      console.error('submitStockMovement error:', error)
+      onToast && onToast('❌ Stock non modifié : ' + error.message, 'error')
+      return
+    }
+    onToast && onToast(`✅ Stock mis à jour : ${data?.stock_before ?? stockActionRow.stock} → ${data?.stock_after ?? '—'}`, 'default')
+    setStockActionRow(null)
+    setStockQuantity('')
+    setStockReason('')
+    await Promise.all([loadProducts(), loadStockHistory()])
+  }
+
   useEffect(() => {
     loadOrders()
     loadProducts()
@@ -1899,6 +1956,7 @@ export default function AdminPanel({ onLogout, onToast }) {
     if (tab === 'promos') loadPromos()
     if (tab === 'affiliate') loadProducts()
     if (tab === 'banner') loadBanner()
+    if (tab === 'stock') loadStockHistory()
   }, [tab])
 
   const filteredOrders = orders.filter(o => {
@@ -2864,14 +2922,14 @@ export default function AdminPanel({ onLogout, onToast }) {
             const hasModels = !!p.show_models && models.length > 0
             const hasColors = colors.length > 0
             if (hasModels) return models.map(m => ({
-              key: `model-${p.id}-${m.name}`, product: p.nom, variant: m.name || 'Modèle',
-              stock: m.stock, type: 'Modèle'
+              key: `model-${p.id}-${m.name}`, productId: p.id, product: p.nom, variant: m.name || 'Modèle',
+              variantType: 'model', variantName: String(m.name || ''), stock: m.stock, type: 'Modèle'
             }))
             if (hasColors) return colors.map(col => ({
-              key: `color-${p.id}-${col.name}`, product: p.nom, variant: col.name || 'Couleur',
-              stock: col.stock, type: 'Couleur'
+              key: `color-${p.id}-${col.name}`, productId: p.id, product: p.nom, variant: col.name || 'Couleur',
+              variantType: 'color', variantName: String(col.name || ''), stock: col.stock, type: 'Couleur'
             }))
-            return [{ key: `product-${p.id}`, product: p.nom, variant: 'Stock général', stock: p.stock, type: 'Produit' }]
+            return [{ key: `product-${p.id}`, productId: p.id, product: p.nom, variant: 'Stock général', variantType: 'product', variantName: null, stock: p.stock, type: 'Produit' }]
           })
           const validRows = rows.filter(r => r.stock !== null && r.stock !== undefined && r.stock !== '')
           const totalUnits = validRows.reduce((sum, r) => sum + Math.max(0, Number(r.stock) || 0), 0)
@@ -2883,14 +2941,18 @@ export default function AdminPanel({ onLogout, onToast }) {
             const matchesFilter = stockFilter === 'all' || (stockFilter === 'low' && n > 0 && n <= 5) || (stockFilter === 'out' && n <= 0)
             return matchesSearch && matchesFilter
           })
+          const selectedStock = stockActionRow
+          const movementLabel = value => value === 'entry' ? 'Entrée' : value === 'exit' ? 'Sortie' : 'Correction'
+          const movementColor = value => value === 'entry' ? '#86efac' : value === 'exit' ? '#fca5a5' : '#fbbf24'
+          const inputStyle = { width:'100%', boxSizing:'border-box', background:'#111', border:'1px solid #333', borderRadius:8, padding:'10px 12px', color:'white', fontSize:14, outline:'none' }
           return (
             <div>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap',marginBottom:16}}>
                 <div>
-                  <h3 style={{color:'white',fontSize:16,fontWeight:900,margin:'0 0 5px'}}>📦 État du stock</h3>
-                  <p style={{color:'rgba(255,255,255,.45)',fontSize:12,margin:0}}>Consultation uniquement — les quantités affichées proviennent des fiches produits.</p>
+                  <h3 style={{color:'white',fontSize:16,fontWeight:900,margin:'0 0 5px'}}>📦 Gestion du stock</h3>
+                  <p style={{color:'rgba(255,255,255,.45)',fontSize:12,margin:0}}>Les entrées et sorties de la boutique physique mettent à jour le même stock que celui du site.</p>
                 </div>
-                <button className="act-btn" onClick={loadProducts}>↻ Actualiser</button>
+                <button className="act-btn" onClick={() => Promise.all([loadProducts(), loadStockHistory()])}>↻ Actualiser</button>
               </div>
               <div className="adm-stats" style={{marginBottom:16}}>
                 <div className="stat-card"><div className="label">Références suivies</div><div className="value">{validRows.length}</div></div>
@@ -2908,25 +2970,90 @@ export default function AdminPanel({ onLogout, onToast }) {
                 <div style={{padding:28,textAlign:'center',color:'rgba(255,255,255,.45)'}}>Aucun stock correspondant à cette recherche.</div>
               ) : (
                 <div style={{overflowX:'auto',border:'1px solid rgba(255,255,255,.08)',borderRadius:12}}>
-                  <table style={{width:'100%',borderCollapse:'collapse',minWidth:560}}>
+                  <table style={{width:'100%',borderCollapse:'collapse',minWidth:650}}>
                     <thead><tr style={{background:'rgba(255,255,255,.04)',textAlign:'left'}}>
-                      {['Produit','Variante','Type','Quantité'].map(label=><th key={label} style={{padding:'11px 12px',fontSize:11,color:'rgba(255,255,255,.5)',whiteSpace:'nowrap'}}>{label}</th>)}
+                      {['Produit','Variante','Type','Quantité','Action'].map(label=><th key={label} style={{padding:'11px 12px',fontSize:11,color:'rgba(255,255,255,.5)',whiteSpace:'nowrap'}}>{label}</th>)}
                     </tr></thead>
                     <tbody>
                       {visibleRows.map(row=>{
                         const n=Number(row.stock)
                         const color=n<=0?'#fca5a5':n<=5?'#fbbf24':'#86efac'
-                        return <tr key={row.key} style={{borderTop:'1px solid rgba(255,255,255,.06)'}}>
+                        const isSelected = selectedStock?.key === row.key
+                        return <tr key={row.key} style={{borderTop:'1px solid rgba(255,255,255,.06)',background:isSelected?'rgba(201,168,76,.07)':'transparent'}}>
                           <td style={{padding:'12px',fontSize:12,color:'white',fontWeight:700}}>{row.product}</td>
                           <td style={{padding:'12px',fontSize:12,color:'rgba(255,255,255,.72)'}}>{row.variant}</td>
                           <td style={{padding:'12px',fontSize:11,color:'rgba(255,255,255,.45)'}}>{row.type}</td>
                           <td style={{padding:'12px',fontSize:13,color,fontWeight:900}}>{n.toLocaleString('fr-DZ')}</td>
+                          <td style={{padding:'9px 12px',whiteSpace:'nowrap'}}>
+                            <button className="act-btn" onClick={()=>{setStockActionRow(row);setStockOperation('add');setStockQuantity('');setStockReason('')}}>{isSelected?'Modifier':'Gérer'}</button>
+                          </td>
                         </tr>
                       })}
                     </tbody>
                   </table>
                 </div>
               )}
+              {selectedStock && (
+                <div style={{marginTop:16,padding:16,background:'#171717',border:'1px solid rgba(201,168,76,.25)',borderRadius:12}}>
+                  <div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'center',marginBottom:12}}>
+                    <div>
+                      <div style={{color:'white',fontWeight:900,fontSize:14}}>Modifier le stock — {selectedStock.product}</div>
+                      <div style={{color:'rgba(255,255,255,.5)',fontSize:11,marginTop:3}}>{selectedStock.variant} · Stock actuel : {Number(selectedStock.stock)||0}</div>
+                    </div>
+                    <button className="act-btn" onClick={()=>setStockActionRow(null)}>✕ Fermer</button>
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(145px,1fr))',gap:10,alignItems:'end'}}>
+                    <div>
+                      <label style={{display:'block',color:'rgba(255,255,255,.55)',fontSize:10,marginBottom:6}}>Opération</label>
+                      <select value={stockOperation} onChange={e=>setStockOperation(e.target.value)} style={inputStyle}>
+                        <option value="add">➕ Ajouter au stock</option>
+                        <option value="remove">➖ Retirer du stock</option>
+                        <option value="set">🎯 Corriger la quantité</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{display:'block',color:'rgba(255,255,255,.55)',fontSize:10,marginBottom:6}}>{stockOperation==='set'?'Nouvelle quantité':'Quantité à '+(stockOperation==='add'?'ajouter':'retirer')}</label>
+                      <input type="number" min={stockOperation==='set'?0:1} step="1" inputMode="numeric" value={stockQuantity} onChange={e=>setStockQuantity(e.target.value)} placeholder={stockOperation==='set'?'Ex. 15':'Ex. 3'} style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={{display:'block',color:'rgba(255,255,255,.55)',fontSize:10,marginBottom:6}}>Motif obligatoire</label>
+                      <input value={stockReason} onChange={e=>setStockReason(e.target.value)} maxLength={180} placeholder="Ex. Vente boutique / Réception fournisseur" style={inputStyle} />
+                    </div>
+                    <button className="act-btn" onClick={submitStockMovement} disabled={stockSaving || !stockQuantity || stockReason.trim().length<3} style={{background:'var(--br)',color:'#080808',fontWeight:900,opacity:stockSaving?0.6:1,minHeight:40}}>{stockSaving?'Enregistrement…':'💾 Valider le mouvement'}</button>
+                  </div>
+                  <div style={{fontSize:10,color:'rgba(255,255,255,.38)',marginTop:10,lineHeight:1.5}}>La correction fixe directement la quantité finale. Une sortie supérieure au stock disponible est refusée. Chaque opération est enregistrée dans l’historique.</div>
+                </div>
+              )}
+              <div style={{marginTop:22}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,marginBottom:10}}>
+                  <div style={{color:'white',fontWeight:900,fontSize:14}}>🧾 Historique des mouvements</div>
+                  <span style={{color:'rgba(255,255,255,.35)',fontSize:10}}>40 derniers mouvements</span>
+                </div>
+                {stockHistoryLoading ? <div className="spinner">Chargement de l’historique…</div> : stockHistory.length===0 ? (
+                  <div style={{padding:18,textAlign:'center',color:'rgba(255,255,255,.4)',background:'#171717',borderRadius:10}}>Aucun mouvement manuel enregistré pour le moment.</div>
+                ) : (
+                  <div style={{overflowX:'auto',border:'1px solid rgba(255,255,255,.08)',borderRadius:12}}>
+                    <table style={{width:'100%',borderCollapse:'collapse',minWidth:720}}>
+                      <thead><tr style={{background:'rgba(255,255,255,.04)',textAlign:'left'}}>
+                        {['Date','Produit','Opération','Variation','Avant','Après','Motif'].map(label=><th key={label} style={{padding:'10px',fontSize:10,color:'rgba(255,255,255,.5)',whiteSpace:'nowrap'}}>{label}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {stockHistory.map(move=>(
+                          <tr key={move.id} style={{borderTop:'1px solid rgba(255,255,255,.06)'}}>
+                            <td style={{padding:10,fontSize:10,color:'rgba(255,255,255,.5)',whiteSpace:'nowrap'}}>{new Date(move.created_at).toLocaleString('fr-DZ')}</td>
+                            <td style={{padding:10,fontSize:11,color:'white'}}>{move.product_name}<div style={{color:'rgba(255,255,255,.4)',fontSize:10}}>{move.variant_name || 'Stock général'}</div></td>
+                            <td style={{padding:10,fontSize:11,color:movementColor(move.movement_type),fontWeight:800}}>{movementLabel(move.movement_type)}</td>
+                            <td style={{padding:10,fontSize:11,color:'white',fontWeight:800}}>{move.movement_type==='entry'?'+':''}{move.movement_type==='exit'?'-':''}{move.quantity}</td>
+                            <td style={{padding:10,fontSize:11,color:'rgba(255,255,255,.6)'}}>{move.stock_before}</td>
+                            <td style={{padding:10,fontSize:11,color:'rgba(255,255,255,.8)',fontWeight:800}}>{move.stock_after}</td>
+                            <td style={{padding:10,fontSize:11,color:'rgba(255,255,255,.55)',maxWidth:220}}>{move.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )
         })()}
