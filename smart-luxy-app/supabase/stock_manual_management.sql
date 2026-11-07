@@ -28,7 +28,7 @@ create policy "Admins insert stock movements"
   on public.stock_movements for insert to authenticated
   with check (public.is_admin());
 
-grant select, insert on public.stock_movements to authenticated;
+revoke all on public.stock_movements from anon;\ngrant select, insert on public.stock_movements to authenticated;
 grant usage, select on sequence public.stock_movements_id_seq to authenticated;
 
 create or replace function public.admin_adjust_product_stock(
@@ -59,11 +59,11 @@ begin
     raise exception 'Accès refusé : administrateur requis';
   end if;
 
-  if p_variant_type not in ('product', 'model', 'color') then
+  if p_variant_type is null or p_variant_type not in ('product', 'model', 'color') then
     raise exception 'Type de stock invalide';
   end if;
 
-  if p_operation not in ('add', 'remove', 'set') then
+  if p_operation is null or p_operation not in ('add', 'remove', 'set') then
     raise exception 'Opération de stock invalide';
   end if;
 
