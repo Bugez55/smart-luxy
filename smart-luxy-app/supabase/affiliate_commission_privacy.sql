@@ -27,6 +27,7 @@ begin
     end if;
   end loop;
 end;
+$migration$;
 
 -- The models checkout RPC is a third public order endpoint. It stores the
 -- commission internally in affiliate_order_attributions, but must not return
@@ -58,5 +59,3 @@ begin
   end if;
 end;
 $model_privacy$;
-
-$migration$;
