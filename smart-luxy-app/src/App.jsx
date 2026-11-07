@@ -1,18 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { supabase } from './supabase'
 import AnnouncementBar from './components/AnnouncementBar'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import TrustMarquee from './components/TrustMarquee'
 import ProductGrid from './components/ProductGrid'
-import ProductPage from './components/ProductPage'
-import TrackingPage from './components/TrackingPage'
+
+
 import Cart from './components/Cart'
-import OrderModal from './components/OrderModal'
+
 import SuccessScreen from './components/SuccessScreen'
-import PolitiquesPage from './components/PolitiquesPage'
+
 import AdminLogin from './components/admin/AdminLogin'
-import AdminPanel from './components/admin/AdminPanel'
+
 import { notifyTelegram, genId } from './utils/notify'
 import CONFIG from './config'
 import { getSettings, saveSetting } from './utils/useSettings'
@@ -22,9 +22,44 @@ import ProductGallery from './components/ProductGallery'
 import CookieConsent from './components/CookieConsent'
 import { sendCapiEvent } from './utils/api'
 
+const ProductPage = lazy(() => import('./components/ProductPage'))
+const TrackingPage = lazy(() => import('./components/TrackingPage'))
+const OrderModal = lazy(() => import('./components/OrderModal'))
+const PolitiquesPage = lazy(() => import('./components/PolitiquesPage'))
+const AdminPanel = lazy(() => import('./components/admin/AdminPanel'))
+
+function ModuleLoading() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        color: 'var(--g4, #999)',
+        background: 'var(--bk, #0a0a0a)',
+      }}
+    >
+      Chargement…
+    </div>
+  )
+}
+
 // ── Facebook Pixel — Tracking événements ──
 function fbq(...args) {
-  if (typeof window !== 'undefined' && window.fbq) window.fbq(...args)
+  if (typeof window === 'undefined' || typeof window.fbq !== 'function') return
+
+  // Les événements marketing restent désactivés si le visiteur refuse le Pixel.
+  try {
+    if (window.localStorage.getItem('sl_cookie_consent') !== 'accepted') return
+  } catch {
+    return
+  }
+
+  window.fbq(...args)
 }
 
 const STOREFRONT_THEME_CSS = `
@@ -978,7 +1013,11 @@ export default function App() {
   if (isAdmin) {
     if (authLoading) return <div style={{ minHeight:'100vh', background:'var(--bk)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--g4)' }}>Chargement…</div>
     if (!adminAuth) return <AdminLogin onLogin={handleLogin} />
-    return <AdminPanel onLogout={handleLogout} onToast={toast} />
+    return (
+      <Suspense fallback={<ModuleLoading />}>
+        <AdminPanel onLogout={handleLogout} onToast={toast} />
+      </Suspense>
+    )
   }
 
   // ── Boutique ─────────────────────────────────────────
@@ -1040,6 +1079,8 @@ export default function App() {
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
             <input
+              type="search"
+              aria-label="Rechercher un produit"
               placeholder="Rechercher un produit..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -1131,6 +1172,19 @@ export default function App() {
           >
             📦 Suivre ma commande
           </button>
+          <span style={{ color:'var(--g3)', fontSize:12 }}>|</span>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('wazyo:cookie-preferences'))}
+            style={{
+              background:'none', border:'none',
+              color:'var(--g3)', fontSize:12,
+              cursor:'pointer', textDecoration:'underline', textUnderlineOffset:3,
+              padding:0,
+            }}
+          >
+            Préférences cookies
+          </button>
         </div>
         <p style={{ color:'var(--g3)', fontSize:11, marginTop:12 }}>
           © {new Date().getFullYear()} Wazyo · Tous droits réservés
@@ -1139,7 +1193,8 @@ export default function App() {
 
       {/* Direct checkout depuis la page d'accueil */}
       {checkoutProduct && (
-        <ProductPage
+        <Suspense fallback={<ModuleLoading />}>
+          <ProductPage
           checkoutOnly
           product={checkoutProduct}
           affiliateOffer={affiliateOffer}
@@ -1151,13 +1206,15 @@ export default function App() {
             return ok
           }}
           onPolitique={(tab) => setPolitiqueTab(tab)}
-        />
+          />
+        </Suspense>
       )}
 
       {/* Product detail */}
       <div className={`overlay ${openProduct ? 'on' : ''}`} onClick={closeProductDetail} />
       {openProduct && (
-        <ProductPage
+        <Suspense fallback={<ModuleLoading />}>
+          <ProductPage
           product={openProduct}
           affiliateOffer={affiliateOffer}
           cartItems={cart}
@@ -1180,7 +1237,8 @@ export default function App() {
             return ok
           }}
           onPolitique={(tab) => setPolitiqueTab(tab)}
-        />
+          />
+        </Suspense>
       )}
 
       {/* Cart */}
@@ -1202,12 +1260,14 @@ export default function App() {
 
       {/* Order modal */}
       {orderItems && (
-        <OrderModal
+        <Suspense fallback={<ModuleLoading />}>
+          <OrderModal
           items={orderItems}
           promo={promoInfo}
           onClose={() => { setOrderItems(null); setPromoInfo(null) }}
           onSubmit={submitOrder}
-        />
+          />
+        </Suspense>
       )}
 
       {/* Success */}
@@ -1220,14 +1280,20 @@ export default function App() {
 
       {/* Politiques */}
       {politiqueTab && (
-        <PolitiquesPage
-          defaultTab={politiqueTab}
-          onClose={() => setPolitiqueTab(null)}
-        />
+        <Suspense fallback={<ModuleLoading />}>
+          <PolitiquesPage
+            defaultTab={politiqueTab}
+            onClose={() => setPolitiqueTab(null)}
+          />
+        </Suspense>
       )}
 
       {/* Tracking */}
-      {trackingOpen && <TrackingPage onClose={() => setTrackingOpen(false)} />}
+      {trackingOpen && (
+        <Suspense fallback={<ModuleLoading />}>
+          <TrackingPage onClose={() => setTrackingOpen(false)} />
+        </Suspense>
+      )}
       <WAButton />
       <CookieConsent />
 
