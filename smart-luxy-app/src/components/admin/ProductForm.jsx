@@ -4,7 +4,7 @@ import { supabase } from '../../supabase'
 const CATS = ['Cuisine','Maison','Électronique','Mode','Beauté','Sport','Jardin','Autre']
 const BADGES = ['','⚡ Nouveau','🔥 Tendance','⭐ Top vente','💎 Premium','🎁 Promo']
 
-export default function ProductForm({ product, onClose, onSave }) {
+export default function ProductForm({ product, products = [], onClose, onSave }) {
   const isEdit = !!product
 
   const [form, setForm] = useState({
@@ -36,6 +36,7 @@ export default function ProductForm({ product, onClose, onSave }) {
     note_etoiles:  product?.note_etoiles !== undefined ? String(product.note_etoiles) : '5',
     nb_commandes:  product?.nb_commandes || 0,
     bundles:       product?.bundles ? (typeof product.bundles === 'string' ? JSON.parse(product.bundles) : product.bundles) : [],
+    complementary_product_ids: product?.complementary_product_ids ? (typeof product.complementary_product_ids === 'string' ? JSON.parse(product.complementary_product_ids) : product.complementary_product_ids).map(String) : [],
     faq:           product?.faq ? (typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq) : [],
     show_colors:   product?.show_colors === true,
     colors:        product?.colors ? (typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors).map(c => ({
@@ -550,6 +551,10 @@ export default function ProductForm({ product, onClose, onSave }) {
         form.bundles.length > 0
           ? form.bundles
           : null,
+
+      complementary_product_ids: Array.isArray(form.complementary_product_ids)
+        ? form.complementary_product_ids.map(String).filter(id => id && id !== String(product?.id || ''))
+        : [],
 
       faq:
         form.faq.length > 0
@@ -1287,6 +1292,39 @@ export default function ProductForm({ product, onClose, onSave }) {
                   }
                 />
               </div>
+            </div>
+          </div>
+
+          {/* ── PRODUITS COMPLÉMENTAIRES ── */}
+          <div className="pf-section" style={{ border:'1px solid rgba(34,197,94,.22)', borderRadius:14 }}>
+            <h3>🧩 Produits complémentaires</h3>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,.42)', lineHeight:1.55, marginBottom:12 }}>
+              Sélectionne les accessoires ou produits qui vont réellement avec cet article. Ils seront proposés sur sa fiche produit. Les produits en rupture ne seront pas affichés.
+            </p>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, marginBottom:10 }}>
+              <span style={{ fontSize:12, color:'#86efac', fontWeight:800 }}>{form.complementary_product_ids.length} produit(s) associé(s)</span>
+              {form.complementary_product_ids.length > 0 && (
+                <button type="button" onClick={() => set('complementary_product_ids', [])} style={{ background:'transparent', border:'1px solid rgba(248,113,113,.3)', color:'#fca5a5', borderRadius:8, padding:'5px 8px', fontSize:11 }}>Tout retirer</button>
+              )}
+            </div>
+            <div style={{ maxHeight:260, overflowY:'auto', border:'1px solid rgba(255,255,255,.08)', borderRadius:10 }}>
+              {products.filter(item => String(item.id) !== String(product?.id || '')).length > 0 ? (
+                products.filter(item => String(item.id) !== String(product?.id || '')).map(item => {
+                  const id = String(item.id)
+                  const checked = form.complementary_product_ids.includes(id)
+                  return (
+                    <label key={id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 10px', borderBottom:'1px solid rgba(255,255,255,.05)', cursor:'pointer', background:checked ? 'rgba(34,197,94,.07)' : 'transparent' }}>
+                      <input type="checkbox" checked={checked} onChange={e => set('complementary_product_ids', e.target.checked ? [...form.complementary_product_ids, id] : form.complementary_product_ids.filter(value => value !== id))} style={{ accentColor:'#22c55e', width:16, height:16, flexShrink:0 }} />
+                      {item.img ? <img src={item.img} alt="" style={{ width:38, height:38, objectFit:'cover', borderRadius:7, background:'#222', flexShrink:0 }} /> : <span style={{ width:38, height:38, display:'grid', placeItems:'center', background:'#222', borderRadius:7 }}>{item.emoji || '📦'}</span>}
+                      <span style={{ minWidth:0, flex:1 }}>
+                        <span style={{ display:'block', color:'#fff', fontSize:12, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.nom}</span>
+                        <span style={{ display:'block', color:'rgba(255,255,255,.4)', fontSize:10 }}>{item.categorie || 'Sans catégorie'} · {Number(item.prix || 0).toLocaleString('fr-DZ')} DA</span>
+                      </span>
+                      {checked && <span style={{ color:'#86efac', fontSize:10, fontWeight:800 }}>Associé</span>}
+                    </label>
+                  )
+                })
+              ) : <div style={{ padding:14, color:'rgba(255,255,255,.35)', fontSize:12, textAlign:'center' }}>Ajoute d'abord d'autres produits à la boutique.</div>}
             </div>
           </div>
 
