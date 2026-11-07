@@ -104,11 +104,14 @@ async function resolvePublicIPv4(hostname) {
   let addresses
 
   try {
-    addresses = await dns.lookup(hostname, {
-      family: 4,
-      all: true,
-      verbatim: true,
-    })
+    let dnsTimer
+    addresses = await Promise.race([
+      dns.lookup(hostname, { family: 4, all: true, verbatim: true }),
+      new Promise((_, reject) => {
+        dnsTimer = setTimeout(() => reject(new Error('Délai DNS dépassé')), 5000)
+        dnsTimer.unref()
+      }),
+    ]).finally(() => clearTimeout(dnsTimer))
   } catch {
     throw new Error('Impossible de résoudre une adresse IPv4 publique')
   }
