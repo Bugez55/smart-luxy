@@ -31,7 +31,7 @@ function isRecommendationAvailable(product) {
 export default function ProductPage({ product: p, allProducts, cartItems = [], affiliateOffer = null, onClose, onProductClick, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
   const [openFaq, setOpenFaq] = useState(null)
   const [ordered, setOrdered] = useState(false)
-  const [lang, setLang] = useState('ar')
+  const [lang, setLang] = useState('fr')
   const rtl = lang === 'ar'
   const [imgIdx, setImgIdx] = useState(0)
   const [lb, setLb] = useState(false)
@@ -1932,7 +1932,7 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
           <div style={{ display:'flex', justifyContent:'center', gap:16, marginTop:12, flexWrap:'wrap' }}>
             {[
               { icon:'✅', label: lang==='ar' ? 'دفع عند الاستلام' : 'Paiement livraison' },
-              { icon:'🔄', label: lang==='ar' ? 'إرجاع مجاني' : 'Retour gratuit' },
+              { icon:'🔄', label: lang==='ar' ? 'الإرجاع حسب الشروط' : 'Retour selon les conditions' },
               { icon:'🚚', label: lang==='ar' ? 'توصيل لكل الولايات' : '69 wilayas' },
             ].map(b => (
               <div key={b.label} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
