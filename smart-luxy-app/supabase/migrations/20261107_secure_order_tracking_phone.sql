@@ -19,7 +19,7 @@ declare
   v_headers jsonb;
   v_ip text;
   v_id text := upper(trim(coalesce(p_order_id, '')));
-  v_phone_digits text := regexp_replace(coalesce(p_phone, ''), '\\D', '', 'g');
+  v_phone_digits text := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
   v_order_phone_digits text;
   v_id_key text;
   v_ip_key text;
@@ -103,7 +103,7 @@ begin
     return null;
   end if;
 
-  v_order_phone_digits := regexp_replace(coalesce(o.telephone, ''), '\\D', '', 'g');
+  v_order_phone_digits := regexp_replace(coalesce(o.telephone, ''), '\D', '', 'g');
   if left(v_order_phone_digits, 3) = '213' and length(v_order_phone_digits) = 12 then
     v_order_phone_digits := substring(v_order_phone_digits from 4);
   elsif left(v_order_phone_digits, 1) = '0' and length(v_order_phone_digits) = 10 then
