@@ -7,7 +7,28 @@ import { getSettings } from '../utils/useSettings'
 
 function fmt(n) { return Number(n || 0).toLocaleString('fr-DZ') + ' DA' }
 
-export default function ProductPage({ product: p, allProducts, cartItems = [], affiliateOffer = null, onClose, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
+function isRecommendationAvailable(product) {
+  const readArray = value => {
+    try {
+      const parsed = typeof value === 'string' ? JSON.parse(value) : value
+      return Array.isArray(parsed) ? parsed : []
+    } catch { return [] }
+  }
+  const hasPositiveOrUnknownStock = item => item?.stock === null || item?.stock === undefined || item?.stock === ''
+    ? true
+    : Number(item.stock) > 0
+  if (product?.show_models === true) {
+    const models = readArray(product.models)
+    if (models.length) return models.some(hasPositiveOrUnknownStock)
+  }
+  if (product?.show_colors === true) {
+    const colors = readArray(product.colors)
+    if (colors.length) return colors.some(hasPositiveOrUnknownStock)
+  }
+  return hasPositiveOrUnknownStock(product)
+}
+
+export default function ProductPage({ product: p, allProducts, cartItems = [], affiliateOffer = null, onClose, onProductClick, onAddToCart, onBuyNow, onSubmitOrder, onPolitique, checkoutOnly = false }) {
   const [openFaq, setOpenFaq] = useState(null)
   const [ordered, setOrdered] = useState(false)
   const [lang, setLang] = useState('ar')
@@ -96,6 +117,8 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
   const specs = (() => { try { return typeof p.specs==='string' ? JSON.parse(p.specs) : (p.specs||[]) } catch { return [] } })()
   const bundles = (() => { try { return typeof p.bundles==='string' ? JSON.parse(p.bundles) : (p.bundles||[]) } catch { return [] } })()
   const faq = (() => { try { return typeof p.faq==='string' ? JSON.parse(p.faq) : (p.faq||[]) } catch { return [] } })()
+  const complementaryIds = (() => { try { const value = typeof p.complementary_product_ids === 'string' ? JSON.parse(p.complementary_product_ids) : p.complementary_product_ids; return Array.isArray(value) ? value.map(String) : [] } catch { return [] } })()
+  const complementaryProducts = (allProducts || []).filter(item => String(item.id) !== String(p.id) && item.is_active && complementaryIds.includes(String(item.id)) && isRecommendationAvailable(item)).slice(0, 6)
   const colors = (() => {
     try {
       const raw = typeof p.colors === 'string' ? JSON.parse(p.colors) : (p.colors || [])
@@ -2192,6 +2215,31 @@ export default function ProductPage({ product: p, allProducts, cartItems = [], a
           >{item.label}</button>
         ))}
       </div>
+
+      {/* ── PRODUITS COMPLÉMENTAIRES ── */}
+      {complementaryProducts.length > 0 && (
+        <div className="pp-complementary" style={{ padding:'0 16px 24px' }}>
+          <div style={{ marginBottom:12 }}>
+            <h3 style={{ fontSize:14, fontWeight:900, color:'var(--g4)', letterSpacing:'.04em', margin:0 }}>À ASSOCIER AVEC CE PRODUIT</h3>
+            <p style={{ fontSize:11, color:'var(--g3)', margin:'4px 0 0' }}>Des accessoires et articles sélectionnés pour vous</p>
+          </div>
+          <div style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:5, scrollbarWidth:'none' }}>
+            {complementaryProducts.map(extra => (
+              <button key={extra.id} type="button" onClick={() => onProductClick && onProductClick(extra)} className="pp-sim-card"
+                style={{ background:'var(--card)', border:'1px solid rgba(201,168,76,.2)', borderRadius:14, overflow:'hidden', cursor:'pointer', width:150, flexShrink:0, padding:0, textAlign:'left', color:'inherit' }}>
+                <div style={{ height:96, background:'var(--card2)', overflow:'hidden' }}>
+                  {extra.img ? <img src={extra.img} alt={extra.nom} loading="lazy" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30 }}>{extra.emoji || '📦'}</div>}
+                </div>
+                <div style={{ padding:'9px 10px' }}>
+                  <div style={{ fontSize:11, color:'var(--g4)', fontWeight:800, marginBottom:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{extra.nom}</div>
+                  <div style={{ fontSize:12, color:'var(--br)', fontWeight:900 }}>{fmt(extra.prix)}</div>
+                  <div style={{ fontSize:10, color:'#86efac', fontWeight:800, marginTop:6 }}>Voir le produit →</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Produits similaires ── */}
       {(allProducts||[]).filter(x=>x.id!==p.id&&x.categorie===p.categorie&&x.is_active).slice(0,4).length > 0 && (
