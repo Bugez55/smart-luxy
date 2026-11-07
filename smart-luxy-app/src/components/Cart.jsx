@@ -101,7 +101,7 @@ export default function Cart({ open, items, total, onClose, onRemove, onChangeQt
               borderBottom: '1px solid var(--g3)',
             }}>
               {[
-                { icon: '🔒', text: 'Paiement sécurisé' },
+                { icon: '💵', text: 'Paiement à la livraison' },
                 { icon: '🚚', text: 'Livraison rapide' },
                 { icon: '↩️', text: 'Retour facile' },
               ].map((b, i) => (
