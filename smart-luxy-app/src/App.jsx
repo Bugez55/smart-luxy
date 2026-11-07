@@ -1162,6 +1162,7 @@ export default function App() {
           affiliateOffer={affiliateOffer}
           cartItems={cart}
           onClose={closeProductDetail}
+          onProductClick={openProductDetail}
           onAddToCart={(itemOrQty, qty) => {
             const item = itemOrQty && typeof itemOrQty === 'object' ? itemOrQty : openProduct
             const quantity = itemOrQty && typeof itemOrQty === 'object' ? qty : itemOrQty
